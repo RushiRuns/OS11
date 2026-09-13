@@ -3,6 +3,7 @@ import { useAppStore } from '../../stores/app-store.js';
 import { useListStore, useSmartLists, useUserLists, useListGroups } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
+import { useTagStore } from '../../stores/tagStore.js';
 import { ListItem } from './ListItem.js';
 import { SmartListGroup } from './SmartListGroup.js';
 import { CreateListModal } from '../lists/CreateListModal.js';
@@ -36,6 +37,8 @@ export function Sidebar(): React.ReactElement {
 
   const tasksById = useTaskStore((state) => state.tasksById);
 
+  const { tagsById, loadTags } = useTagStore();
+
   // Modals and context menu state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -53,7 +56,8 @@ export function Sidebar(): React.ReactElement {
   useEffect(() => {
     loadLists();
     loadModules();
-  }, [loadLists, loadModules]);
+    loadTags();
+  }, [loadLists, loadModules, loadTags]);
 
   // Compute task count per list
   const getTaskCount = useCallback(
@@ -75,6 +79,24 @@ export function Sidebar(): React.ReactElement {
         default:
           return tasks.filter((t) => t.list_id === listId && t.is_completed === 0).length;
       }
+    },
+    [tasksById]
+  );
+
+  // Compute active task count per tag
+  const getTagTaskCount = useCallback(
+    (tagId: string): number => {
+      const taskTags = useTagStore.getState().taskTagsByTaskId;
+      let count = 0;
+      for (const [taskId, tagIds] of Object.entries(taskTags)) {
+        if (tagIds.includes(tagId)) {
+          const task = tasksById[taskId];
+          if (task && task.is_trashed === 0 && task.is_completed === 0) {
+            count++;
+          }
+        }
+      }
+      return count;
     },
     [tasksById]
   );
@@ -263,6 +285,37 @@ export function Sidebar(): React.ReactElement {
             </div>
           );
         })}
+
+        {/* Tags Section */}
+        {Object.values(tagsById).length > 0 && (
+          <>
+            <div className={styles.sectionLabel}>Tags</div>
+            {Object.values(tagsById).map((tag) => {
+              const pseudoList: List = {
+                id: `tag:${tag.id}`,
+                name: `#${tag.name}`,
+                icon: null,
+                color: tag.color ?? 'var(--tag-gray)',
+                background_type: 'none',
+                background_value: null,
+                sort_order: tag.sort_order,
+                is_smart: 0,
+                notification_enabled: 0,
+                created_at: tag.created_at,
+                updated_at: tag.created_at,
+              };
+              return (
+                <ListItem
+                  key={tag.id}
+                  list={pseudoList}
+                  isActive={activeListId === `tag:${tag.id}`}
+                  taskCount={getTagTaskCount(tag.id)}
+                  onClick={(id) => setActiveListId(id)}
+                />
+              );
+            })}
+          </>
+        )}
 
         {/* Views Section (omits disabled modules per Phase 6 spec) */}
         {enabledViews.length > 0 && (

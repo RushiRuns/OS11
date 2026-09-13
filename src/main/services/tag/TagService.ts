@@ -60,6 +60,10 @@ export class TagService {
   public getTasksForTag(tagId: string): Task[] {
     return this.repository.getTasksForTag(tagId);
   }
+
+  public mergeTags(sourceTagId: string, targetTagId: string): void {
+    this.repository.merge(sourceTagId, targetTagId);
+  }
 }
 
 export default TagService;

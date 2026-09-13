@@ -1,0 +1,220 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.popoverContainer {
+  position: relative;
+  width: 320px;
+  max-width: 90vw;
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-xl, 0 16px 48px rgba(0, 0, 0, 0.4));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary, #f8fafc);
+  animation: fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.header {
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.searchIcon {
+  color: var(--text-tertiary, #64748b);
+  font-size: 13px;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #f8fafc);
+  font-size: var(--text-sm, 14px);
+  outline: none;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary, #64748b);
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary, #64748b);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton:hover {
+  color: var(--text-primary, #f8fafc);
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+}
+
+.tagList {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tagItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--text-secondary, #cbd5e1);
+  font-size: var(--text-sm, 13px);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.tagItem:hover,
+.tagItemActive {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #ffffff);
+}
+
+.tagItemSelected {
+  color: var(--color-accent, #3b82f6);
+  font-weight: var(--weight-medium, 500);
+}
+
+.tagColorDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tagName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkMark {
+  font-size: 13px;
+  color: var(--color-accent, #3b82f6);
+}
+
+.createSection {
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--bg-surface-active, rgba(0, 0, 0, 0.2));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.createLabel {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary, #94a3b8);
+  font-weight: var(--weight-medium, 500);
+}
+
+.colorPalette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.colorSwatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+  padding: 0;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.2);
+}
+
+.colorSwatchSelected {
+  border-color: #ffffff;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.createButtonRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: 4px;
+}
+
+.confirmBtn {
+  background: var(--color-accent, #3b82f6);
+  color: #ffffff;
+  border: none;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--weight-medium, 500);
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+
+.confirmBtn:hover {
+  opacity: 0.9;
+}
+
+.emptyNotice {
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #64748b);
+}
+
+.treeItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.treeIndent {
+  display: inline-block;
+  width: 14px;
+}

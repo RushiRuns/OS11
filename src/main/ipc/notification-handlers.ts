@@ -14,6 +14,24 @@ export function registerNotificationHandlers(service = new NotificationService()
 
   ipcMain.handle(IPC.NOTIFICATIONS.CLEAR, async () => {
     try {
+      service.clear();
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.NOTIFICATIONS.MARK_READ, async (_event, id: string) => {
+    try {
+      service.markRead(id);
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.NOTIFICATIONS.MARK_ALL_READ, async () => {
+    try {
       service.markAllRead();
       return { ok: true, data: true };
     } catch (err: unknown) {

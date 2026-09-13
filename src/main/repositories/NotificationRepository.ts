@@ -39,4 +39,9 @@ export class NotificationRepository extends BaseRepository {
     `);
     stmt.run(new Date().toISOString());
   }
+
+  public clear(): void {
+    const stmt = this.db.prepare(`DELETE FROM notification_history`);
+    stmt.run();
+  }
 }

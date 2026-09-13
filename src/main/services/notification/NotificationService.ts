@@ -70,6 +70,10 @@ export class NotificationService {
   public markAllRead(): void {
     this.repository.markAllRead();
   }
+
+  public clear(): void {
+    this.repository.clear();
+  }
 }
 
 export default NotificationService;

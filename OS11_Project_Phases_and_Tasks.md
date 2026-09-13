@@ -981,34 +981,34 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Tag System
 
-- [ ] Create `src/renderer/stores/tagStore.ts` — `tagsById: Record<string, Tag>`, lazy loaded on first tag use
-- [ ] Create `src/renderer/features/tags/TagPicker.tsx` + `.module.css`
+- [x] Create `src/renderer/stores/tagStore.ts` — `tagsById: Record<string, Tag>`, lazy loaded on first tag use
+- [x] Create `src/renderer/features/tags/TagPicker.tsx` + `.module.css`
   - Inline popover (triggered by `Ctrl+T` or clicking tag area on card)
   - Existing tags listed with color dots; fuzzy search within tags
   - Create new tag inline — name + color selection (12-color palette from tokens)
   - Nested tag support: display `work/client/Acme` as hierarchical tree
   - `Escape` closes; `Enter` or click applies selected tag
-- [ ] Create `src/renderer/features/tags/TagView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tags/TagView.tsx` + `.module.css`
   - Click any tag in sidebar or tag dot on task card → opens Tag View
   - All tasks with this tag across all lists, virtualized
   - Header: tag color dot + tag name + task count
-- [ ] Create `src/renderer/features/tags/TagManager.tsx` — in Settings
+- [x] Create `src/renderer/features/tags/TagManager.tsx` — in Settings
   - List all tags with edit / rename / recolor / delete controls
   - Merge tags: combine two tags → batch updates all `task_tags` entries
   - Nested tags: parent tag picker when editing
-- [ ] Auto-tag rules (Settings → Tags, optional): "tasks in list [X] → auto-tag #[tag]"
+- [x] Auto-tag rules (Settings → Tags, optional): "tasks in list [X] → auto-tag #[tag]"
   - Stored as a setting key/value; applied in `TaskService.create()` after list assignment
 
 ### Priority Display
 
-- [ ] Left border color only — no badge, no label, no icon (FEEL UI)
-- [ ] Critical priority: pulsing CSS `@keyframes` animation on the left border
+- [x] Left border color only — no badge, no label, no icon (FEEL UI)
+- [x] Critical priority: pulsing CSS `@keyframes` animation on the left border
   - `@media (prefers-reduced-motion: reduce)` disables the animation
-- [ ] Overdue + high/critical priority: red due date chip (text color `var(--color-danger)`)
+- [x] Overdue + high/critical priority: red due date chip (text color `var(--color-danger)`)
 
 ### In-App Notification Center
 
-- [ ] Create `src/renderer/features/notifications/NotificationCenter.tsx` + `.module.css`
+- [x] Create `src/renderer/features/notifications/NotificationCenter.tsx` + `.module.css`
   - Bell icon in Titlebar; badge count of unread notifications
   - Framer Motion: `AnimatePresence` slide-in panel from the right (not a modal)
   - All notification types shown: due, reminder, pomodoro, agenda, goal, streak
@@ -1016,13 +1016,13 @@ One service per domain. Validation happens in domain functions called from here.
   - Each item: mark read on click → focuses the relevant task
   - "Mark All Read" button at top
   - Virtualized — can hold unlimited history
-- [ ] Create `src/renderer/stores/notificationStore.ts` — `items: NotificationHistoryItem[]`, `unreadCount: number`
+- [x] Create `src/renderer/stores/notificationStore.ts` — `items: NotificationHistoryItem[]`, `unreadCount: number`
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `TagPicker`, `TagView`, `TagManager`, `NotificationCenter`, `tagStore`, `notificationStore`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 9 complete: Full tag system (nested, merge, auto-tag), notification center."
-- [ ] Commit: `"Phase 9 complete: Tags, priority, notification center"`
+- [x] Update UTILITIES.md: `TagPicker`, `TagView`, `TagManager`, `NotificationCenter`, `tagStore`, `notificationStore`
+- [x] CHANGELOG_INTERNAL.md: "Phase 9 complete: Full tag system (nested, merge, auto-tag), notification center."
+- [x] Commit: `"Phase 9 complete: Tags, priority, notification center"`
 
 ---
 

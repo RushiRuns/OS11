@@ -24,6 +24,8 @@
 | `useVimMode` | `src/renderer/hooks/useVimMode.ts` | Modal navigation (`j/k`, `gg/G`, `dd`, `cc`, `ss`, `o`) gated by `vim_keybindings` module | Component scope |
 | `useSearchStore` | `src/renderer/stores/searchStore.ts` | Zustand store for full-text search state, debounced queries, and results | Renderer global |
 | `useSelectionStore` | `src/renderer/stores/selectionStore.ts` | Multi-select and contiguous range selection store (`selectedIds: Set<string>`) | Renderer global |
+| `useTagStore` | `src/renderer/stores/tagStore.ts` | Normalized tag store (`tagsById: Record<string, Tag>`) with task associations, tree parser, and palette | Renderer global |
+| `useNotificationStore` | `src/renderer/stores/notificationStore.ts` | In-app notification center store tracking history items, unread count, and drawer visibility | Renderer global |
 
 ---
 
@@ -63,12 +65,17 @@
 | `TaskContextMenu` | `src/renderer/features/tasks/TaskContextMenu.tsx` | No | No (CSS transitions) | Floating context menu for tasks with complete, star, due date, priority, subtasks, duplication, and delete actions |
 | `BulkActionBar` | `src/renderer/features/tasks/BulkActionBar.tsx` | No | **Site #4 (Scale & opacity slide-up)** | Floating toolbar for bulk completing, deleting, moving, priority setting, and My Day assignment |
 | `DatePicker` | `src/renderer/components/DatePicker/DatePicker.tsx` | No | No (CSS transitions) | Compact inline date picker popover with natural language input, calendar grid, and time selectors |
+| `TagPicker` | `src/renderer/features/tags/TagPicker.tsx` | No | No (CSS transitions) | Inline tag picker popover with fuzzy search, nested hierarchy tree, and 12-color token palette |
+| `TagView` | `src/renderer/features/tags/TagView.tsx` | No | No (CSS transitions) | Cross-list tag filter view with colored header dot and active task count |
+| `TagManager` | `src/renderer/features/tags/TagManager.tsx` | No | No (CSS transitions) | Settings management panel for editing, recoloring, merging tags, and configuring auto-tag rules |
+| `NotificationCenter` | `src/renderer/features/notifications/NotificationCenter.tsx` | No | **Site #5 (Slide-in drawer from right)** | Slide-in notification center drawer grouped by date (Today, Yesterday, Earlier) with mark read and task focus |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
 2. **Detail panel open/close:** Spring slide-in from right (`x: 40 → 0`).
 3. **Task list reorder:** `layoutId` layout animation during drag-and-drop.
 4. **Quick-add bar appear/dismiss:** Scale (`0.96 → 1`) and opacity (`0 → 1`).
+5. **Notification center drawer:** Slide-in from right (`x: 360 → 0`) in < 180ms.
 *All other UI animations and transitions use pure CSS.*
 
 ---

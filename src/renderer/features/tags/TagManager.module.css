@@ -1,0 +1,191 @@
+.managerContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sectionTitle {
+  font-size: var(--text-base, 16px);
+  font-weight: var(--weight-semibold, 600);
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+}
+
+.sectionDesc {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.tagTable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.tagRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface-raised, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-sm, 6px);
+}
+
+.colorPickerBtn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 120px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-primary, #f8fafc);
+  font-size: var(--text-sm, 13px);
+  padding: 2px 6px;
+  outline: none;
+}
+
+.nameInput:hover,
+.nameInput:focus {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
+  border-color: var(--border-default, rgba(255, 255, 255, 0.15));
+}
+
+.parentSelect {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--text-secondary, #cbd5e1);
+  font-size: var(--text-xs, 12px);
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.actionBtn {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--text-secondary, #94a3b8);
+  font-size: var(--text-xs, 12px);
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.actionBtn:hover {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #f8fafc);
+}
+
+.deleteBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary, #64748b);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.deleteBtn:hover {
+  color: var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.mergeSection {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  background: var(--bg-surface-raised, rgba(0, 0, 0, 0.2));
+  border-radius: var(--radius-sm, 6px);
+  border: 1px dashed var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+.ruleList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.ruleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface-raised, rgba(255, 255, 255, 0.03));
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.ruleText {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ruleAddRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.selectInput {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.15));
+  color: var(--text-primary, #f8fafc);
+  font-size: var(--text-xs, 12px);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 8px;
+  outline: none;
+}
+
+.addRuleBtn {
+  background: var(--color-accent, #3b82f6);
+  color: #ffffff;
+  border: none;
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--weight-medium, 500);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.addRuleBtn:hover {
+  opacity: 0.9;
+}

@@ -82,6 +82,11 @@ export const IPC = {
     CREATE: 'tags:create',
     UPDATE: 'tags:update',
     DELETE: 'tags:delete',
+    GET_FOR_TASK: 'tags:get-for-task',
+    ADD_TO_TASK: 'tags:add-to-task',
+    REMOVE_FROM_TASK: 'tags:remove-from-task',
+    GET_TASKS_FOR_TAG: 'tags:get-tasks-for-tag',
+    MERGE: 'tags:merge',
   },
   REMINDERS: {
     GET_ALL: 'reminders:get-all',
@@ -129,6 +134,8 @@ export const IPC = {
   NOTIFICATIONS: {
     GET_HISTORY: 'notifications:get-history',
     CLEAR: 'notifications:clear',
+    MARK_READ: 'notifications:mark-read',
+    MARK_ALL_READ: 'notifications:mark-all-read',
     SEND_NATIVE: 'notifications:send-native',
   },
   IDENTITY: {

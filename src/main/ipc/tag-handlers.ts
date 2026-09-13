@@ -39,6 +39,54 @@ export function registerTagHandlers(service = new TagService()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(IPC.TAGS.GET_FOR_TASK, async (_event, taskId: string) => {
+    try {
+      const data = service.getTagsForTask(taskId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TAGS.ADD_TO_TASK, async (_event, { taskId, tagId }: { taskId: string; tagId: string }) => {
+    try {
+      service.addTagToTask(taskId, tagId);
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TAGS.REMOVE_FROM_TASK, async (_event, { taskId, tagId }: { taskId: string; tagId: string }) => {
+    try {
+      service.removeTagFromTask(taskId, tagId);
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TAGS.GET_TASKS_FOR_TAG, async (_event, tagId: string) => {
+    try {
+      const data = service.getTasksForTag(tagId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(
+    IPC.TAGS.MERGE,
+    async (_event, { sourceTagId, targetTagId }: { sourceTagId: string; targetTagId: string }) => {
+      try {
+        service.mergeTags(sourceTagId, targetTagId);
+        return { ok: true, data: true };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 }
 
 export default registerTagHandlers;

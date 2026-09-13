@@ -1,0 +1,70 @@
+.tagViewContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.header {
+  padding: var(--space-8) var(--space-8) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tagBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.colorDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.tagName {
+  font-size: var(--text-2xl, 24px);
+  font-weight: var(--weight-bold, 700);
+  letter-spacing: var(--tracking-tight, -0.02em);
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+}
+
+.taskCount {
+  font-size: var(--text-sm, 14px);
+  color: var(--text-secondary, #94a3b8);
+  font-weight: var(--weight-normal, 400);
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-8) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) 0;
+  color: var(--text-tertiary, #64748b);
+  gap: var(--space-2);
+}
+
+.emptyIcon {
+  font-size: 32px;
+  opacity: 0.6;
+}
+
+.emptyText {
+  font-size: var(--text-sm, 14px);
+}

@@ -77,6 +77,54 @@
   fill: currentColor;
 }
 
+.bellButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  padding: 0;
+  position: relative;
+}
+
+.bellButton:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.bellButtonActive {
+  color: var(--color-accent, #3b82f6);
+  background-color: var(--accent-muted);
+}
+
+.bellIcon {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.unreadBadge {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-danger, #ef4444);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: var(--weight-bold, 700);
+  line-height: 14px;
+  text-align: center;
+}
+
 .windowControls {
   display: flex;
   align-items: center;

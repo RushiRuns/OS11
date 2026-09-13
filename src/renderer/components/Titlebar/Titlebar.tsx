@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { settingsServiceAdapter } from '../../services/settings-service-adapter.js';
+import { useNotificationStore } from '../../stores/notificationStore.js';
 import styles from './Titlebar.module.css';
 
 interface TitlebarProps {
@@ -16,6 +17,9 @@ export function Titlebar({
   onToggleAlwaysOnTop,
 }: TitlebarProps): React.ReactElement {
   const [pinned, setPinned] = useState(initialAlwaysOnTop);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const isNotificationOpen = useNotificationStore((state) => state.isOpen);
+  const toggleNotificationOpen = useNotificationStore((state) => state.toggleOpen);
 
   const isMac =
     typeof navigator !== 'undefined' &&
@@ -39,6 +43,20 @@ export function Titlebar({
       </div>
 
       <div className={styles.titlebarActions}>
+        {/* In-App Notification Center Bell */}
+        <button
+          type="button"
+          className={`${styles.bellButton} ${isNotificationOpen ? styles.bellButtonActive : ''}`}
+          onClick={() => toggleNotificationOpen()}
+          title="Notification Center"
+          aria-label="Notification Center"
+        >
+          <svg className={styles.bellIcon} viewBox="0 0 24 24">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
+          </svg>
+          {unreadCount > 0 && <span className={styles.unreadBadge}>{unreadCount}</span>}
+        </button>
+
         {/* Always on Top Pin Button */}
         <button
           type="button"

@@ -11,6 +11,9 @@ import { MyDayView } from './features/lists/MyDayView.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
 import { CommandPalette } from './features/command-palette/CommandPalette.js';
+import { TagView } from './features/tags/TagView.js';
+import { NotificationCenter } from './features/notifications/NotificationCenter.js';
+import { useTaskStore } from './stores/taskStore.js';
 import { ipc } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
@@ -81,7 +84,37 @@ export function App(): React.ReactElement {
     return <OmnibarView />;
   }
 
+  const handleFocusTask = async (taskId: string) => {
+    let task = useTaskStore.getState().tasksById[taskId];
+    if (!task) {
+      try {
+        task = await ipc.invoke<Task>(IPC.TASKS.GET_BY_ID, taskId);
+      } catch {
+        // Best effort lookup
+      }
+    }
+    if (task) {
+      setSelectedTask(task);
+      if (task.list_id) {
+        useAppStore.getState().setActiveListId(task.list_id);
+      } else {
+        useAppStore.getState().setActiveListId('smart_all');
+      }
+    }
+  };
+
   const renderMainContent = () => {
+    if (activeListId.startsWith('tag:')) {
+      const tagId = activeListId.slice(4);
+      return (
+        <TagView
+          tagId={tagId}
+          onSelectTask={(task) => setSelectedTask(task)}
+          selectedTaskId={selectedTask?.id}
+        />
+      );
+    }
+
     switch (activeListId) {
       case 'smart_my_day':
         return (
@@ -188,6 +221,9 @@ export function App(): React.ReactElement {
         onClose={() => setIsCommandPaletteOpen(false)}
         onToggleFocusMode={() => setIsFocusMode((prev) => !prev)}
       />
+
+      {/* Slide-In In-App Notification Center Drawer */}
+      <NotificationCenter onFocusTask={handleFocusTask} />
     </div>
   );
 }

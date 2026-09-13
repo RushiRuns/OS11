@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-13] — Phase 9 complete: Full tag system (nested, merge, auto-tag), notification center
+- **What was built:**
+  - `tagStore.ts`: Normalized Zustand store (`tagsById: Record<string, Tag>`) with task-tag association mappings (`taskTagsByTaskId`), optimistic CRUD, lazy loading, and hierarchical tag tree parser (`buildTagTree`) supporting slash-delimited paths (`work/client/Acme`) and parent IDs.
+  - `TagPicker.tsx` + `.module.css`: Compact inline popover with fuzzy tag filtering, nested tree display, inline creation with 12 curated token colors (`--tag-blue` to `--tag-gray`), and keyboard navigation (`Escape`, `ArrowUp/Down`, `Enter`).
+  - `TagView.tsx` + `.module.css`: Cross-list tag filter view displaying tag color dot, tag name, task count, and task card collection.
+  - `TagManager.tsx` + `.module.css` in Settings: Full management interface with inline renaming, color cycling through the 12-token palette, parent tag selector, tag merge tool, and list-based auto-tag rule configuration.
+  - FEEL UI Priority Display: Strictly left border color only (2.5px), pulsing animation for critical priority with `@media (prefers-reduced-motion: reduce)` fallback, and red due date chip (`var(--color-danger)`) for overdue + high/critical tasks.
+  - `NotificationCenter.tsx` + `.module.css`: Framer Motion slide-in drawer from the right (<180ms per ADR-0009), date grouping ("Today", "Yesterday", "Earlier"), unread indicator dot, mark read on click with task focus navigation, and "Mark All Read" / "Clear" actions.
+  - `Titlebar.tsx` + `.module.css`: Added notification bell button with dynamic unread count pill badge.
+  - IPC and backend support: Added channels and handlers for `tags:get-for-task`, `tags:add-to-task`, `tags:remove-from-task`, `tags:get-tasks-for-tag`, `tags:merge`, `notifications:mark-read`, and `notifications:mark-all-read`.
+  - Auto-tagging rules: `TaskService.create()` automatically queries `auto_tag_rules` from Settings and attaches configured tags to newly created tasks.
+  - Unit test suite `tests/domain/tags-and-notifications.test.ts` (20 test files, 105 tests passing).
+- **What changed architecturally:**
+  - IPC contract expanded in `src/shared/ipc-channels.ts` and documented in `IPC_CHANNELS.md` without violating renderer/main boundary isolation.
+  - Tag merging executes in an atomic SQLite transaction in `TagRepository.ts`, deduplicating task-tag links and cleaning up the source tag.
+  - Registered Site #5 in ADR-0009 permitted Framer Motion sites for the Notification Center drawer slide-in.
+
+---
+
 ### [2026-09-13] — Phase 8 complete: All drag-and-drop targets, context menu, multi-select, bulk operations, inline date picker
 - **What was built:**
   - `@dnd-kit/core` & `@dnd-kit/sortable` integration in `TaskList.tsx` with `PointerSensor` (distance constraint `8px`) and `KeyboardSensor`.

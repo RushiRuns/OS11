@@ -1,6 +1,8 @@
 import { TaskRepository } from '../../repositories/TaskRepository.js';
 import { IdentityRepository } from '../../repositories/IdentityRepository.js';
 import { ReminderRepository } from '../../repositories/ReminderRepository.js';
+import { SettingsRepository } from '../../repositories/SettingsRepository.js';
+import { TagRepository } from '../../repositories/TagRepository.js';
 import { validateCreate, validateUpdate, ValidationError } from '../../domain/task-validation.js';
 import { nextOccurrence } from '../../domain/recurrence.js';
 import { wouldCreateCycle } from '../../domain/dependency-check.js';
@@ -30,15 +32,21 @@ export class TaskService {
   private taskRepo: TaskRepository;
   private identityRepo: IdentityRepository;
   private reminderRepo: ReminderRepository;
+  private settingsRepo: SettingsRepository;
+  private tagRepo: TagRepository;
 
   constructor(
     taskRepo?: TaskRepository,
     identityRepo?: IdentityRepository,
-    reminderRepo?: ReminderRepository
+    reminderRepo?: ReminderRepository,
+    settingsRepo?: SettingsRepository,
+    tagRepo?: TagRepository
   ) {
     this.taskRepo = taskRepo ?? new TaskRepository();
     this.identityRepo = identityRepo ?? new IdentityRepository();
     this.reminderRepo = reminderRepo ?? new ReminderRepository();
+    this.settingsRepo = settingsRepo ?? new SettingsRepository();
+    this.tagRepo = tagRepo ?? new TagRepository();
   }
 
   public getAll(): Task[] {
@@ -97,6 +105,20 @@ export class TaskService {
       notes: sanitizedNotes,
       assignee_device_id: identity.id,
     });
+
+    // Auto-tag rules: if list_id is assigned, check settings 'auto_tag_rules'
+    if (task.list_id) {
+      try {
+        const rules = this.settingsRepo.get<Record<string, string[]>>('auto_tag_rules');
+        if (rules && rules[task.list_id] && Array.isArray(rules[task.list_id])) {
+          for (const tagId of rules[task.list_id]) {
+            this.tagRepo.addTagToTask(task.id, tagId);
+          }
+        }
+      } catch {
+        // Auto-tag rule application is non-blocking
+      }
+    }
 
     // Notify worker thread to index in background
     workerManager.send('INDEX_TASK', { id: task.id, title: task.title, notes: task.notes }).catch(() => {

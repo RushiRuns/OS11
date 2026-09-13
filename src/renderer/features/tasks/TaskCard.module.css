@@ -6,7 +6,7 @@
   min-height: var(--task-height-comfortable, 44px);
   background: var(--bg-surface, #0f172a);
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  border-left: 3px solid transparent;
+  border-left: var(--priority-border-width, 2.5px) solid transparent;
   border-radius: var(--radius-md, 8px);
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
@@ -24,21 +24,21 @@
   border-color: var(--color-accent-blue, #3b82f6);
 }
 
-/* Priority Left Borders */
+/* Priority Left Borders (FEEL UI: border color only, no badge or icon) */
 .priority1 {
-  border-left-color: var(--priority-1, #3b82f6);
+  border-left-color: var(--priority-low, #27AE60);
 }
 
 .priority2 {
-  border-left-color: var(--priority-2, #eab308);
+  border-left-color: var(--priority-medium, #F39C12);
 }
 
 .priority3 {
-  border-left-color: var(--priority-3, #f97316);
+  border-left-color: var(--priority-high, #E74C3C);
 }
 
 .priority4 {
-  border-left-color: var(--priority-4, #ef4444);
+  border-left-color: var(--priority-critical, #C0392B);
 }
 
 .priorityCriticalPulse {
@@ -47,10 +47,10 @@
 
 @keyframes border-pulse {
   0%, 100% {
-    border-left-color: var(--priority-4, #ef4444);
+    border-left-color: var(--priority-critical, #C0392B);
   }
   50% {
-    border-left-color: rgba(239, 68, 68, 0.3);
+    border-left-color: rgba(192, 57, 43, 0.25);
   }
 }
 
@@ -120,6 +120,32 @@
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;
   border-color: rgba(239, 68, 68, 0.3);
+}
+
+.dueDateOverdueCritical {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--color-danger, #ef4444) !important;
+  border-color: var(--color-danger, #ef4444);
+  font-weight: var(--weight-medium, 500);
+}
+
+.tagDotPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 11px;
+  color: var(--text-secondary, #cbd5e1);
+  background: var(--bg-surface-raised, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tagDotPill:hover {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #ffffff);
 }
 
 .tagDot {

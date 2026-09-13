@@ -92,6 +92,11 @@ System-wide hierarchical tags.
 - `tags:create` — Create a new tag (name, color, parent_id).
 - `tags:update` — Update tag name or color.
 - `tags:delete` — Delete tag and detach from associated tasks.
+- `tags:get-for-task` — Retrieve all tags associated with a specific task ID.
+- `tags:add-to-task` — Associate a tag with a task.
+- `tags:remove-from-task` — Disassociate a tag from a task.
+- `tags:get-tasks-for-tag` — Retrieve all tasks labeled with a specific tag ID.
+- `tags:merge` — Merge source tag into target tag and batch update associations.
 
 ### REMINDERS
 Timed alerts and scheduled alarms.
@@ -145,6 +150,8 @@ FTS5 full-text search engine queries offloaded to worker thread.
 In-app notification center and native desktop alerts.
 - `notifications:get-history` — Fetch historical notification log.
 - `notifications:clear` — Clear notification log.
+- `notifications:mark-read` — Mark a specific notification as read.
+- `notifications:mark-all-read` — Mark all unread notifications as read.
 - `notifications:send-native` — Trigger an OS native notification alert.
 
 ### IDENTITY

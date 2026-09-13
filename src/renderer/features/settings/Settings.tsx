@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../../components/Button/Button.js';
+import { TagManager } from '../tags/TagManager.js';
 
 export function Settings(): React.ReactElement {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -90,6 +91,9 @@ export function Settings(): React.ReactElement {
             HEALTHY
           </span>
         </div>
+
+        {/* Phase 9: Tag Management & Auto-Tagging */}
+        <TagManager />
       </section>
     </div>
   );

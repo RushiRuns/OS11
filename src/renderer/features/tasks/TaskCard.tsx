@@ -3,6 +3,9 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
+import { useTagStore } from '../../stores/tagStore.js';
+import { useAppStore } from '../../stores/app-store.js';
+import { TagPicker } from '../tags/TagPicker.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './TaskCard.module.css';
 
@@ -38,10 +41,18 @@ export const TaskCard = memo(function TaskCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [fileOver, setFileOver] = useState(false);
+  const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { selectedIds, isMultiSelectActive, toggleSelect, selectRange } = useSelectionStore();
   const isMultiSelected = selectedIds.has(task.id);
+
+  const taskTags = useTagStore((state) => state.getTagsForTask(task.id));
+  const loadTagsForTask = useTagStore((state) => state.loadTagsForTask);
+
+  useEffect(() => {
+    loadTagsForTask(task.id);
+  }, [task.id, loadTagsForTask]);
 
   const {
     attributes,
@@ -78,6 +89,12 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsTagPickerOpen(true);
+      return;
+    }
     if (e.key === 'Enter') {
       handleSaveTitle();
     } else if (e.key === 'Escape') {
@@ -123,9 +140,11 @@ export const TaskCard = memo(function TaskCard({
 
   // Check if overdue
   const isOverdue =
-    task.due_date &&
+    Boolean(task.due_date) &&
     task.is_completed === 0 &&
-    new Date(task.due_date).getTime() < new Date().setHours(0, 0, 0, 0);
+    new Date(task.due_date!).getTime() < new Date().setHours(0, 0, 0, 0);
+
+  const isOverdueAndCritical = isOverdue && task.priority >= 3;
 
   return (
     <div
@@ -240,12 +259,35 @@ export const TaskCard = memo(function TaskCard({
         {task.due_date && (
           <span
             className={`${styles.dueDateChip} ${
-              isOverdue ? styles.dueDateOverdue : ''
+              isOverdueAndCritical
+                ? styles.dueDateOverdueCritical
+                : isOverdue
+                ? styles.dueDateOverdue
+                : ''
             }`}
           >
             {task.due_date}
           </span>
         )}
+
+        {/* Tag Pills */}
+        {taskTags.map((tag) => (
+          <span
+            key={tag.id}
+            className={styles.tagDotPill}
+            onClick={(e) => {
+              e.stopPropagation();
+              useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+            }}
+            title={`Tag: #${tag.name}`}
+          >
+            <span
+              className={styles.tagDot}
+              style={{ background: tag.color ?? 'var(--tag-gray)' }}
+            />
+            <span>#{tag.name}</span>
+          </span>
+        ))}
 
         {task.pomodoro_count > 0 && (
           <span className={styles.badgePill} title="Completed Pomodoro Sessions">
@@ -262,6 +304,19 @@ export const TaskCard = memo(function TaskCard({
 
       {/* Layer 3: Action Buttons */}
       <div className={styles.actionsRow} onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsTagPickerOpen(true);
+          }}
+          title="Tags (Ctrl+T)"
+          aria-label="Manage Tags"
+        >
+          🏷️
+        </button>
+
         <button
           type="button"
           className={`${styles.iconButton} ${
@@ -294,6 +349,14 @@ export const TaskCard = memo(function TaskCard({
           ✕
         </button>
       </div>
+
+      {isTagPickerOpen && (
+        <TagPicker
+          taskId={task.id}
+          selectedTagIds={taskTags.map((t) => t.id)}
+          onClose={() => setIsTagPickerOpen(false)}
+        />
+      )}
     </div>
   );
 });

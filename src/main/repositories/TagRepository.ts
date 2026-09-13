@@ -105,6 +105,28 @@ export class TagRepository extends BaseRepository {
     `);
     return stmt.all(tagId) as Task[];
   }
+
+  public merge(sourceTagId: string, targetTagId: string): void {
+    if (sourceTagId === targetTagId) return;
+    const runInTransaction = this.db.transaction(() => {
+      this.db
+        .prepare(`
+          INSERT OR IGNORE INTO task_tags (task_id, tag_id)
+          SELECT task_id, ? FROM task_tags WHERE tag_id = ?
+        `)
+        .run(targetTagId, sourceTagId);
+
+      this.db
+        .prepare(`DELETE FROM task_tags WHERE tag_id = ?`)
+        .run(sourceTagId);
+
+      this.db
+        .prepare(`DELETE FROM tags WHERE id = ?`)
+        .run(sourceTagId);
+    });
+
+    runInTransaction();
+  }
 }
 
 export default TagRepository;

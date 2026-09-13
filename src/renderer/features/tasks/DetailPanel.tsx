@@ -4,6 +4,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import DOMPurify from 'dompurify';
 import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
+import { useTagStore } from '../../stores/tagStore.js';
+import { TagPicker } from '../tags/TagPicker.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import type { Task } from '@shared/types/task.js';
@@ -20,8 +22,11 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
 
   const subtasks = useSubtasks(task?.id ?? '');
+  const taskTags = useTagStore((state) => (task ? state.getTagsForTask(task.id) : []));
+  const { loadTagsForTask, removeTagFromTask } = useTagStore();
 
   // TipTap Rich Text Editor for Notes
   const editor = useEditor({
@@ -41,11 +46,12 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   useEffect(() => {
     if (task) {
       setTitle(task.title);
+      loadTagsForTask(task.id);
       if (editor && editor.getHTML() !== (task.notes ?? '')) {
         editor.commands.setContent(task.notes ?? '');
       }
     }
-  }, [task, editor]);
+  }, [task, editor, loadTagsForTask]);
 
   // Close panel on Escape
   useEffect(() => {
@@ -198,6 +204,62 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
               </button>
             </div>
           </div>
+
+          {/* Tags */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Tags</span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {taskTags.map((tag) => (
+                <span
+                  key={tag.id}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    padding: '2px 6px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--bg-surface-hover, rgba(255, 255, 255, 0.08))',
+                    border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))',
+                    color: 'var(--text-secondary, #cbd5e1)',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: tag.color ?? 'var(--tag-gray)',
+                    }}
+                  />
+                  <span>#{tag.name}</span>
+                  <button
+                    type="button"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: 'var(--text-tertiary, #94a3b8)',
+                      fontSize: '12px',
+                      lineHeight: 1,
+                    }}
+                    onClick={() => removeTagFromTask(task.id, tag.id)}
+                    title="Remove tag"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                className={styles.metaBtn}
+                onClick={() => setIsTagPickerOpen(true)}
+              >
+                + Tag
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Subtasks Section */}
@@ -244,6 +306,14 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           </div>
         </div>
       </div>
+
+      {isTagPickerOpen && task && (
+        <TagPicker
+          taskId={task.id}
+          selectedTagIds={taskTags.map((t) => t.id)}
+          onClose={() => setIsTagPickerOpen(false)}
+        />
+      )}
     </motion.aside>
   );
 }
