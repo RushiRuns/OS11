@@ -65,11 +65,14 @@
   --color-danger-muted:    rgba(231,76,60,0.12);
   --color-info:            #3498DB;
   --color-info-muted:      rgba(52,152,219,0.12);
+  --color-star:            #F4B942;   /* Star / importance flag — never accent or danger */
 
   /* ----------------------------------------------------------
      PRIORITY — shown as left-border color only, never a badge.
      Critical additionally gets a pulsing animation.
+     Border width is always 2.5px (--priority-border-width).
      ---------------------------------------------------------- */
+  --priority-border-width: 2.5px;
   --priority-none:     transparent;
   --priority-low:      #27AE60;
   --priority-medium:   #F39C12;
@@ -198,6 +201,12 @@
   --titlebar-height:      28px;  /* Electron custom titlebar */
   --toolbar-height:       52px;
   --quick-add-height:     52px;
+
+  /* Custom titlebar window-control button colors
+     (used exclusively by the Titlebar component) */
+  --titlebar-close:   #FF5F57;   /* Close — macOS red / Windows ✕ */
+  --titlebar-min:     #FFBD2E;   /* Minimize */
+  --titlebar-max:     #28C840;   /* Maximize */
 
   /* Task item heights (three density modes) */
   --task-height-comfortable: 44px;
@@ -387,6 +396,23 @@
 
 .density-compact { --task-height: var(--task-height-compact); }
 .density-cozy    { --task-height: var(--task-height-cozy);    }
+
+
+/* ============================================================
+   PRIORITY ANIMATIONS
+   Critical priority tasks pulse their left border.
+   Apply .priority-critical-pulse to any task element with
+   --priority-critical border.
+   ============================================================ */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.priority-critical-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
 
 
 /* ============================================================

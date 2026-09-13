@@ -6,51 +6,7 @@
   background-color: var(--surface-base);
   color: var(--text-primary);
   overflow: hidden;
-}
-
-.titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 38px;
-  padding: 0 16px;
-  background-color: var(--surface-sidebar);
-  border-bottom: 1px solid var(--border-subtle);
-  -webkit-app-region: drag;
-  user-select: none;
-}
-
-.titlebarTitle {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
-}
-
-.windowControls {
-  display: flex;
-  gap: 6px;
-  -webkit-app-region: no-drag;
-}
-
-.windowButton {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 0.75rem;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.windowButton:hover {
-  background-color: var(--surface-hover);
-  color: var(--text-primary);
+  font-family: var(--font-body);
 }
 
 .mainContent {
@@ -60,30 +16,32 @@
 }
 
 .sidebar {
-  width: 230px;
+  width: var(--sidebar-width);
   background-color: var(--surface-sidebar);
   border-right: 1px solid var(--border-subtle);
-  padding: 16px 12px;
+  padding: var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--text-secondary);
   cursor: pointer;
   background: transparent;
   border: none;
   width: 100%;
   text-align: left;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .navItem:hover {
@@ -94,14 +52,14 @@
 .navItemActive {
   background-color: var(--surface-selected);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .contentArea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 32px 40px;
+  padding: var(--space-8) var(--space-10);
   overflow-y: auto;
   background-color: var(--surface-base);
 }
@@ -110,63 +68,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .heading {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
-  letter-spacing: -0.02em;
-}
-
-.quickAddRow {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.input {
-  flex: 1;
-  background-color: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
-}
-
-.input::placeholder {
-  color: var(--text-placeholder);
-}
-
-.addButton {
-  background-color: var(--accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 0 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 150ms ease;
-}
-
-.addButton:hover {
-  background-color: var(--accent-hover);
+  letter-spacing: var(--tracking-tight);
 }
 
 .taskList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .taskCard {
@@ -175,43 +90,50 @@
   justify-content: space-between;
   background-color: var(--surface-raised);
   border: 1px solid var(--border-subtle);
+  border-left: var(--priority-border-width) solid var(--priority-none);
   border-radius: var(--radius-sm);
-  padding: 10px 16px;
-  transition: border-color 150ms ease;
+  padding: var(--space-2) var(--space-4);
+  min-height: var(--task-height);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), opacity var(--transition-fast);
 }
 
 .taskCard:hover {
   border-color: var(--border-default);
+  background-color: var(--surface-hover);
+}
+
+.priorityLow {
+  border-left-color: var(--priority-low);
+}
+
+.priorityMedium {
+  border-left-color: var(--priority-medium);
+}
+
+.priorityHigh {
+  border-left-color: var(--priority-high);
+}
+
+.priorityCritical {
+  border-left-color: var(--priority-critical);
+}
+
+.priorityCriticalPulse {
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .taskLeft {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.checkbox {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--text-tertiary);
-  cursor: pointer;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-  font-size: 0.75rem;
-  transition: border-color 120ms ease;
-}
-
-.checkbox:hover {
-  border-color: var(--accent);
+  gap: var(--space-3);
+  flex: 1;
 }
 
 .taskTitle {
-  font-size: 0.925rem;
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
   color: var(--text-primary);
+  transition: color var(--transition-fast);
 }
 
 .taskTitleCompleted {
@@ -219,14 +141,25 @@
   color: var(--text-tertiary);
 }
 
+.starIcon {
+  color: var(--color-star);
+  font-size: var(--text-sm);
+  display: inline-flex;
+  align-items: center;
+}
+
 .deleteButton {
   background: transparent;
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
   border-radius: var(--radius-sm);
-  transition: color 150ms ease;
+  font-size: var(--text-sm);
+  transition: color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .deleteButton:hover {
@@ -238,7 +171,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 0;
+  padding: var(--space-12) 0;
   color: var(--text-tertiary);
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }

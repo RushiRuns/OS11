@@ -70,19 +70,52 @@ Before adding any new package:
 - Redux/RTK — too much boilerplate, overpowered for this use case.
 - React Context for global state — known re-render performance problem at scale.
 
+### Radix UI (via `shadcn/ui` scaffold)
+**Does:** Headless, fully accessible UI primitives. Installed individually from `@radix-ui/*`. OS11 owns 100% of the styling — Radix provides only the behaviour and accessibility tree.
+**Why:** Popovers, dropdowns, dialogs, and tooltips require WAI-ARIA semantics, keyboard navigation, and focus trapping that are non-trivial to build correctly from scratch. Radix handles this without imposing any visual opinions.
+**Initialised with:** `npx shadcn@latest init` — generates a clean scaffold; only the primitives listed below are adopted. The `shadcn` component code is ejected into `src/renderer/components/` and styled with CSS Modules + tokens, not Tailwind.
+**Approved Radix primitives and their OS11 mapping:**
+
+| Radix primitive | OS11 feature |
+|---|---|
+| `@radix-ui/react-dropdown-menu` | Right-click task context menus |
+| `@radix-ui/react-popover` | Date picker, tag picker, priority picker (inline) |
+| `@radix-ui/react-dialog` | Delete confirmation dialogs, Settings modal |
+| `@radix-ui/react-collapsible` | Sidebar section collapse / expand |
+| `@radix-ui/react-scroll-area` | Task list and sidebar overflow scrolling |
+| `@radix-ui/react-tooltip` | Keyboard shortcut hints on hover / focus-visible |
+
+**Styling rule:** No Radix primitive ships with inline styles or a className that isn't a CSS Module reference to a token. If a Radix component requires a Portal, the portal root targets `#radix-portal` in `index.html`.
+**Banned alternatives:**
+- Headless UI — smaller primitive set; missing Popover and ScrollArea equivalents.
+- MUI / Ant Design / Chakra UI — pre-styled; conflicts with the token-based styling system and adds significant bundle weight. See Banned Packages table.
+
 ---
 
 ## Animation
 
 ### `framer-motion` (11.x)
-**Does:** Production-grade animation library for React. Handles layout animations, gesture animations, shared element transitions, drag overlays, and mount/unmount motion.
-**Why:** OS11's FEEL UI requires motion that communicates state without feeling heavy. Framer Motion's `AnimatePresence` handles task card mount/unmount, panel slide-in/out, and list reorder animations. Its `layoutId` prop enables shared element transitions (e.g., a task card expanding into the detail panel). All of this is achievable in pure CSS, but Framer Motion makes it maintainable and correct across browsers without fighting CSS quirks.
+**Does:** Production-grade animation library for React. Spring physics, layout animations, `AnimatePresence` mount/unmount, and shared element transitions via `layoutId`.
+**Why:** OS11's FEEL UI requires motion that communicates state without feeling heavy. All of this is achievable in pure CSS, but Framer Motion makes it maintainable and correct across browsers without fighting CSS quirks.
 **Integration with @dnd-kit:** Framer Motion handles the *visual* animation of items during drag (smooth movement, spring physics). `@dnd-kit` handles the *logical* drag detection and drop. They are used together — @dnd-kit owns the interaction; Framer Motion owns the look.
 **Performance note:** Framer Motion uses the Web Animations API and GPU-composited properties (`transform`, `opacity`) by default. It does not trigger layout reflows on animated elements. `reduce_motion` in the settings table maps to `useReducedMotion()` hook — animations are replaced with instant transitions when enabled.
-**Bundle impact:** ~50KB gzipped. Loaded as part of the initial renderer bundle since animations are on the critical path (task list, panel, sidebar all animate on load).
+**Bundle impact:** ~50KB gzipped. Loaded as part of the initial renderer bundle since animations are on the critical path.
+
+**Strict use restriction — Framer Motion is permitted at exactly 4 sites. Every other animation uses CSS transitions via tokens:**
+
+| # | Feature | Motion type |
+|---|---|---|
+| 1 | **Checkbox completion** | Spring bounce (`--ease-spring`) + line-through reveal |
+| 2 | **Detail panel** | Spring slide-in from right (`x: '100%' → 0`) |
+| 3 | **Task list reorder** | `layoutId` layout animation during drag-and-drop |
+| 4 | **Quick-add bar** | Scale + opacity appear / dismiss (`scale: 0.96 → 1`) |
+
+If a Preact migration occurs in the future, `motion` (`motion.dev`) is the direct replacement — same API, framework-agnostic.
+
 **Banned alternatives:**
 - React Spring — comparable capability, less ergonomic API for layout animations.
-- CSS-only transitions for interactive animations — maintainable for simple hover states (keep these in CSS Modules), but not for layout animations, shared transitions, or gesture-driven motion.
+- GSAP — overkill for the 4 use-sites; large bundle; licence cost for some plugins.
+- CSS-only transitions for the 4 Framer Motion use-sites — achievable but not maintainable for spring physics and layout animations.
 - `animate.css` — static class-based; no programmatic control.
 
 ---
@@ -239,6 +272,9 @@ Before adding any new package:
 | `sql.js` | In-memory only, not suitable for production data. |
 | Any CSS-in-JS runtime (`styled-components`, `emotion`, `stitches`) | CSS Modules + CSS Variables is the styling system. Runtime CSS-in-JS adds overhead that conflicts with the performance requirement. |
 | `animate.css` | No programmatic control; Framer Motion covers all animation needs. |
+| `gsap` (GreenSock) | Overkill for OS11's 4 Framer Motion use-sites; commercial licence required for some plugins. |
+| `@mui/material` / `@ant-design/icons` / `@chakra-ui/react` | Pre-styled component systems that conflict with the token-based CSS Modules approach. Bundle weight unjustifiable. Radix UI primitives (via shadcn scaffold) cover all accessibility needs without visual opinions. |
+| `react-spring` | Framer Motion is the chosen animation library. Do not introduce a second pattern. |
 
 ---
 

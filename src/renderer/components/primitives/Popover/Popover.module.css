@@ -1,0 +1,45 @@
+.content {
+  background-color: var(--surface-overlay);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-subtle);
+  z-index: var(--z-dropdown);
+  min-width: 200px;
+  animation-duration: var(--motion-fast);
+  animation-timing-function: var(--ease-out);
+}
+
+.content[data-state="open"] {
+  animation-name: slideDownAndFade;
+}
+
+.content[data-state="closed"] {
+  animation-name: slideUpAndFade;
+}
+
+.arrow {
+  fill: var(--surface-overlay);
+}
+
+@keyframes slideDownAndFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideUpAndFade {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}

@@ -65,6 +65,7 @@
 - [ ] `docs/decisions/ADR-0006-css-modules-over-css-in-js.md` — why runtime CSS-in-JS is banned; tokens approach
 - [ ] `docs/decisions/ADR-0007-fractional-indexing.md` — why `sort_order REAL` with fractional indexing
 - [ ] `docs/decisions/ADR-0008-fts5-full-text-search.md` — why FTS5 virtual table; worker thread placement
+- [ ] `docs/decisions/ADR-0009-radix-ui-headless-primitives.md` — why Radix UI over building custom focus-traps; why GSAP/MUI/AntD/Chakra are banned; the 4-site Framer Motion restriction rationale
 
 ### Project Setup
 
@@ -140,6 +141,12 @@
   - `@font-face` for Inter (300, 400, 500, 600, 700) — self-hosted, no Google Fonts network dependency
   - `@font-face` for JetBrains Mono (400, 500) — for notes editor code blocks
   - Import after `tokens.css` in `main.tsx`
+- [ ] Initialise Radix UI / shadcn scaffold
+  - Run `npx shadcn@latest init` — select **no** to Tailwind CSS when prompted; choose CSS Variables
+  - Eject generated component code into `src/renderer/components/` (do not leave it in `components/ui/`)
+  - Install only the 6 approved primitives: `@radix-ui/react-dropdown-menu`, `@radix-ui/react-popover`, `@radix-ui/react-dialog`, `@radix-ui/react-collapsible`, `@radix-ui/react-scroll-area`, `@radix-ui/react-tooltip`
+  - Add `<div id="radix-portal"></div>` to `index.html` for portal targets
+  - Verify no Tailwind classes appear anywhere in ejected component files
 
 ### Custom Electron Titlebar
 
@@ -160,26 +167,33 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
 - [ ] Create `src/renderer/components/Checkbox/Checkbox.tsx` + `.module.css`
   - Size: `var(--checkbox-size)` (20px), border: `var(--checkbox-border-width)` (1.5px)
   - Resting: `var(--border-default)` border, transparent fill
-  - Checked: `var(--accent)` fill, white check icon, spring animation via `var(--ease-spring)`
-  - Reduced motion: instant fill, no spring (reads `useMotionConfig()` — built in Phase 7)
+  - Checked: `var(--accent)` fill, white check icon, **Framer Motion spring animation** (permitted use-site #1)
+    - `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`
+  - Project-colored variants: border and fill inherit the task's project color token when a project is assigned
+  - Reduced motion: instant fill, no spring (reads `useReducedMotion()`)
 - [ ] Create `src/renderer/components/Button/Button.tsx` + `.module.css`
-  - Variants: `primary` (accent fill), `secondary` (border), `ghost` (transparent), `danger` (danger color)
-  - All sizes use `var(--space-*)` tokens for padding; `var(--radius-sm)` for border radius
+  - **Three semantic variants** (per Feature Spec §2.3):
+    - `primary` — `--accent` fill, `--text-on-accent` text
+    - `ghost` — transparent bg, `--text-primary` text; `--border-default` border on hover
+    - `danger` — `--color-danger` fill on hover; ghost-styled at rest
+  - Size modifier `sm`: `padding: var(--space-1) var(--space-3)`, `font-size: var(--text-sm)`
+  - All padding uses `var(--space-*)` tokens; border radius is `var(--radius-sm)`
   - Focus ring: `var(--shadow-focus)` — visible on keyboard navigation only (`focus-visible`)
 - [ ] Create `src/renderer/components/Input/Input.tsx` + `.module.css`
-  - Border: `var(--border-default)`, radius: `var(--radius-md)`
-  - Focus: `var(--accent-border)` border
-  - Error: `var(--color-danger)` border + error message below
+  - Border: `var(--border-default)`, radius: `var(--radius-md)`, padding: `var(--space-2) var(--space-3)`
+  - Focus: `var(--accent-border)` border + `var(--shadow-focus)` ring
+  - Error: `var(--color-danger)` border + error message below in `--text-xs`
   - Placeholder: `var(--text-placeholder)` color
 - [ ] Create `src/renderer/components/Popover/Popover.tsx` + `.module.css`
+  - **Wraps `@radix-ui/react-popover`** — do not build a custom focus-trap
   - Background: `var(--surface-overlay)`, shadow: `var(--shadow-md)`, radius: `var(--radius-md)`
   - Z-index: `var(--z-dropdown)` (100)
-  - Framer Motion: `AnimatePresence` + `opacity` + `scaleY` from origin — `< 200ms`
+  - CSS transition: `opacity` + `scaleY` from origin — `var(--transition-fast)` — not Framer Motion
 - [ ] Create `src/renderer/components/Toast/Toast.tsx` + `.module.css`
   - Z-index: `var(--z-notification)` (500)
   - Variants: default, success, error, undo
   - "Undo" variant has an action button inline
-  - Auto-dismiss after 5 seconds; Framer Motion slide-up on mount, slide-down on dismiss
+  - Auto-dismiss after 5 seconds; CSS slide-up on mount, slide-down on dismiss (not Framer Motion)
 - [ ] Create `src/renderer/components/EmptyState/EmptyState.tsx` + `.module.css`
   - Every feature has an empty state — build it once here
   - Props: `icon`, `title`, `description`, `action?`
@@ -188,9 +202,14 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
   - Minimal CSS spinner — `var(--accent)` color
   - Respects `prefers-reduced-motion`: static indicator when reduced motion is on
 - [ ] Create `src/renderer/components/Tooltip/Tooltip.tsx` + `.module.css`
-  - Shown on `focus-visible` or hover (keyboard shortcut hints)
+  - **Wraps `@radix-ui/react-tooltip`** — provides keyboard shortcut hints on `focus-visible` or hover
   - Z-index: `var(--z-tooltip)` (600)
   - Font: `var(--text-xs)`, `var(--weight-medium)`
+- [ ] Create `src/renderer/components/QuickAdd/QuickAdd.tsx` + `.module.css`
+  - Height: `var(--quick-add-height)` (52px), radius: `var(--radius-xl)`
+  - Layout: circular `+` icon button (left) + `"Add a task…"` text trigger (expands to full input on click)
+  - **Framer Motion** appear/dismiss (permitted use-site #4): `scale: 0.96 → 1`, `opacity: 0 → 1`
+  - Dismisses on `Escape` or click-outside via Radix `FocusScope` / `DismissableLayer`
 
 ### App Layout Shell
 
@@ -206,7 +225,9 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md — inventory all components: Checkbox, Button, Input, Popover, Toast, EmptyState, LoadingSpinner, Tooltip, Titlebar
+- [ ] Update UTILITIES.md — inventory all components: Checkbox, Button, Input, Popover (Radix), Toast, EmptyState, LoadingSpinner, Tooltip (Radix), Titlebar, QuickAdd
+  - Note which components wrap Radix primitives
+  - Note which components use Framer Motion (Checkbox, DetailPanel, TaskList, QuickAdd only)
 - [ ] CHANGELOG_INTERNAL.md: "Phase 1 complete: Token system live, fonts wired, base component library built, app shell."
 - [ ] Commit: `"Phase 1 complete: Design system and base component library"`
 

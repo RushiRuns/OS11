@@ -93,21 +93,58 @@ Layer 3 — Detail panel / expanded state (opened explicitly):
 
 This means a user who only creates simple tasks sees a clean, minimal list. A power user who opens the detail panel finds the full depth. The *same* UI serves both without compromise.
 
-### 2.3 FEEL UI in Practice — Component Examples
+### 2.3 FEEL UI in Practice — Component Specs
 
 **Task Cards**
 - Resting state: title + checkbox. Nothing else unless the task has data to show.
 - Hover state: a single action row fades in below the title (`Edit`, `Move`, `Delete`, `…`).
-- Priority is shown as a subtle left-border color, not a separate badge.
-- Tags show as small colored dots, not full-width chips, unless the card is expanded.
+- **Priority:** rendered as a `2.5px solid` left border in the priority color. Never a badge, icon, or separate column. Critical priority tasks additionally get a `pulse` animation (1.5s ease-in-out, alternating opacity 1 → 0.6).
+- **Tags:** three display forms depending on context:
+  - **Dot form** — 18px circle (`--radius-full`): resting state on any task card.
+  - **Chip form** — rounded pill with label (`--text-sm`, `--radius-full`): hover state on cards and in the detail panel.
+  - **Project dot** — 10px circle + text label: sidebar project list only.
+- **Star / Importance:** `--color-star` (`#F4B942`) fill. Never accent-colored or red.
+- **Subtask progress:** shown as `◎ N/M` when subtasks exist; hidden when there are none.
+- **Overdue dates:** date chip text and background tint switch to `--color-danger`.
+- **Completed tasks:** title gets `text-decoration: line-through` in `--text-tertiary` color.
+
+**Checkbox**
+- 20px circle (`--checkbox-size`), `1.5px` border (`--checkbox-border-width`).
+- Resting: `--border-default` border, transparent fill.
+- Checked: `--accent` fill, white checkmark, spring bounce animation via `--ease-spring` (Framer Motion).
+- Project-colored variants: checkbox border and fill match the task's project color when assigned.
+- Reduced motion: instant fill, no spring.
+
+**Buttons — three semantic variants plus a size modifier:**
+- `.btn-primary` — accent fill, white text, `--radius-sm` border radius.
+- `.btn-ghost` — transparent background, `--text-primary` text; border appears on hover.
+- `.btn-danger` — `--color-danger` fill on hover; resting state is ghost-styled.
+- `.btn-sm` modifier — `padding: var(--space-1) var(--space-3)`, `font-size: var(--text-sm)`.
+- Focus ring: `var(--shadow-focus)` — visible only on `focus-visible`.
+
+**Quick-Add Bar**
+- Fixed height `var(--quick-add-height)` (52px), `--radius-xl` radius.
+- Contains: a circular `+` icon button on the left, and a text trigger (`"Add a task…"`) that expands into a full input on click.
+- Appears via Framer Motion scale + opacity (`scale: 0.96 → 1`, `opacity: 0 → 1`).
+- Dismisses on `Escape` or click-outside.
+
+**Inputs**
+- Border: `var(--border-default)`, radius: `var(--radius-md)`, padding: `var(--space-2) var(--space-3)`.
+- Focus: `var(--accent-border)` border + `var(--shadow-focus)` ring.
+- Error: `var(--color-danger)` border + error message below in `--text-xs`.
+- Placeholder: `var(--text-placeholder)` color.
 
 **Sidebar**
 - List names are shown. Icons optional. Unread/pending counts shown only when non-zero.
+- **Core smart views** (always present, non-removable):
+  - ☀️ Today, 📅 Upcoming, 📋 Anytime, 🌙 Someday, ⭐ Important
+  - Counts appear as small rounded badges only when non-zero.
+- Projects listed below smart views with a 10px colored project dot + name + optional task count.
 - Smart lists (My Day, Important, Planned) are grouped under a single collapsible header — not always expanded by default.
 - Disabled modules are not shown at all in the sidebar — they do not exist in the UI until enabled.
 
 **Detail Panel**
-- Opens as a right-side drawer, not a modal, so the task list remains visible.
+- Opens as a right-side drawer (`var(--detail-panel-width)` = 320px), not a modal, so the task list remains visible.
 - Sections (Notes, Subtasks, Attachments, Reminders) are collapsed by default; each expands individually when the user needs it.
 - Empty sections display no placeholder text — they simply don't exist visually until clicked.
 
@@ -117,17 +154,21 @@ This means a user who only creates simple tasks sees a clean, minimal list. A po
 
 ### 2.4 Motion & Animation
 
-- All transitions are **under 200ms**, eased with `ease-out` curves. Nothing lingers.
-- Animations are powered by **Framer Motion** — GPU-composited (`transform`, `opacity` only), never triggering layout reflows.
+- All CSS transitions are **under 200ms**, eased with `ease-out` curves (`--ease-out`). Nothing lingers.
+- **Framer Motion is restricted to 4 specific use-sites** (see ARCHITECTURE.md §UI Component Architecture). Everything else — hover states, sidebar selection, button presses, popover fades — uses CSS `transition` via token shorthands.
+  1. Checkbox completion — spring bounce + line-through.
+  2. Detail panel open/close — spring slide from right.
+  3. Task list reorder — `layoutId` layout animation.
+  4. Quick-add bar appear/dismiss — scale + opacity.
 - Animations communicate state changes (task completion, drag-drop landing, panel open/close) — they are never decorative.
-- Reduced motion mode (Settings → Accessibility or OS preference) disables all transitions while maintaining layout shifts for feedback. Every animated component respects this setting via a global `useMotionConfig()` hook.
+- Reduced motion mode (Settings → Accessibility or OS `prefers-reduced-motion`) disables all Framer Motion transitions; instant layout changes remain for feedback.
 - The "spacey" feel comes from **timing** as much as layout: things appear and disappear decisively, never sluggishly.
 
 ### 2.5 Typography & Density
 
-- Task titles use a medium-weight font. Supporting metadata (dates, tags) uses a lighter weight and smaller size — visually subordinate.
-- Three density modes: **Comfortable** (default), **Compact** (power users), **Cozy** (for focused/single-task views).
-- Line height is generous enough that a full list never feels like a wall of text.
+- Task titles use `--weight-medium`. Supporting metadata (dates, tags) uses `--weight-regular` and `--text-sm` — visually subordinate.
+- Three density modes: **Comfortable** (default, 44px task height), **Compact** (34px), **Cozy** (56px). Toggled via `.density-compact` / `.density-cozy` class on `<html>`.
+- Line height (`--leading-normal`, 1.5) is generous enough that a full list never feels like a wall of text.
 
 ---
 
@@ -913,8 +954,9 @@ Features ported and improved from Apple Reminders, with special attention to its
 | **Desktop Framework** | Electron (latest stable) |
 | **Bundler** | Vite |
 | **Frontend** | React 18 |
-| **Animation** | Framer Motion |
+| **Animation** | Framer Motion (4 use-sites only; see ARCHITECTURE.md) |
 | **Styling** | CSS Modules + CSS Variables (zero runtime CSS-in-JS) |
+| **Headless UI Primitives** | Radix UI (via shadcn/ui scaffold) — Dropdown, Popover, Dialog, Collapsible, ScrollArea, Tooltip |
 | **Local Database** | SQLite via `better-sqlite3` |
 | **Sync — Phase 2** | WebSocket (`ws`) + mDNS (`bonjour-service`) — local network, no cloud |
 | **State Management** | Zustand |

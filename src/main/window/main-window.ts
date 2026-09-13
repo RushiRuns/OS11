@@ -15,6 +15,8 @@ export function createMainWindow(): BrowserWindow {
     minWidth: APP_DEFAULTS.MIN_WIDTH,
     minHeight: APP_DEFAULTS.MIN_HEIGHT,
     show: false,
+    frame: false,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : undefined,
     backgroundColor: '#0f172a',
     title: APP_DEFAULTS.APP_TITLE,
     autoHideMenuBar: true,

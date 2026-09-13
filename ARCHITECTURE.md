@@ -59,7 +59,7 @@ Owns: IPC handlers, app lifecycle, tray, global shortcuts, notifications, auto-u
 - Does not contain React or any UI code.
 
 ### Renderer Process (`src/renderer/`)
-Owns: All React UI, Zustand stores, CSS, Framer Motion animations, user interaction.
+Owns: All React UI, Zustand stores, CSS, Framer Motion animations (4 permitted use-sites only), Radix UI headless primitives, user interaction.
 - Communicates with Main via `window.electron` (contextBridge-exposed API only).
 - Does not import from `src/main/` or `src/worker/`. Ever.
 - Contains zero business logic. The renderer is a thin view layer.
@@ -182,6 +182,69 @@ Rules:
 
 ---
 
+## UI Component Architecture
+
+### Headless Component Strategy
+
+OS11 uses **Radix UI primitives** (installed individually from `@radix-ui/*`, scaffolded via `npx shadcn@latest init`) for any component that requires WAI-ARIA semantics, focus trapping, or keyboard navigation. The scaffolded source is ejected into `src/renderer/components/` and styled **exclusively** with CSS Modules + token variables — no Tailwind, no inline styles.
+
+**Approved Radix primitives:**
+
+| Primitive | Component |
+|---|---|
+| `@radix-ui/react-dropdown-menu` | Right-click task context menus |
+| `@radix-ui/react-popover` | Date picker, tag picker, priority picker |
+| `@radix-ui/react-dialog` | Delete confirmations, Settings modal |
+| `@radix-ui/react-collapsible` | Sidebar section collapse / expand |
+| `@radix-ui/react-scroll-area` | Task list and sidebar overflow scrolling |
+| `@radix-ui/react-tooltip` | Keyboard shortcut hint tooltips |
+
+If a Radix component requires a Portal, it targets `#radix-portal` in `index.html`. No new `document.body.appendChild` calls in renderer code.
+
+### Animation Rules
+
+Framer Motion is restricted to **4 use-sites only**. All other motion uses CSS transitions via `--transition-*` and `--ease-*` tokens.
+
+| # | Feature | Permitted motion |
+|---|---|---|
+| 1 | Checkbox completion | Spring bounce (`--ease-spring`) + line-through |
+| 2 | Detail panel open/close | Spring slide-in from right |
+| 3 | Task list reorder | `layoutId` during `@dnd-kit` drag |
+| 4 | Quick-add bar appear/dismiss | Scale + opacity |
+
+**CSS transition rule:** Everything else — hover states, sidebar item selection, button active states, toast appear/dismiss, popover fade — uses `transition: var(--transition-fast)` or `var(--transition-default)` with GPU-composited properties only (`transform`, `opacity`). No JS animation outside the 4 sites above.
+
+**Reduced motion:** Every animated component — CSS or Framer Motion — must respect `prefers-reduced-motion`. Framer Motion components read `useReducedMotion()`; CSS components use the `@media (prefers-reduced-motion: reduce)` block already in `tokens.css`.
+
+### Custom Titlebar
+
+OS11 uses a frameless Electron window (`frame: false`) with a custom React titlebar. The titlebar height is `var(--titlebar-height)` (28px).
+
+**Window control colors** (defined in `tokens.css` and used exclusively by the Titlebar component):
+
+| Token | Value | Button |
+|---|---|---|
+| `--titlebar-close` | `#FF5F57` | Close (macOS traffic light / Windows ✕) |
+| `--titlebar-min` | `#FFBD2E` | Minimize |
+| `--titlebar-max` | `#28C840` | Maximize |
+
+- The drag region uses `-webkit-app-region: drag`. Buttons are `-webkit-app-region: no-drag`.
+- macOS uses `titleBarStyle: 'hiddenInset'` — native traffic lights are positioned in the inset area; the React titlebar renders only app controls and the Always-on-Top pin.
+- Windows and Linux render Close / Minimize / Maximize as custom React buttons wired to `window.electron.invoke(IPC.APP.WINDOW_CONTROL, action)`.
+
+### Component Styling Rules
+
+1. Every component uses only `var(--token)` references. No hardcoded color, size, radius, or font value. Ever.
+2. Priority left-border is **2.5px solid** and applied via `border-left` only — never as a badge, icon, or separate element.
+3. Tag display has three permitted forms:
+   - **Dot** (18px circle, `--radius-full`) — resting state on task cards.
+   - **Chip** (pill with label, `--radius-full`, `--text-sm`) — hover / detail panel state.
+   - **Project dot** (10px circle + text, sidebar list item) — sidebar only.
+4. The star/importance indicator uses `--color-star` (`#F4B942`) and is never red or accent-colored.
+5. Overdue date chips use `--color-danger` for both text and background tint — no custom one-off color.
+
+---
+
 ## State Management Rules
 
 - One Zustand store per feature domain. No cross-store imports.
@@ -251,17 +314,20 @@ high or critical vulnerability ships.
 
 If a proposed implementation violates any of these, it is rejected and redesigned before code is written.
 
-1. React components do not import from repositories or domain modules.
-2. All persistence goes through the repository layer. No `db.prepare()` outside of `src/main/repositories/`.
-3. All dates stored as ISO 8601 strings (`YYYY-MM-DDTHH:mm:ss.sssZ`).
-4. All IPC handlers use `try/catch` and return `{ ok: boolean, data?, error? }`.
-5. State lives in one place per domain. No duplicating state across stores.
-6. No new dependency without a written justification in `DEPENDENCIES.md`.
-7. No new architectural pattern without a decision record in `docs/decisions/ADR-*.md`.
-8. Every schema change requires a migration file.
-9. No feature ships without at least one test.
+ 1. React components do not import from repositories or domain modules.
+ 2. All persistence goes through the repository layer. No `db.prepare()` outside of `src/main/repositories/`.
+ 3. All dates stored as ISO 8601 strings (`YYYY-MM-DDTHH:mm:ss.sssZ`).
+ 4. All IPC handlers use `try/catch` and return `{ ok: boolean, data?, error? }`.
+ 5. State lives in one place per domain. No duplicating state across stores.
+ 6. No new dependency without a written justification in `DEPENDENCIES.md`.
+ 7. No new architectural pattern without a decision record in `docs/decisions/ADR-*.md`.
+ 8. Every schema change requires a migration file.
+ 9. No feature ships without at least one test.
 10. The renderer contains zero business logic. Validation, computation, and data transformation happen in services or domain functions — not in components or stores.
 11. No cloud provider SDK, external auth SDK, or AI/LLM API client is introduced at any point without a formal decision record. This is a hard constraint for Phase 1 and requires explicit founder sign-off for any later phase.
+12. No hardcoded color, size, radius, or font value in any component file. Every visual value comes from a `var(--token)` defined in `tokens.css`.
+13. Framer Motion is used at exactly 4 permitted sites (checkbox, detail panel, list reorder, quick-add bar). Any new use of `framer-motion` outside these sites requires an ADR.
+14. Radix UI primitives are used for all components requiring WAI-ARIA semantics or focus trapping. Do not build a custom focus-trap or keyboard navigation handler from scratch.
 
 ---
 
