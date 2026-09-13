@@ -135,13 +135,13 @@
 ### Token System Wiring
 
 - [x] `src/renderer/styles/tokens.css` — the provided token file is the source of truth
-- [ ] Import `tokens.css` as the first import in `src/renderer/main.tsx`
-- [ ] Verify tokens in both light and dark mode: open a basic page in the app, toggle `data-theme="dark"` on `<html>`, confirm surfaces and text switch
-- [ ] Create `src/renderer/styles/fonts.css`
+- [x] Import `tokens.css` as the first import in `src/renderer/main.tsx`
+- [x] Verify tokens in both light and dark mode: open a basic page in the app, toggle `data-theme="dark"` on `<html>`, confirm surfaces and text switch
+- [x] Create `src/renderer/styles/fonts.css`
   - `@font-face` for Inter (300, 400, 500, 600, 700) — self-hosted, no Google Fonts network dependency
   - `@font-face` for JetBrains Mono (400, 500) — for notes editor code blocks
   - Import after `tokens.css` in `main.tsx`
-- [ ] Initialise Radix UI / shadcn scaffold
+- [x] Initialise Radix UI / shadcn scaffold
   - Run `npx shadcn@latest init` — select **no** to Tailwind CSS when prompted; choose CSS Variables
   - Eject generated component code into `src/renderer/components/` (do not leave it in `components/ui/`)
   - Install only the 6 approved primitives: `@radix-ui/react-dropdown-menu`, `@radix-ui/react-popover`, `@radix-ui/react-dialog`, `@radix-ui/react-collapsible`, `@radix-ui/react-scroll-area`, `@radix-ui/react-tooltip`
@@ -150,11 +150,11 @@
 
 ### Custom Electron Titlebar
 
-- [ ] Create `src/renderer/components/Titlebar/Titlebar.module.css`
+- [x] Create `src/renderer/components/Titlebar/Titlebar.module.css`
   - Height: `var(--titlebar-height)` (28px)
   - `-webkit-app-region: drag` on the drag zone
   - Window control buttons: `no-drag`, no system chrome (frame: false)
-- [ ] Create `src/renderer/components/Titlebar/Titlebar.tsx`
+- [x] Create `src/renderer/components/Titlebar/Titlebar.tsx`
   - Windows: Close / Minimize / Maximize buttons (left or right per OS convention)
   - macOS: Traffic light proxy buttons (native via `titleBarStyle: 'hiddenInset'`)
   - Linux: Minimize / Maximize / Close
@@ -164,14 +164,14 @@
 
 All components use only CSS variable tokens. No hardcoded values. Verified against DONE.md before closing.
 
-- [ ] Create `src/renderer/components/Checkbox/Checkbox.tsx` + `.module.css`
+- [x] Create `src/renderer/components/Checkbox/Checkbox.tsx` + `.module.css`
   - Size: `var(--checkbox-size)` (20px), border: `var(--checkbox-border-width)` (1.5px)
   - Resting: `var(--border-default)` border, transparent fill
   - Checked: `var(--accent)` fill, white check icon, **Framer Motion spring animation** (permitted use-site #1)
     - `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`
   - Project-colored variants: border and fill inherit the task's project color token when a project is assigned
   - Reduced motion: instant fill, no spring (reads `useReducedMotion()`)
-- [ ] Create `src/renderer/components/Button/Button.tsx` + `.module.css`
+- [x] Create `src/renderer/components/Button/Button.tsx` + `.module.css`
   - **Three semantic variants** (per Feature Spec §2.3):
     - `primary` — `--accent` fill, `--text-on-accent` text
     - `ghost` — transparent bg, `--text-primary` text; `--border-default` border on hover
@@ -179,33 +179,33 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
   - Size modifier `sm`: `padding: var(--space-1) var(--space-3)`, `font-size: var(--text-sm)`
   - All padding uses `var(--space-*)` tokens; border radius is `var(--radius-sm)`
   - Focus ring: `var(--shadow-focus)` — visible on keyboard navigation only (`focus-visible`)
-- [ ] Create `src/renderer/components/Input/Input.tsx` + `.module.css`
+- [x] Create `src/renderer/components/Input/Input.tsx` + `.module.css`
   - Border: `var(--border-default)`, radius: `var(--radius-md)`, padding: `var(--space-2) var(--space-3)`
   - Focus: `var(--accent-border)` border + `var(--shadow-focus)` ring
   - Error: `var(--color-danger)` border + error message below in `--text-xs`
   - Placeholder: `var(--text-placeholder)` color
-- [ ] Create `src/renderer/components/Popover/Popover.tsx` + `.module.css`
+- [x] Create `src/renderer/components/Popover/Popover.tsx` + `.module.css`
   - **Wraps `@radix-ui/react-popover`** — do not build a custom focus-trap
   - Background: `var(--surface-overlay)`, shadow: `var(--shadow-md)`, radius: `var(--radius-md)`
   - Z-index: `var(--z-dropdown)` (100)
   - CSS transition: `opacity` + `scaleY` from origin — `var(--transition-fast)` — not Framer Motion
-- [ ] Create `src/renderer/components/Toast/Toast.tsx` + `.module.css`
+- [x] Create `src/renderer/components/Toast/Toast.tsx` + `.module.css`
   - Z-index: `var(--z-notification)` (500)
   - Variants: default, success, error, undo
   - "Undo" variant has an action button inline
   - Auto-dismiss after 5 seconds; CSS slide-up on mount, slide-down on dismiss (not Framer Motion)
-- [ ] Create `src/renderer/components/EmptyState/EmptyState.tsx` + `.module.css`
+- [x] Create `src/renderer/components/EmptyState/EmptyState.tsx` + `.module.css`
   - Every feature has an empty state — build it once here
   - Props: `icon`, `title`, `description`, `action?`
   - Uses `var(--text-secondary)` and `var(--text-tertiary)` for the calm, non-intrusive look
-- [ ] Create `src/renderer/components/LoadingSpinner/LoadingSpinner.tsx` + `.module.css`
+- [x] Create `src/renderer/components/LoadingSpinner/LoadingSpinner.tsx` + `.module.css`
   - Minimal CSS spinner — `var(--accent)` color
   - Respects `prefers-reduced-motion`: static indicator when reduced motion is on
-- [ ] Create `src/renderer/components/Tooltip/Tooltip.tsx` + `.module.css`
+- [x] Create `src/renderer/components/Tooltip/Tooltip.tsx` + `.module.css`
   - **Wraps `@radix-ui/react-tooltip`** — provides keyboard shortcut hints on `focus-visible` or hover
   - Z-index: `var(--z-tooltip)` (600)
   - Font: `var(--text-xs)`, `var(--weight-medium)`
-- [ ] Create `src/renderer/components/QuickAdd/QuickAdd.tsx` + `.module.css`
+- [x] Create `src/renderer/components/QuickAdd/QuickAdd.tsx` + `.module.css`
   - Height: `var(--quick-add-height)` (52px), radius: `var(--radius-xl)`
   - Layout: circular `+` icon button (left) + `"Add a task…"` text trigger (expands to full input on click)
   - **Framer Motion** appear/dismiss (permitted use-site #4): `scale: 0.96 → 1`, `opacity: 0 → 1`
@@ -213,23 +213,23 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
 
 ### App Layout Shell
 
-- [ ] Create `src/renderer/App.tsx`
+- [x] Create `src/renderer/App.tsx`
   - Three-column CSS Grid: Sidebar | TaskList | DetailPanel
   - Lazy imports per PERFORMANCE.md §5 — Dashboard, Agenda, Projects, Settings, Pomodoro all lazy
   - TaskList, Sidebar, DetailPanel always in initial bundle (critical path)
   - `Suspense` fallback: skeleton UI, not a spinner (skeleton matches the layout of real content)
-- [ ] Create `src/renderer/styles/layout.module.css`
+- [x] Create `src/renderer/styles/layout.module.css`
   - Column widths: `var(--sidebar-width)`, fill, `var(--detail-panel-width)`
   - Respect `--sidebar-position` setting (left/right/hidden)
   - Min window width: 600px (sidebar + task list minimum)
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md — inventory all components: Checkbox, Button, Input, Popover (Radix), Toast, EmptyState, LoadingSpinner, Tooltip (Radix), Titlebar, QuickAdd
+- [x] Update UTILITIES.md — inventory all components: Checkbox, Button, Input, Popover (Radix), Toast, EmptyState, LoadingSpinner, Tooltip (Radix), Titlebar, QuickAdd
   - Note which components wrap Radix primitives
   - Note which components use Framer Motion (Checkbox, DetailPanel, TaskList, QuickAdd only)
-- [ ] CHANGELOG_INTERNAL.md: "Phase 1 complete: Token system live, fonts wired, base component library built, app shell."
-- [ ] Commit: `"Phase 1 complete: Design system and base component library"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 1 complete: Token system live, fonts wired, base component library built, app shell."
+- [x] Commit: `"Phase 1 complete: Design system and base component library"`
 
 ---
 

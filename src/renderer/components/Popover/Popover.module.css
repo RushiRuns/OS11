@@ -1,0 +1,46 @@
+.content {
+  background-color: var(--surface-overlay);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-subtle);
+  z-index: var(--z-dropdown);
+  min-width: 200px;
+  transform-origin: var(--radix-popover-content-transform-origin);
+  animation-duration: var(--transition-fast);
+  animation-timing-function: var(--ease-out);
+}
+
+.content[data-state="open"] {
+  animation-name: popoverAppear;
+}
+
+.content[data-state="closed"] {
+  animation-name: popoverDismiss;
+}
+
+.arrow {
+  fill: var(--surface-overlay);
+}
+
+@keyframes popoverAppear {
+  from {
+    opacity: 0;
+    transform: scaleY(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes popoverDismiss {
+  from {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: scaleY(0.96);
+  }
+}

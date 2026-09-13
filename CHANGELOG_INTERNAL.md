@@ -5,6 +5,20 @@
 
 ---
 
+### [2026-09-13] — Phase 1 complete: Token system live, fonts wired, base component library built, app shell
+- **What was built:**
+  - Token system and self-hosted fonts wired at app entry point (`tokens.css`, `fonts.css`).
+  - Titlebar component with frameless drag regions, OS window controls, and Always on Top pin toggle.
+  - Base tokens-only component library: `Button` (3 semantic variants), `Input` (error/focus states), `Popover` (Radix wrapper), `Toast` (undo action, auto-dismiss), `EmptyState`, `LoadingSpinner` (reduced-motion friendly), and `Tooltip` (Radix wrapper with kbd badge).
+  - Three-column CSS Grid application layout shell (`layout.module.css`): Sidebar | TaskList | DetailPanel.
+  - Route-level lazy loading for `Dashboard`, `Agenda`, `Projects`, `Settings`, and `Pomodoro` with a layout-matched `Suspense` skeleton fallback.
+- **What changed architecturally:**
+  - Strict tokens-only policy enforced across all components; zero hardcoded pixel/color literals.
+  - Critical path bundle established (`Sidebar`, `TaskList`, `DetailPanel`, `App`); non-critical modules code-split on demand.
+  - Permitted Framer Motion interactions restricted strictly to 4 designated sites.
+
+---
+
 ### [2026-09-13] — Phase 0 complete: All governance docs, ADRs, project skeleton, git init
 - **What was built:**
   - Complete suite of companion governance documents (`UTILITIES.md`, `DONE.md`, `CHANGELOG_INTERNAL.md`, `IPC_CHANNELS.md`).

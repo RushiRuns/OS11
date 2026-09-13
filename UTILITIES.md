@@ -21,17 +21,28 @@
 
 *Check here before writing a new UI component. All components consume `tokens.css` CSS variables exclusively.*
 
-| Component | File Path | Type | Description |
-|---|---|---|---|
-| `Titlebar` | `src/renderer/components/Titlebar/Titlebar.tsx` | App Chrome | Custom frameless window titlebar with drag region and window controls |
-| `Checkbox` | `src/renderer/components/Checkbox/Checkbox.tsx` | Input | Accessible task completion checkbox with spring animation (permitted site #1) |
-| `QuickAdd` | `src/renderer/components/QuickAdd/QuickAdd.tsx` | Feature Trigger | Quick-entry task capture input with spring scale/opacity (permitted site #4) |
-| `Collapsible` | `src/renderer/components/primitives/Collapsible/` | Radix Primitive | Accessible expandable section wrapper |
-| `Dialog` | `src/renderer/components/primitives/Dialog/` | Radix Primitive | Accessible modal dialog with focus trap and overlay portal |
-| `DropdownMenu`| `src/renderer/components/primitives/DropdownMenu/` | Radix Primitive | Accessible contextual popout menus |
-| `Popover` | `src/renderer/components/primitives/Popover/` | Radix Primitive | Floating picker and popup overlay container |
-| `ScrollArea` | `src/renderer/components/primitives/ScrollArea/` | Radix Primitive | Custom scrollable viewport with themed scrollbars |
-| `Tooltip` | `src/renderer/components/primitives/Tooltip/` | Radix Primitive | Accessible keyboard-shortcut tooltip hints |
+| Component | File Path | Radix Primitive Wrapped? | Framer Motion Site? | Description |
+|---|---|---|---|---|
+| `Titlebar` | `src/renderer/components/Titlebar/Titlebar.tsx` | No | No (CSS transitions) | Custom frameless window titlebar with drag zone, window controls, and Always on Top pin |
+| `Checkbox` | `src/renderer/components/Checkbox/Checkbox.tsx` | No | **Site #1 (Spring completion)** | Accessible task completion checkbox with 180ms spring bounce |
+| `Button` | `src/renderer/components/Button/Button.tsx` | No | No (CSS transitions) | Base button with 3 semantic variants (`primary`, `ghost`, `danger`) and `sm` / `md` sizes |
+| `Input` | `src/renderer/components/Input/Input.tsx` | No | No (CSS transitions) | Styled text input with error state, accent border, and focus ring |
+| `Popover` | `src/renderer/components/Popover/Popover.tsx` | **Yes (`@radix-ui/react-popover`)** | No (CSS `opacity` + `scaleY`) | Floating picker overlay container with focus trap |
+| `Toast` | `src/renderer/components/Toast/Toast.tsx` | No | No (CSS slide-up/down) | In-app notification toast with auto-dismiss and inline "Undo" action |
+| `EmptyState` | `src/renderer/components/EmptyState/EmptyState.tsx` | No | No (Static) | Universal empty state with calm typography and optional CTA button |
+| `LoadingSpinner` | `src/renderer/components/LoadingSpinner/LoadingSpinner.tsx` | No | No (CSS spin, reduced-motion static) | Accent-colored CSS spinner with reduced-motion static mode |
+| `Tooltip` | `src/renderer/components/Tooltip/Tooltip.tsx` | **Yes (`@radix-ui/react-tooltip`)** | No (CSS fade-in) | Keyboard-shortcut hint tooltip with kbd badge |
+| `QuickAdd` | `src/renderer/components/QuickAdd/QuickAdd.tsx` | No | **Site #4 (Scale & opacity)** | Instant task entry bar with spring scale/opacity appear/dismiss |
+| `Sidebar` | `src/renderer/features/sidebar/Sidebar.tsx` | Uses `ScrollArea` | No (CSS transitions) | Main navigation sidebar (critical initial bundle) |
+| `TaskList` | `src/renderer/features/tasks/TaskList.tsx` | Uses `ScrollArea` | **Site #3 (Reorder layoutId)** | Primary task stream with virtual scroll and priority styling (critical initial bundle) |
+| `DetailPanel` | `src/renderer/features/tasks/DetailPanel.tsx` | No | **Site #2 (Spring slide-in)** | Task metadata/notes editor with spring slide-in from right (critical initial bundle) |
+
+### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
+1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
+2. **Detail panel open/close:** Spring slide-in from right (`x: 40 → 0`).
+3. **Task list reorder:** `layoutId` layout animation during drag-and-drop.
+4. **Quick-add bar appear/dismiss:** Scale (`0.96 → 1`) and opacity (`0 → 1`).
+*All other UI animations and transitions use pure CSS.*
 
 ---
 

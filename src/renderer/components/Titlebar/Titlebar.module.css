@@ -9,6 +9,18 @@
   -webkit-app-region: drag;
   user-select: none;
   font-family: var(--font-body);
+  position: relative;
+  z-index: var(--z-modal);
+}
+
+.macTitlebar {
+  padding-left: var(--space-20); /* Space for native macOS traffic lights */
+}
+
+.titlebarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .titlebarTitle {
@@ -21,16 +33,60 @@
   gap: var(--space-2);
 }
 
-.windowControls {
+.versionBadge {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.titlebarActions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   -webkit-app-region: no-drag;
 }
 
+.pinButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  padding: 0;
+}
+
+.pinButton:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.pinButtonActive {
+  color: var(--accent);
+  background-color: var(--accent-muted);
+}
+
+.pinIcon {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+
+.windowControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  -webkit-app-region: no-drag;
+}
+
 .controlButton {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: var(--radius-full);
   border: none;
   cursor: pointer;

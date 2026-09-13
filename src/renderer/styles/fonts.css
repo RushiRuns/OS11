@@ -1,0 +1,91 @@
+/**
+ * OS11 — Self-Hosted Font Declarations
+ *
+ * Rules:
+ *  1. Zero external network requests (no Google Fonts CDN).
+ *  2. Resolves installed system copies first (Inter / JetBrains Mono)
+ *     and falls back cleanly to native OS system fonts.
+ */
+
+/* ============================================================
+   INTER (UI Body & Headings)
+   Weights: 300 (Light), 400 (Regular), 500 (Medium),
+            600 (SemiBold), 700 (Bold)
+   ============================================================ */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src:
+    local('Inter Light'),
+    local('Inter-Light');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Inter Regular'),
+    local('Inter-Regular'),
+    local('Inter');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src:
+    local('Inter Medium'),
+    local('Inter-Medium');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src:
+    local('Inter SemiBold'),
+    local('Inter-SemiBold');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Inter Bold'),
+    local('Inter-Bold');
+}
+
+/* ============================================================
+   JETBRAINS MONO (Notes Code Blocks & Monospace Elements)
+   Weights: 400 (Regular), 500 (Medium)
+   ============================================================ */
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('JetBrains Mono Regular'),
+    local('JetBrainsMono-Regular'),
+    local('JetBrains Mono');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src:
+    local('JetBrains Mono Medium'),
+    local('JetBrainsMono-Medium');
+}

@@ -1,7 +1,8 @@
+import './styles/tokens.css';
+import './styles/fonts.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.js';
-import './styles/tokens.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

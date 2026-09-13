@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Task, CreateTaskPayload } from '@shared/types/task.js';
+import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/task.js';
 import { taskServiceAdapter } from '../services/task-service-adapter.js';
 
 interface TaskState {
@@ -8,6 +8,7 @@ interface TaskState {
   error: string | null;
   fetchTasks: () => Promise<void>;
   createTask: (payload: CreateTaskPayload) => Promise<void>;
+  updateTask: (payload: UpdateTaskPayload) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 }
@@ -73,6 +74,23 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         tasks: state.tasks.filter((t) => t.id !== tempId),
         error: err.message,
       }));
+    }
+  },
+
+  updateTask: async (payload: UpdateTaskPayload) => {
+    const previous = get().tasks;
+    // Optimistic update
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === payload.id ? { ...t, ...payload } : t)),
+    }));
+
+    try {
+      const updated = await taskServiceAdapter.update(payload);
+      set((state) => ({
+        tasks: state.tasks.map((t) => (t.id === payload.id ? updated : t)),
+      }));
+    } catch (err: any) {
+      set({ tasks: previous, error: err.message });
     }
   },
 
