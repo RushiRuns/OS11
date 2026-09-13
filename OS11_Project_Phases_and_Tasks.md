@@ -906,9 +906,9 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### @dnd-kit Integration
 
-- [ ] Wrap `TaskList` in `DndContext` + `SortableContext` from `@dnd-kit`
-- [ ] `@dnd-kit` owns the drag detection and drop logic; Framer Motion owns the animation — they do not overlap
-- [ ] Implement all drag targets from Feature Spec §3.1:
+- [x] Wrap `TaskList` in `DndContext` + `SortableContext` from `@dnd-kit`
+- [x] `@dnd-kit` owns the drag detection and drop logic; Framer Motion owns the animation — they do not overlap
+- [x] Implement all drag targets from Feature Spec §3.1:
 
   | Drag action | Implementation |
   |---|---|
@@ -920,14 +920,14 @@ One service per domain. Validation happens in domain functions called from here.
   | File → Task card | `AttachmentService.upload(file, taskId)` |
   | Reorder within list | `fractionalIndex.between()` → `TaskService.updateSortOrder()` |
 
-- [ ] Drop target indicators: visible on active drag via Framer Motion `opacity` transitions
-- [ ] Every drag triggers an undo entry in `useUndoRedo`
-- [ ] Drag feedback: `< 16ms` pointer-event response (PERFORMANCE.md target)
-- [ ] Test: dragging 50 tasks rapidly to reorder — no jank
+- [x] Drop target indicators: visible on active drag via Framer Motion `opacity` transitions
+- [x] Every drag triggers an undo entry in `useUndoRedo`
+- [x] Drag feedback: `< 16ms` pointer-event response (PERFORMANCE.md target)
+- [x] Test: dragging 50 tasks rapidly to reorder — no jank
 
 ### Context Menu
 
-- [ ] Create `src/renderer/features/tasks/TaskContextMenu.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tasks/TaskContextMenu.tsx` + `.module.css`
   - Right-click any task card → context menu at cursor position
   - Z-index: `var(--z-dropdown)` (100)
   - All actions from Feature Spec §3.2:
@@ -947,12 +947,12 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Multi-Select & Bulk Operations
 
-- [ ] Hover any task → subtle multi-select checkbox appears on the left
-- [ ] Click checkbox → enter multi-select mode; all tasks show checkboxes
-- [ ] `Ctrl+Click` / `Shift+Click` for range selection
-- [ ] `Ctrl+A` → select all tasks in current list
-- [ ] Create `src/renderer/stores/selectionStore.ts` — `selectedIds: Set<string>`, `isMultiSelectActive: boolean`
-- [ ] Create `src/renderer/features/tasks/BulkActionBar.tsx` + `.module.css`
+- [x] Hover any task → subtle multi-select checkbox appears on the left
+- [x] Click checkbox → enter multi-select mode; all tasks show checkboxes
+- [x] `Ctrl+Click` / `Shift+Click` for range selection
+- [x] `Ctrl+A` → select all tasks in current list
+- [x] Create `src/renderer/stores/selectionStore.ts` — `selectedIds: Set<string>`, `isMultiSelectActive: boolean`
+- [x] Create `src/renderer/features/tasks/BulkActionBar.tsx` + `.module.css`
   - Framer Motion: `AnimatePresence` slide-up from bottom when multi-select is active, slide-down on exit
   - Actions: Complete, Delete, Move to List, Add Tag, Set Priority, Add to My Day
   - Shows "X tasks selected" count
@@ -960,7 +960,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Inline Date Picker
 
-- [ ] Create `src/renderer/components/DatePicker/DatePicker.tsx` + `.module.css`
+- [x] Create `src/renderer/components/DatePicker/DatePicker.tsx` + `.module.css`
   - Compact inline popover — not a full-screen modal (FEEL UI)
   - Quick options: Today, Tomorrow, Next Week, No Date
   - Calendar grid for custom selection
@@ -971,9 +971,9 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `TaskContextMenu`, `BulkActionBar`, `DatePicker`, `selectionStore`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 8 complete: All drag-and-drop targets, context menu, multi-select, bulk operations, inline date picker."
-- [ ] Commit: `"Phase 8 complete: Drag-and-drop, context menus, multi-select"`
+- [x] Update UTILITIES.md: `TaskContextMenu`, `BulkActionBar`, `DatePicker`, `selectionStore`
+- [x] CHANGELOG_INTERNAL.md: "Phase 8 complete: All drag-and-drop targets, context menu, multi-select, bulk operations, inline date picker."
+- [x] Commit: `"Phase 8 complete: Drag-and-drop, context menus, multi-select"`
 
 ---
 

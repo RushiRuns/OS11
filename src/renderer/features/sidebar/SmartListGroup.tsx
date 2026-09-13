@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { List } from '@shared/types/List.js';
+import { useTaskStore } from '../../stores/taskStore.js';
 import { ListItem } from './ListItem.js';
 import styles from './SmartListGroup.module.css';
 
@@ -43,6 +44,19 @@ export function SmartListGroup({
               isActive={activeListId === list.id}
               taskCount={getTaskCount?.(list.id) ?? 0}
               onClick={onSelectList}
+              onDragOver={(e) => {
+                if (list.id === 'smart_my_day') {
+                  e.preventDefault();
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const taskId = e.dataTransfer.getData('text/plain');
+                if (taskId && list.id === 'smart_my_day') {
+                  const today = new Date().toISOString().split('T')[0];
+                  useTaskStore.getState().updateTask({ id: taskId, my_day_date: today });
+                }
+              }}
             />
           ))}
         </div>

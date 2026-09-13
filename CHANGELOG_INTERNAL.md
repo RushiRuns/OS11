@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-13] — Phase 8 complete: All drag-and-drop targets, context menu, multi-select, bulk operations, inline date picker
+- **What was built:**
+  - `@dnd-kit/core` & `@dnd-kit/sortable` integration in `TaskList.tsx` with `PointerSensor` (distance constraint `8px`) and `KeyboardSensor`.
+  - Reordering within task lists using `between(prev, next)` fractional indexing math, calling `reorderTask()` with full undo/redo action recording.
+  - Sidebar task drop targets: dropping tasks onto sidebar user lists or "My Day" updates list assignment or sets `my_day_date` to today.
+  - Native file drag-and-drop on task cards with visual dashed outline highlight.
+  - Floating `TaskContextMenu.tsx` + `.module.css`: right-click on any task card provides Complete, Star, Set Due Date, Set Priority (0-4), Add to My Day, Move to List, Duplicate, Create Subtask, Open Details, and Delete with undo toast.
+  - Multi-select system:
+    - `selectionStore.ts`: tracks `selectedIds: Set<string>`, `isMultiSelectActive: boolean`, `toggleSelect`, `selectRange`, `selectAll`, `clearSelection`.
+    - TaskCard multi-select checkboxes: reveal on hover or persist when multi-select is active; support `Ctrl+Click` and `Shift+Click` contiguous range selection; `Ctrl+A` hotkey selects all tasks in the active view.
+    - `BulkActionBar.tsx` + `.module.css`: Framer Motion animated floating toolbar with count badge and bulk actions for Complete, Delete (single batched undo toast), Move to List, Set Priority, and Add to My Day; dismisses with `Escape`.
+  - Inline compact `DatePicker.tsx` + `.module.css`: popover with natural language input (`chrono-node` parser), quick option chips (Today, Tomorrow, Next Week, No Date), month calendar grid, 15-minute time selector, and immediate close on date selection per FEEL UI principles.
+  - Unit tests in `tests/domain/dnd-and-multiselect.test.ts` (19 test files, 100 tests passing).
+- **What changed architecturally:**
+  - Migrated fractional indexing calculations to `src/shared/utils/fractional-index.ts` so both renderer and main processes can compute midpoint reorder positions without architectural layer boundary violations.
+  - `@dnd-kit` manages pointer physics and drag detection exclusively, leaving animation transitions to CSS and Framer Motion per ADR-0009.
+
+---
+
 ### [2026-09-13] — Phase 7 complete: Quick Add, Omnibar, NLP parsing, all keyboard shortcuts, command palette, search
 - **What was built:**
   - `QuickAddBar.tsx` + `.module.css`: Always-accessible 52px task creation bar with 16px border-radius, `Ctrl+N`/`Cmd+N` focus listener, debounced NLP parsing, and live badge preview chips.

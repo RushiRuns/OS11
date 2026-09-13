@@ -175,3 +175,59 @@
 .starButtonActive:hover {
   color: #facc15;
 }
+
+/* Multi-Select Checkbox (reveals on card hover or always when multi-select active) */
+.multiSelectCheckboxWrap {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-right: -4px;
+}
+
+.taskCard:hover .multiSelectCheckboxWrap,
+.taskCard[data-multiselect="active"] .multiSelectCheckboxWrap {
+  display: flex;
+}
+
+.multiSelectInput {
+  cursor: pointer;
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+}
+
+/* Drag Handle */
+.dragGrip {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  user-select: none;
+  margin-right: -4px;
+}
+
+.taskCard:hover .dragGrip {
+  display: flex;
+}
+
+.dragGrip:active {
+  cursor: grabbing;
+}
+
+/* Drag States */
+.taskCard[data-dragging="true"] {
+  opacity: 0.4;
+  transform: scale(0.98);
+}
+
+.taskCard[data-droptarget="true"] {
+  border: 2px dashed var(--accent);
+  background: var(--surface-hover);
+}
+
+.taskCard[data-filedrop="true"] {
+  border: 2px dashed var(--color-success, #10b981);
+  background: rgba(16, 185, 129, 0.08);
+}

@@ -108,7 +108,7 @@ export function Sidebar(): React.ReactElement {
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
-  // Reorder user lists on drop
+  // Reorder user lists on drop, or move task to list if task is dropped
   const handleDrop = (targetListId: string) => {
     if (!draggingListId || draggingListId === targetListId) return;
 
@@ -127,6 +127,16 @@ export function Sidebar(): React.ReactElement {
 
     useListStore.getState().reorderLists(updates);
     setDraggingListId(null);
+  };
+
+  const handleItemDrop = async (e: React.DragEvent, targetListId: string) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && !draggingListId) {
+      await useTaskStore.getState().updateTask({ id: taskId, list_id: targetListId });
+      return;
+    }
+    handleDrop(targetListId);
   };
 
   // Duplicate list handler
@@ -221,7 +231,7 @@ export function Sidebar(): React.ReactElement {
               isDraggable
               onDragStart={(_e, id) => setDraggingListId(id)}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(_e, id) => handleDrop(id)}
+              onDrop={(e, id) => handleItemDrop(e, id)}
             />
           ))}
 
@@ -246,7 +256,7 @@ export function Sidebar(): React.ReactElement {
                     isDraggable
                     onDragStart={(_e, id) => setDraggingListId(id)}
                     onDragOver={(e) => e.preventDefault()}
-                    onDrop={(_e, id) => handleDrop(id)}
+                    onDrop={(e, id) => handleItemDrop(e, id)}
                   />
                 ))}
               </div>

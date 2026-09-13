@@ -1,12 +1,30 @@
 import React, { useState, useRef, useEffect, useDeferredValue, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { between } from '@shared/utils/fractional-index.js';
+import {
   useTaskStore,
   useCompletedTasks,
 } from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
+import { useSelectionStore } from '../../stores/selectionStore.js';
 import { TaskCard } from './TaskCard.js';
 import { TaskListHeader } from './TaskListHeader.js';
+import { TaskContextMenu, type TaskContextMenuPosition } from './TaskContextMenu.js';
+import { BulkActionBar } from './BulkActionBar.js';
 import { QuickAddBar } from '../quickadd/QuickAddBar.js';
 import { SearchView } from '../search/SearchView.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
@@ -36,12 +54,32 @@ export function TaskList({
     deleteTask,
     restoreTask,
     duplicateTask,
+    makeSubtask,
+    reorderTask,
   } = useTaskStore();
 
+  const { selectAll } = useSelectionStore();
   const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
   const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+
+  // Context menu state
+  const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
+
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Dnd-kit sensors: Pointer distance threshold 8px prevents click/drag conflict
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadTasks();
@@ -95,6 +133,8 @@ export function TaskList({
     deferredConfig
   );
 
+  const allTaskIds = filteredIncomplete.map((t) => t.id);
+
   // TanStack Virtualizer
   const virtualizer = useVirtualizer({
     count: filteredIncomplete.length,
@@ -102,7 +142,6 @@ export function TaskList({
     estimateSize: () => 44, // var(--task-height-comfortable)
     overscan: 10,
   });
-
 
   // Task deletion with Undo Toast
   const handleDeleteTask = useCallback(
@@ -125,6 +164,22 @@ export function TaskList({
     [activeTasks, deleteTask, pushAction, restoreTask]
   );
 
+  // Ctrl+A select all visible tasks
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        selectAll(allTaskIds);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [allTaskIds, selectAll]);
+
   // Vim mode navigation (gated by vim_keybindings module toggle)
   useVimMode({
     tasks: filteredIncomplete,
@@ -146,6 +201,37 @@ export function TaskList({
     onSelectTask,
     onDeleteTask: handleDeleteTask,
   });
+
+  // Handle Dnd-kit Drag End (Reorder & Nest Subtask)
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = filteredIncomplete.findIndex((t) => t.id === active.id);
+    const newIndex = filteredIncomplete.findIndex((t) => t.id === over.id);
+
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const activeTask = filteredIncomplete[oldIndex];
+
+    const prevTask = newIndex > 0 ? (newIndex > oldIndex ? filteredIncomplete[newIndex] : filteredIncomplete[newIndex - 1]) : null;
+    const nextTask = newIndex < filteredIncomplete.length - 1 ? (newIndex > oldIndex ? filteredIncomplete[newIndex + 1] : filteredIncomplete[newIndex]) : null;
+
+    const newSortOrder = between(prevTask?.sort_order ?? null, nextTask?.sort_order ?? null);
+    const oldSortOrder = activeTask.sort_order;
+
+    await reorderTask(String(active.id), newSortOrder);
+
+    pushAction({
+      description: `Reordered "${activeTask.title}"`,
+      undoFn: async () => {
+        await reorderTask(String(active.id), oldSortOrder);
+      },
+      redoFn: async () => {
+        await reorderTask(String(active.id), newSortOrder);
+      },
+    });
+  };
 
   const headerTitle = (() => {
     switch (activeListId) {
@@ -188,83 +274,139 @@ export function TaskList({
         <QuickAddBar />
       </div>
 
-      {/* Virtual Scroll Area */}
-      <div ref={parentRef} className={styles.virtualScrollArea}>
-        {filteredIncomplete.length === 0 && completedTasks.length === 0 ? (
-          <EmptyState
-            title="All clear"
-            description="No tasks in this list. Press Ctrl+N to add one."
-          />
-        ) : (
-          <div
-            className={styles.virtualInner}
-            style={{ height: `${virtualizer.getTotalSize()}px` }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const task = filteredIncomplete[virtualItem.index];
-              if (!task) return null;
-
-              return (
-                <div
-                  key={task.id}
-                  className={styles.virtualItem}
-                  style={{
-                    transform: `translateY(${virtualItem.start}px)`,
-                  }}
-                >
-                  <TaskCard
-                    task={task}
-                    isSelected={selectedTaskId === task.id}
-                    onSelect={onSelectTask}
-                    onToggleComplete={toggleComplete}
-                    onToggleStar={toggleStar}
-                    onUpdateTitle={(id, title) => updateTask({ id, title })}
-                    onDelete={handleDeleteTask}
-                    onDuplicate={duplicateTask}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Collapsible Completed Section */}
-        {completedTasks.length > 0 && (
-          <div className={styles.completedSection}>
-            <div
-              className={styles.completedHeader}
-              onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-            >
-              <span
-                className={`${styles.completedCaret} ${
-                  isCompletedOpen ? styles.completedCaretOpen : ''
-                }`}
+      {/* Virtual Scroll Area wrapped in DndContext & SortableContext */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={allTaskIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div ref={parentRef} className={styles.virtualScrollArea}>
+            {filteredIncomplete.length === 0 && completedTasks.length === 0 ? (
+              <EmptyState
+                title="All clear"
+                description="No tasks in this list. Press Ctrl+N to add one."
+              />
+            ) : (
+              <div
+                className={styles.virtualInner}
+                style={{ height: `${virtualizer.getTotalSize()}px` }}
               >
-                ▶
-              </span>
-              <span>Completed ({completedTasks.length})</span>
-            </div>
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                  const task = filteredIncomplete[virtualItem.index];
+                  if (!task) return null;
 
-            {isCompletedOpen && (
-              <div className={styles.completedList}>
-                {completedTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isSelected={selectedTaskId === task.id}
-                    onSelect={onSelectTask}
-                    onToggleComplete={toggleComplete}
-                    onToggleStar={toggleStar}
-                    onUpdateTitle={(id, title) => updateTask({ id, title })}
-                    onDelete={handleDeleteTask}
-                    onDuplicate={duplicateTask}
-                  />
-                ))}
+                  return (
+                    <div
+                      key={task.id}
+                      className={styles.virtualItem}
+                      style={{
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
+                    >
+                      <TaskCard
+                        task={task}
+                        isSelected={selectedTaskId === task.id}
+                        allTaskIds={allTaskIds}
+                        onSelect={onSelectTask}
+                        onToggleComplete={toggleComplete}
+                        onToggleStar={toggleStar}
+                        onUpdateTitle={(id, title) => updateTask({ id, title })}
+                        onDelete={handleDeleteTask}
+                        onDuplicate={duplicateTask}
+                        onContextMenu={(e, t) => {
+                          setContextMenuTask(t);
+                          setContextMenuPos({ x: e.clientX, y: e.clientY });
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Collapsible Completed Section */}
+            {completedTasks.length > 0 && (
+              <div className={styles.completedSection}>
+                <div
+                  className={styles.completedHeader}
+                  onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+                >
+                  <span
+                    className={`${styles.completedCaret} ${
+                      isCompletedOpen ? styles.completedCaretOpen : ''
+                    }`}
+                  >
+                    ▶
+                  </span>
+                  <span>Completed ({completedTasks.length})</span>
+                </div>
+
+                {isCompletedOpen && (
+                  <div className={styles.completedList}>
+                    {completedTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        isSelected={selectedTaskId === task.id}
+                        allTaskIds={allTaskIds}
+                        onSelect={onSelectTask}
+                        onToggleComplete={toggleComplete}
+                        onToggleStar={toggleStar}
+                        onUpdateTitle={(id, title) => updateTask({ id, title })}
+                        onDelete={handleDeleteTask}
+                        onDuplicate={duplicateTask}
+                        onContextMenu={(e, t) => {
+                          setContextMenuTask(t);
+                          setContextMenuPos({ x: e.clientX, y: e.clientY });
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
+        </SortableContext>
+      </DndContext>
+
+      {/* Bulk Action Bar (Framer Motion AnimatePresence) */}
+      <BulkActionBar />
+
+      {/* Task Context Menu */}
+      <TaskContextMenu
+        task={contextMenuTask}
+        position={contextMenuPos}
+        onClose={() => {
+          setContextMenuTask(null);
+          setContextMenuPos(null);
+        }}
+        onToggleComplete={toggleComplete}
+        onToggleStar={toggleStar}
+        onSetPriority={(id, priority) => updateTask({ id, priority })}
+        onSetDueDate={(id, date, time, allDay) =>
+          updateTask({
+            id,
+            due_date: date,
+            due_time: time,
+            all_day: allDay ? 1 : 0,
+          })
+        }
+        onToggleMyDay={(id) => {
+          const today = new Date().toISOString().split('T')[0];
+          const target = activeTasks.find((t) => t.id === id);
+          const next = target?.my_day_date === today ? null : today;
+          updateTask({ id, my_day_date: next });
+        }}
+        onMoveToList={(id, listId) => updateTask({ id, list_id: listId })}
+        onDuplicate={duplicateTask}
+        onCreateSubtask={(parentId) => makeSubtask(`task-${Date.now()}`, parentId)}
+        onOpenDetail={(t) => onSelectTask?.(t)}
+        onDelete={handleDeleteTask}
+      />
 
       {/* Undo Toast Container */}
       {lastToastAction && (
