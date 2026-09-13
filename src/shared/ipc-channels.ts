@@ -1,24 +1,11 @@
 export const IPC = {
-  TASKS: {
-    GET_ALL: 'tasks:get-all',
-    GET_BY_ID: 'tasks:get-by-id',
-    CREATE: 'tasks:create',
-    UPDATE: 'tasks:update',
-    DELETE: 'tasks:delete',
-    TOGGLE_COMPLETE: 'tasks:toggle-complete',
-  },
-  LISTS: {
-    GET_ALL: 'lists:get-all',
-    CREATE: 'lists:create',
-  },
-  PROJECTS: {
-    GET_ALL: 'projects:get-all',
-    CREATE: 'projects:create',
-  },
-  SETTINGS: {
-    GET_ALL: 'settings:get-all',
-    GET: 'settings:get',
-    SET: 'settings:set',
+  APP: {
+    GET_STARTUP_DATA: 'app:get-startup-data',
+    GET_INFO: 'app:get-info',
+    MINIMIZE: 'app:minimize',
+    MAXIMIZE: 'app:maximize',
+    CLOSE: 'app:close',
+    QUIT: 'app:quit',
   },
   SYSTEM: {
     GET_INFO: 'system:get-info',
@@ -26,4 +13,107 @@ export const IPC = {
     MAXIMIZE: 'system:maximize',
     CLOSE: 'system:close',
   },
+  TASKS: {
+    GET_ALL: 'tasks:get-all',
+    GET_BY_ID: 'tasks:get-by-id',
+    CREATE: 'tasks:create',
+    UPDATE: 'tasks:update',
+    DELETE: 'tasks:delete',
+    TOGGLE_COMPLETE: 'tasks:toggle-complete',
+    REORDER: 'tasks:reorder',
+    BATCH_UPDATE: 'tasks:batch-update',
+  },
+  LISTS: {
+    GET_ALL: 'lists:get-all',
+    GET_BY_ID: 'lists:get-by-id',
+    CREATE: 'lists:create',
+    UPDATE: 'lists:update',
+    DELETE: 'lists:delete',
+    REORDER: 'lists:reorder',
+  },
+  LIST_GROUPS: {
+    GET_ALL: 'list-groups:get-all',
+    CREATE: 'list-groups:create',
+    UPDATE: 'list-groups:update',
+    DELETE: 'list-groups:delete',
+    REORDER: 'list-groups:reorder',
+  },
+  PROJECTS: {
+    GET_ALL: 'projects:get-all',
+    GET_BY_ID: 'projects:get-by-id',
+    CREATE: 'projects:create',
+    UPDATE: 'projects:update',
+    DELETE: 'projects:delete',
+    REORDER: 'projects:reorder',
+  },
+  SECTIONS: {
+    GET_ALL: 'sections:get-all',
+    CREATE: 'sections:create',
+    UPDATE: 'sections:update',
+    DELETE: 'sections:delete',
+    REORDER: 'sections:reorder',
+  },
+  TAGS: {
+    GET_ALL: 'tags:get-all',
+    CREATE: 'tags:create',
+    UPDATE: 'tags:update',
+    DELETE: 'tags:delete',
+  },
+  REMINDERS: {
+    GET_ALL: 'reminders:get-all',
+    SET: 'reminders:set',
+    DISMISS: 'reminders:dismiss',
+    SNOOZE: 'reminders:snooze',
+  },
+  ATTACHMENTS: {
+    GET_ALL: 'attachments:get-all',
+    ADD: 'attachments:add',
+    DELETE: 'attachments:delete',
+    OPEN: 'attachments:open',
+  },
+  POMODORO: {
+    START: 'pomodoro:start',
+    PAUSE: 'pomodoro:pause',
+    STOP: 'pomodoro:stop',
+    GET_TODAY_STATS: 'pomodoro:get-today-stats',
+    GET_SESSIONS: 'pomodoro:get-sessions',
+  },
+  GOALS: {
+    GET_ALL: 'goals:get-all',
+    GET_BY_ID: 'goals:get-by-id',
+    CREATE: 'goals:create',
+    UPDATE: 'goals:update',
+    DELETE: 'goals:delete',
+    LINK_TASK: 'goals:link-task',
+  },
+  SETTINGS: {
+    GET_ALL: 'settings:get-all',
+    GET: 'settings:get',
+    SET: 'settings:set',
+    RESET: 'settings:reset',
+  },
+  MODULES: {
+    GET_ALL: 'modules:get-all',
+    SET_ACTIVE: 'modules:set-active',
+  },
+  SEARCH: {
+    QUERY: 'search:query',
+    REINDEX: 'search:reindex',
+  },
+  NOTIFICATIONS: {
+    GET_HISTORY: 'notifications:get-history',
+    CLEAR: 'notifications:clear',
+    SEND_NATIVE: 'notifications:send-native',
+  },
+  IDENTITY: {
+    GET: 'identity:get',
+    UPDATE: 'identity:update',
+  },
+  SYNC: {
+    GET_STATUS: 'sync:get-status',
+    PAIR_DEVICE: 'sync:pair-device',
+    QUEUE_CHANGE: 'sync:queue-change',
+  },
 } as const;
+
+export type IpcChannelGroup = keyof typeof IPC;

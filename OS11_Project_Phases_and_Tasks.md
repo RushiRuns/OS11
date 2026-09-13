@@ -24,14 +24,14 @@
 
 ### Companion Governance Documents (create before first code session)
 
-- [ ] Create `UTILITIES.md` — index of every shared hook, utility, and component in the codebase
+- [x] Create `UTILITIES.md` — index of every shared hook, utility, and component in the codebase
   - Section: Shared Hooks (check here before writing a new hook)
   - Section: Shared Components (check here before writing a new component)
   - Section: Domain Functions (check here before writing new domain logic)
   - Section: Repository Methods (check here before writing a new query)
   - Section: **"Do NOT create a duplicate of"** — items that must exist only once
   - Rule: updated at the end of every session that creates something reusable
-- [ ] Create `DONE.md` — definition of done, consulted before closing any feature
+- [x] Create `DONE.md` — definition of done, consulted before closing any feature
   - Happy path tested
   - Empty state exists and is correct
   - Error state exists and is handled
@@ -46,10 +46,10 @@
   - CHANGELOG_INTERNAL.md updated
   - ARCHITECTURE.md rules not violated
   - Committed to git
-- [ ] Create `CHANGELOG_INTERNAL.md` — starts empty; one entry per coding session
+- [x] Create `CHANGELOG_INTERNAL.md` — starts empty; one entry per coding session
   - Format: `[date] — [what was built] — [what changed architecturally]`
   - Updated at the end of every session before committing
-- [ ] Create `IPC_CHANNELS.md` — every IPC channel name defined before first use
+- [x] Create `IPC_CHANNELS.md` — every IPC channel name defined before first use
   - No ad-hoc string literals anywhere in the codebase; every channel name comes from this file
   - Groups: APP, TASKS, LISTS, LIST_GROUPS, PROJECTS, SECTIONS, TAGS, REMINDERS,
     ATTACHMENTS, POMODORO, GOALS, SETTINGS, MODULES, SEARCH, NOTIFICATIONS, IDENTITY,
@@ -57,20 +57,20 @@
 
 ### Architecture Decision Records
 
-- [ ] `docs/decisions/ADR-0001-better-sqlite3.md` — why `better-sqlite3` over `sql.js` / `node-sqlite3` / Prisma
-- [ ] `docs/decisions/ADR-0002-electron-over-tauri.md` — the Tauri evaluation and why Electron won
-- [ ] `docs/decisions/ADR-0003-zustand-over-redux.md` — why Zustand; why Context is banned for global state
-- [ ] `docs/decisions/ADR-0004-vite-bundler.md` — why Vite over Webpack/CRA; `manualChunks` config rationale
-- [ ] `docs/decisions/ADR-0005-local-first-no-cloud.md` — the primary constraint, consequences, future unlock path
-- [ ] `docs/decisions/ADR-0006-css-modules-over-css-in-js.md` — why runtime CSS-in-JS is banned; tokens approach
-- [ ] `docs/decisions/ADR-0007-fractional-indexing.md` — why `sort_order REAL` with fractional indexing
-- [ ] `docs/decisions/ADR-0008-fts5-full-text-search.md` — why FTS5 virtual table; worker thread placement
-- [ ] `docs/decisions/ADR-0009-radix-ui-headless-primitives.md` — why Radix UI over building custom focus-traps; why GSAP/MUI/AntD/Chakra are banned; the 4-site Framer Motion restriction rationale
+- [x] `docs/decisions/ADR-0001-better-sqlite3.md` — why `better-sqlite3` over `sql.js` / `node-sqlite3` / Prisma
+- [x] `docs/decisions/ADR-0002-electron-over-tauri.md` — the Tauri evaluation and why Electron won
+- [x] `docs/decisions/ADR-0003-zustand-over-redux.md` — why Zustand; why Context is banned for global state
+- [x] `docs/decisions/ADR-0004-vite-bundler.md` — why Vite over Webpack/CRA; `manualChunks` config rationale
+- [x] `docs/decisions/ADR-0005-local-first-no-cloud.md` — the primary constraint, consequences, future unlock path
+- [x] `docs/decisions/ADR-0006-css-modules-over-css-in-js.md` — why runtime CSS-in-JS is banned; tokens approach
+- [x] `docs/decisions/ADR-0007-fractional-indexing.md` — why `sort_order REAL` with fractional indexing
+- [x] `docs/decisions/ADR-0008-fts5-full-text-search.md` — why FTS5 virtual table; worker thread placement
+- [x] `docs/decisions/ADR-0009-radix-ui-headless-primitives.md` — why Radix UI over building custom focus-traps; why GSAP/MUI/AntD/Chakra are banned; the 4-site Framer Motion restriction rationale
 
 ### Project Setup
 
-- [ ] Initialize project with Vite + React + TypeScript + Electron
-- [ ] Create complete folder structure per `ARCHITECTURE.md`:
+- [x] Initialize project with Vite + React + TypeScript + Electron
+- [x] Create complete folder structure per `ARCHITECTURE.md`:
   ```
   src/
     main/
@@ -109,20 +109,20 @@
   docs/
     decisions/
   ```
-- [ ] Configure `tsconfig.json` with path aliases (`@main`, `@renderer`, `@shared`, `@worker`)
-- [ ] Configure `vite.config.ts` with `manualChunks` per PERFORMANCE.md §5:
+- [x] Configure `tsconfig.json` with path aliases (`@main`, `@renderer`, `@shared`, `@worker`)
+- [x] Configure `vite.config.ts` with `manualChunks` per PERFORMANCE.md §5:
   - Initial bundle: `TaskList`, `Sidebar`, `DetailPanel`, `App`
   - Lazy chunks: `Dashboard`, `Agenda`, `Projects`, `Settings`, `Pomodoro`
   - Recharts auto-splits with Dashboard chunk
-- [ ] Configure `electron-builder` in `package.json` for `.exe` (NSIS), `.dmg`, `.AppImage`
-- [ ] Set up ESLint + Prettier with rules that enforce no hardcoded values, no renderer-to-repo imports
-- [ ] Create `docs/decisions/` folder — empty, ready for ADRs
-- [ ] Git init — first commit: `"chore: project skeleton + all governance documents"`
+- [x] Configure `electron-builder` in `package.json` for `.exe` (NSIS), `.dmg`, `.AppImage`
+- [x] Set up ESLint + Prettier with rules that enforce no hardcoded values, no renderer-to-repo imports
+- [x] Create `docs/decisions/` folder — empty, ready for ADRs
+- [x] Git init — first commit: `"chore: project skeleton + all governance documents"`
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 0 complete: All governance docs, ADRs, project skeleton, git init."
-- [ ] Commit: `"chore: Phase 0 complete — governance and project foundation"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 0 complete: All governance docs, ADRs, project skeleton, git init."
+- [x] Commit: `"chore: Phase 0 complete — governance and project foundation"`
 
 ---
 
