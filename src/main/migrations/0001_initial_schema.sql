@@ -1,14 +1,17 @@
--- OS11 Initial Schema (0001)
+-- ============================================================
+-- OS11 Initial Schema (Migration 0001)
+-- Core local SQLite schema per SCHEMA.md
+-- ============================================================
 
--- 1. local_identity
+-- 1. local_identity (Identifies this device)
 CREATE TABLE IF NOT EXISTS local_identity (
-  id           TEXT PRIMARY KEY,
-  display_name TEXT NOT NULL,
-  avatar_emoji TEXT,
+  id           TEXT PRIMARY KEY,   -- UUID v4
+  display_name TEXT NOT NULL,      -- Set by user in Settings
+  avatar_emoji TEXT,               -- Optional emoji avatar
   created_at   TEXT NOT NULL
 );
 
--- 2. list_groups
+-- 2. list_groups (Folder groupings for lists in sidebar)
 CREATE TABLE IF NOT EXISTS list_groups (
   id           TEXT PRIMARY KEY,
   name         TEXT NOT NULL,
@@ -17,7 +20,7 @@ CREATE TABLE IF NOT EXISTS list_groups (
   created_at   TEXT NOT NULL
 );
 
--- 3. lists
+-- 3. lists (User lists and built-in smart lists)
 CREATE TABLE IF NOT EXISTS lists (
   id                   TEXT PRIMARY KEY,
   name                 TEXT NOT NULL,
@@ -37,16 +40,16 @@ CREATE TABLE IF NOT EXISTS lists (
 CREATE INDEX IF NOT EXISTS idx_lists_group_id   ON lists(group_id);
 CREATE INDEX IF NOT EXISTS idx_lists_smart_type ON lists(smart_type) WHERE is_smart = 1;
 
--- 4. projects
+-- 4. projects (Multi-section task containers)
 CREATE TABLE IF NOT EXISTS projects (
   id           TEXT PRIMARY KEY,
   name         TEXT NOT NULL,
   description  TEXT,
   color        TEXT,
   icon         TEXT,
-  status       TEXT NOT NULL DEFAULT 'active',
+  status       TEXT NOT NULL DEFAULT 'active',    -- 'active' | 'archived' | 'completed'
   due_date     TEXT,
-  default_view TEXT NOT NULL DEFAULT 'list',
+  default_view TEXT NOT NULL DEFAULT 'list',      -- 'list' | 'board' | 'timeline' | 'calendar' | 'table'
   sort_order   REAL NOT NULL DEFAULT 0,
   created_at   TEXT NOT NULL,
   updated_at   TEXT NOT NULL
@@ -54,7 +57,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 
--- 5. sections
+-- 5. sections (Named groups within a project)
 CREATE TABLE IF NOT EXISTS sections (
   id           TEXT PRIMARY KEY,
   project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -66,7 +69,7 @@ CREATE TABLE IF NOT EXISTS sections (
 
 CREATE INDEX IF NOT EXISTS idx_sections_project_id ON sections(project_id);
 
--- 6. tasks
+-- 6. tasks (Core task entities)
 CREATE TABLE IF NOT EXISTS tasks (
   id                  TEXT PRIMARY KEY,
   title               TEXT NOT NULL,
@@ -80,14 +83,14 @@ CREATE TABLE IF NOT EXISTS tasks (
   all_day             INTEGER NOT NULL DEFAULT 1,
   recurrence_rule     TEXT,
   recurrence_basis    TEXT,
-  priority            INTEGER NOT NULL DEFAULT 0,
+  priority            INTEGER NOT NULL DEFAULT 0, -- 0=None, 1=Low, 2=Medium, 3=High, 4=Critical
   is_starred          INTEGER NOT NULL DEFAULT 0,
   is_completed        INTEGER NOT NULL DEFAULT 0,
   completed_at        TEXT,
   estimated_minutes   INTEGER,
-  assignee_device_id  TEXT,
+  assignee_device_id  TEXT,                       -- Phase 2 placeholder
   created_by_device   TEXT NOT NULL DEFAULT 'local',
-  sort_order          REAL NOT NULL DEFAULT 0,
+  sort_order          REAL NOT NULL DEFAULT 0,    -- Fractional indexing
   my_day_date         TEXT,
   pomodoro_count      INTEGER NOT NULL DEFAULT 0,
   is_trashed          INTEGER NOT NULL DEFAULT 0,
@@ -112,7 +115,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
   PRIMARY KEY (task_id, depends_on_id)
 );
 
--- 8. milestones
+-- 8. milestones (Key dates on project timelines)
 CREATE TABLE IF NOT EXISTS milestones (
   id           TEXT PRIMARY KEY,
   project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -125,7 +128,7 @@ CREATE TABLE IF NOT EXISTS milestones (
 
 CREATE INDEX IF NOT EXISTS idx_milestones_project_id ON milestones(project_id);
 
--- 9. tags
+-- 9. tags (Named hierarchical colored labels)
 CREATE TABLE IF NOT EXISTS tags (
   id            TEXT PRIMARY KEY,
   name          TEXT NOT NULL UNIQUE,
@@ -135,7 +138,7 @@ CREATE TABLE IF NOT EXISTS tags (
   created_at    TEXT NOT NULL
 );
 
--- 10. task_tags
+-- 10. task_tags (Join: task <-> tag)
 CREATE TABLE IF NOT EXISTS task_tags (
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   tag_id  TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
@@ -144,20 +147,20 @@ CREATE TABLE IF NOT EXISTS task_tags (
 
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
 
--- 11. reminders
+-- 11. reminders (Timed task alerts)
 CREATE TABLE IF NOT EXISTS reminders (
-  id            TEXT PRIMARY KEY,
-  task_id       TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  remind_at     TEXT NOT NULL,
-  is_triggered  INTEGER NOT NULL DEFAULT 0,
+  id           TEXT PRIMARY KEY,
+  task_id      TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  remind_at    TEXT NOT NULL,
+  is_triggered INTEGER NOT NULL DEFAULT 0,
   snoozed_until TEXT,
-  created_at    TEXT NOT NULL
+  created_at   TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_reminders_task_id   ON reminders(task_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_remind_at ON reminders(remind_at) WHERE is_triggered = 0;
 
--- 12. attachments
+-- 12. attachments (Local files linked to tasks)
 CREATE TABLE IF NOT EXISTS attachments (
   id            TEXT PRIMARY KEY,
   task_id       TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -171,7 +174,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
 
--- 13. comments
+-- 13. comments (Threads on tasks)
 CREATE TABLE IF NOT EXISTS comments (
   id                TEXT PRIMARY KEY,
   task_id           TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -186,11 +189,11 @@ CREATE TABLE IF NOT EXISTS comments (
 
 CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id);
 
--- 14. comment_reactions
+-- 14. comment_reactions (Emoji reactions)
 CREATE TABLE IF NOT EXISTS comment_reactions (
-  comment_id        TEXT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  comment_id       TEXT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
   reactor_device_id TEXT NOT NULL DEFAULT 'local',
-  emoji             TEXT NOT NULL,
+  emoji            TEXT NOT NULL,
   PRIMARY KEY (comment_id, reactor_device_id, emoji)
 );
 
@@ -198,7 +201,7 @@ CREATE TABLE IF NOT EXISTS comment_reactions (
 CREATE TABLE IF NOT EXISTS pomodoro_sessions (
   id               TEXT PRIMARY KEY,
   task_id          TEXT REFERENCES tasks(id) ON DELETE SET NULL,
-  type             TEXT NOT NULL,
+  type             TEXT NOT NULL,                -- 'work' | 'short_break' | 'long_break'
   duration_seconds INTEGER NOT NULL,
   started_at       TEXT NOT NULL,
   ended_at         TEXT,
@@ -209,12 +212,12 @@ CREATE TABLE IF NOT EXISTS pomodoro_sessions (
 CREATE INDEX IF NOT EXISTS idx_pomodoro_task_id    ON pomodoro_sessions(task_id);
 CREATE INDEX IF NOT EXISTS idx_pomodoro_started_at ON pomodoro_sessions(started_at);
 
--- 16. goals
+-- 16. goals (Objectives linked to tasks/projects)
 CREATE TABLE IF NOT EXISTS goals (
   id               TEXT PRIMARY KEY,
   title            TEXT NOT NULL,
   description      TEXT,
-  goal_type        TEXT NOT NULL,
+  goal_type        TEXT NOT NULL,                -- 'habit' | 'milestone' | 'outcome'
   target_date      TEXT,
   target_value     REAL DEFAULT 100,
   current_value    REAL NOT NULL DEFAULT 0,
@@ -224,10 +227,10 @@ CREATE TABLE IF NOT EXISTS goals (
   updated_at       TEXT NOT NULL
 );
 
--- 17. goal_links
+-- 17. goal_links (Join: goal <-> task/project)
 CREATE TABLE IF NOT EXISTS goal_links (
   goal_id       TEXT NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
-  resource_type TEXT NOT NULL,
+  resource_type TEXT NOT NULL,                   -- 'task' | 'project'
   resource_id   TEXT NOT NULL,
   PRIMARY KEY (goal_id, resource_type, resource_id)
 );
@@ -235,7 +238,7 @@ CREATE TABLE IF NOT EXISTS goal_links (
 -- 18. notification_history
 CREATE TABLE IF NOT EXISTS notification_history (
   id         TEXT PRIMARY KEY,
-  type       TEXT NOT NULL,
+  type       TEXT NOT NULL,                      -- 'due' | 'reminder' | 'pomodoro' | 'collaboration' | 'agenda' | 'goal' | 'streak'
   task_id    TEXT REFERENCES tasks(id) ON DELETE CASCADE,
   title      TEXT NOT NULL,
   body       TEXT NOT NULL,
@@ -245,19 +248,22 @@ CREATE TABLE IF NOT EXISTS notification_history (
 
 CREATE INDEX IF NOT EXISTS idx_notif_created_at ON notification_history(created_at);
 
--- 19. settings
+-- 19. settings (Key-value store)
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL
+  value TEXT NOT NULL                            -- JSON-encoded string
 );
 
--- 20. modules
+-- 20. modules (Feature toggles)
 CREATE TABLE IF NOT EXISTS modules (
   module_name TEXT PRIMARY KEY,
   is_enabled  INTEGER NOT NULL DEFAULT 1
 );
 
--- Phase 2 Tables (defined in schema from day one)
+-- ============================================================
+-- Phase 2 Tables (defined now to avoid schema cascades)
+-- ============================================================
+
 -- 21. users
 CREATE TABLE IF NOT EXISTS users (
   id           TEXT PRIMARY KEY,
@@ -305,7 +311,10 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 
 CREATE INDEX IF NOT EXISTS idx_sync_queue_created_at ON sync_queue(created_at);
 
--- 25. tasks_fts (Full-Text Search)
+-- ============================================================
+-- 25. FTS5 Full-Text Search Virtual Table & Triggers
+-- ============================================================
+
 CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(
   id UNINDEXED,
   title,
@@ -314,7 +323,31 @@ CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(
   content_rowid=rowid
 );
 
--- Seed initial smart lists if empty
+-- Trigger: After Insert
+CREATE TRIGGER IF NOT EXISTS tasks_ai AFTER INSERT ON tasks BEGIN
+  INSERT INTO tasks_fts(rowid, id, title, notes)
+  VALUES (new.rowid, new.id, new.title, coalesce(new.notes, ''));
+END;
+
+-- Trigger: After Delete
+CREATE TRIGGER IF NOT EXISTS tasks_ad AFTER DELETE ON tasks BEGIN
+  INSERT INTO tasks_fts(tasks_fts, rowid, id, title, notes)
+  VALUES ('delete', old.rowid, old.id, old.title, coalesce(old.notes, ''));
+END;
+
+-- Trigger: After Update
+CREATE TRIGGER IF NOT EXISTS tasks_au AFTER UPDATE ON tasks BEGIN
+  INSERT INTO tasks_fts(tasks_fts, rowid, id, title, notes)
+  VALUES ('delete', old.rowid, old.id, old.title, coalesce(old.notes, ''));
+  INSERT INTO tasks_fts(rowid, id, title, notes)
+  VALUES (new.rowid, new.id, new.title, coalesce(new.notes, ''));
+END;
+
+-- ============================================================
+-- Default Seed Data
+-- ============================================================
+
+-- Built-in Smart Lists
 INSERT OR IGNORE INTO lists (id, name, icon, is_smart, smart_type, sort_order, created_at, updated_at)
 VALUES
   ('smart_my_day', 'My Day', '☀️', 1, 'my_day', 0, datetime('now'), datetime('now')),
@@ -322,9 +355,9 @@ VALUES
   ('smart_planned', 'Planned', '📅', 1, 'planned', 2, datetime('now'), datetime('now')),
   ('smart_all', 'All Tasks', '📋', 1, 'all', 3, datetime('now'), datetime('now')),
   ('smart_completed', 'Completed', '✅', 1, 'completed', 4, datetime('now'), datetime('now')),
-  ('list_inbox', 'Tasks', '📥', 0, NULL, 5, datetime('now'), datetime('now'));
+  ('list_inbox', 'Inbox', '📥', 0, NULL, 5, datetime('now'), datetime('now'));
 
--- Seed initial modules if empty
+-- Feature Modules
 INSERT OR IGNORE INTO modules (module_name, is_enabled)
 VALUES
   ('my_day', 1),
@@ -340,3 +373,24 @@ VALUES
   ('habit_tracker', 0),
   ('collaboration', 0),
   ('companion_sync', 0);
+
+-- Default Settings (SCHEMA.md)
+INSERT OR IGNORE INTO settings (key, value)
+VALUES
+  ('theme', '"auto"'),
+  ('accent_color', '"#1B88FF"'),
+  ('font_size', '"md"'),
+  ('font_family', '"system"'),
+  ('density', '"comfortable"'),
+  ('sidebar_position', '"left"'),
+  ('launch_at_login', 'true'),
+  ('day_starts_at', '"00:00"'),
+  ('pomodoro_work_minutes', '25'),
+  ('pomodoro_break_minutes', '5'),
+  ('pomodoro_long_break_minutes', '15'),
+  ('pomodoro_sessions_before_long_break', '4'),
+  ('vim_keybindings', 'false'),
+  ('active_profile_preset', '"custom"'),
+  ('app_lock_enabled', 'false'),
+  ('reduce_motion', 'false'),
+  ('task_card_style', '"default"');

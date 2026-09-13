@@ -5,6 +5,22 @@
 
 ---
 
+### [2026-09-13] — Phase 2 complete: Full SQLite schema, all repositories, domain functions, shared types
+- **What was built:**
+  - Initial database migration `0001_initial_schema.sql` covering all 20 Phase 1 tables + 4 Phase 2 stub tables, FTS5 virtual table `tasks_fts` with sync triggers (`tasks_ai`, `tasks_ad`, `tasks_au`), and default seeds for smart lists, modules, and settings.
+  - Transactional migration runner `src/main/migrations/runner.ts` using `PRAGMA user_version`.
+  - Database bootstrap `src/main/repositories/db.ts` applying all 6 performance pragmas (WAL, NORMAL, foreign keys, cache size, memory temp store, mmap size).
+  - TypeScript shared types mirroring all tables under `src/shared/types/` (`Task`, `List`, `ListGroup`, `Project`, `Section`, `Tag`, `Reminder`, `Attachment`, `Comment`, `PomodoroSession`, `Goal`, `GoalLink`, `NotificationHistoryItem`, `Settings`, `Module`, `LocalIdentity`, `IpcResult`).
+  - Repository layer under `src/main/repositories/`: `BaseRepository`, `TaskRepository`, `ListRepository`, `ListGroupRepository`, `ProjectRepository`, `SectionRepository`, `TagRepository`, `ReminderRepository`, `AttachmentRepository`, `PomodoroRepository`, `GoalRepository`, `SettingsRepository`, `ModuleRepository`, `NotificationRepository`, `IdentityRepository`, and `SearchRepository`.
+  - Domain layer pure functions under `src/main/domain/`: `task-validation.ts`, `recurrence.ts` (RFC 5545 calculation via `rrule`), `nlp.ts` (Quick-Add natural language parsing via `chrono-node`), `fractional-index.ts` (ordering midpoints), and `dependency-check.ts` (cycle detection).
+  - Shared date and UUID utilities under `src/shared/utils/`.
+- **What changed architecturally:**
+  - ARCHITECTURE.md Rule 2 strictly enforced: all SQLite statements live inside `src/main/repositories/` with zero string concatenation.
+  - Domain logic isolated as 100% pure, side-effect-free functions decoupled from IPC and filesystem.
+  - Full-text search powered by SQLite FTS5 virtual table with automated trigger-based index updates.
+
+---
+
 ### [2026-09-13] — Phase 1 complete: Token system live, fonts wired, base component library built, app shell
 - **What was built:**
   - Token system and self-hosted fonts wired at app entry point (`tokens.css`, `fonts.css`).

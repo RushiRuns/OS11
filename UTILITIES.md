@@ -46,48 +46,74 @@
 
 ---
 
-## 3. Domain Functions
+## 3. Domain Functions (Pure Functions — No I/O, No IPC, No DB)
 
-*Check here before writing new business logic. Domain functions are pure: no I/O, no IPC, no database calls.*
+*Check here before writing new business logic. All domain logic is pure and deterministic.*
 
 | Function | File Path | Description |
 |---|---|---|
-| `createTaskEntity` | `src/main/domain/task.ts` | Pure task factory with UUID generation, timestamping, default sort order |
-| `validateTaskTitle` | `src/main/domain/task.ts` | Validates task title (non-empty, max 500 chars) |
-| `clampPriority` | `src/main/domain/task.ts` | Clamps numeric priority to valid range (0-4: None, Low, Medium, High, Critical) |
-| `toggleTaskCompletion`| `src/main/domain/task.ts` | Pure state transition returning updated task with completion timestamp |
-| `calculateNextDueDate` | `src/main/domain/task.ts` | RFC 5545 RRULE recurrence calculator for recurring tasks |
-| `parseNaturalLanguageTask` | `src/main/domain/nlp.ts` | Chrono-based NLP date/time and priority parser from raw text input |
+| `validateCreate` / `validateUpdate` | `src/main/domain/task-validation.ts` | Validates task creation/update payloads (title required, max 500 chars, priority 0-4, valid dates/RRULE) |
+| `buildNewTask` | `src/main/domain/task.ts` | Factory for default task entity with UUID and timestamp generation |
+| `isValidRRule` | `src/main/domain/recurrence.ts` | Validates RFC 5545 recurrence rule strings |
+| `nextOccurrence` | `src/main/domain/recurrence.ts` | Calculates next Date after reference date using `rrule` |
+| `humanReadableRRule` | `src/main/domain/recurrence.ts` | Converts RRULE string to human-friendly text (e.g., "every day") |
+| `expandOccurrences` | `src/main/domain/recurrence.ts` | Expands all occurrences between two dates for calendar/agenda |
+| `parseQuickAdd` | `src/main/domain/nlp.ts` | Chrono + regex NLP parser: extracts clean title, `#tag`, `@list`, `!priority`, `🍅`, and natural date/time |
+| `between` / `atStart` / `atEnd` | `src/main/domain/fractional-index.ts` | Fractional indexing math for reordering items |
+| `wouldCreateCycle` | `src/main/domain/dependency-check.ts` | Graph cycle detection preventing cyclic task dependencies |
 
 ---
 
-## 4. Repository Methods
+## 4. Shared Utilities (`src/shared/utils/`)
 
-*Check here before writing a new query. All database queries live in repositories.*
+*Pure utility helpers shared across Main, Worker, and Renderer processes.*
 
-| Repository | Method | File Path | Purpose |
-|---|---|---|---|
-| `BaseRepository` | `findMany`, `findOne`, `execute` | `src/main/repositories/base-repository.ts` | Type-safe wrapper around `better-sqlite3` prepared statements |
-| `TaskRepository` | `findAll(filter)` | `src/main/repositories/task-repository.ts` | Fetch active/completed tasks filtered by list or project |
-| `TaskRepository` | `findById(id)` | `src/main/repositories/task-repository.ts` | Fetch a single task by UUID |
-| `TaskRepository` | `create(task)` | `src/main/repositories/task-repository.ts` | Insert a new task entity |
-| `TaskRepository` | `update(task)` | `src/main/repositories/task-repository.ts` | Update existing task attributes |
-| `TaskRepository` | `delete(id)` | `src/main/repositories/task-repository.ts` | Hard delete a task entity |
-| `TaskRepository` | `toggleComplete(id)` | `src/main/repositories/task-repository.ts` | Toggle task completion status and update `completed_at` |
-| `SettingsRepository` | `getAll()` | `src/main/repositories/settings-repository.ts` | Fetch all key-value application settings |
-| `SettingsRepository` | `get(key)` | `src/main/repositories/settings-repository.ts` | Get setting value by key |
-| `SettingsRepository` | `set(key, val)` | `src/main/repositories/settings-repository.ts` | Insert or replace setting key-value pair |
+| Function | File Path | Description |
+|---|---|---|
+| `toISODate` | `src/shared/utils/date.ts` | Formats Date object strictly as `YYYY-MM-DD` |
+| `toISODateTime` | `src/shared/utils/date.ts` | Formats Date object as ISO-8601 string |
+| `formatForDisplay` | `src/shared/utils/date.ts` | Formats date for display: "Today", "Tomorrow", "Mon, Jan 6", etc. |
+| `isOverdue` | `src/shared/utils/date.ts` | Compares date against current timestamp/day boundary |
+| `generateUUID` | `src/shared/utils/uuid.ts` | Generates RFC-compliant UUID v4 |
+| `isValidUUID` | `src/shared/utils/uuid.ts` | Validates whether string is UUID v4 |
+| `clamp` | `src/shared/utils/index.ts` | Clamps number between min and max bounds |
+| `isValidIsoDate` | `src/shared/utils/index.ts` | Checks if string is valid ISO timestamp |
 
 ---
 
-## 5. Do NOT Create a Duplicate Of
+## 5. Repository Layer (`src/main/repositories/`)
+
+*All SQLite queries reside exclusively in this directory per ARCHITECTURE.md Rule 2.*
+
+| Repository | File Path | Key Methods |
+|---|---|---|
+| `BaseRepository` | `src/main/repositories/base-repository.ts` | Base class connecting to singleton `db` or custom test database |
+| `TaskRepository` | `src/main/repositories/TaskRepository.ts` | `getByListId`, `getFirst50`, `getByProjectId`, `getById`, `getSubtasks`, `getMyDay`, `getImportant`, `getPlanned`, `getAllTasks`, `getCompleted`, `getTrashed`, `create`, `update`, `complete`, `uncomplete`, `star`, `unstar`, `trash`, `restore`, `permanentDelete`, `addToMyDay`, `removeFromMyDay`, `updateSortOrder` |
+| `ListRepository` | `src/main/repositories/ListRepository.ts` | `getAll`, `getById`, `create`, `update`, `delete`, `reorder` |
+| `ListGroupRepository` | `src/main/repositories/ListGroupRepository.ts` | `getAll`, `getById`, `create`, `update`, `delete`, `reorder` |
+| `ProjectRepository` | `src/main/repositories/ProjectRepository.ts` | `getAll`, `getById`, `create`, `update`, `archive`, `delete` |
+| `SectionRepository` | `src/main/repositories/SectionRepository.ts` | `getByProjectId`, `create`, `update`, `delete`, `reorder` |
+| `TagRepository` | `src/main/repositories/TagRepository.ts` | `getAll`, `create`, `update`, `delete`, `getTagsForTask`, `addTagToTask`, `removeTagFromTask`, `getTasksForTag` |
+| `ReminderRepository` | `src/main/repositories/ReminderRepository.ts` | `getUpcomingAndOverdue`, `create`, `markTriggered`, `snooze`, `deleteByTaskId`, `delete` |
+| `AttachmentRepository` | `src/main/repositories/AttachmentRepository.ts` | `getByTaskId`, `getById`, `create`, `delete` |
+| `PomodoroRepository` | `src/main/repositories/PomodoroRepository.ts` | `create`, `complete`, `getByTaskId`, `getStats` |
+| `GoalRepository` | `src/main/repositories/GoalRepository.ts` | `getAll`, `create`, `update`, `delete`, `addLink`, `removeLink`, `getLinks` |
+| `SettingsRepository` | `src/main/repositories/SettingsRepository.ts` | `get(key, default?)`, `set(key, val)`, `getAll()` (JSON encoded) |
+| `ModuleRepository` | `src/main/repositories/ModuleRepository.ts` | `getAll`, `isEnabled(name)`, `toggle(name, enabled)` |
+| `NotificationRepository` | `src/main/repositories/NotificationRepository.ts` | `add`, `getAll`, `markRead`, `markAllRead` |
+| `IdentityRepository` | `src/main/repositories/IdentityRepository.ts` | `get`, `create`, `updateDisplayName` |
+| `SearchRepository` | `src/main/repositories/SearchRepository.ts` | `search(query)` via FTS5 full-text virtual table with snippets |
+
+---
+
+## 6. Do NOT Create a Duplicate Of
 
 *The following items must exist ONLY ONCE in the codebase:*
 
 1. **Design Tokens:** `src/renderer/styles/tokens.css` (never create alternate token files or hardcoded hex/rgba values).
 2. **IPC Channel Registry:** `IPC_CHANNELS.md` and `src/shared/ipc-channels.ts` (never invent ad-hoc string channel names).
-3. **Database Connection:** `src/main/database.ts` (only one `better-sqlite3` instance exists in the main process).
-4. **Database Migration Runner:** `src/main/migrations/runner.ts` (tracks `PRAGMA user_version` and executes sequentially).
+3. **Database Connection:** `src/main/repositories/db.ts` / `src/main/database.ts` (only one `better-sqlite3` instance exists in the main process).
+4. **Database Migration Runner:** `src/main/migrations/runner.ts` (tracks `PRAGMA user_version` and executes sequentially in transactions).
 5. **Main Window Lifecycle Manager:** `src/main/window/main-window.ts` (sole owner of `BrowserWindow` creation, state, and sizing).
 6. **IPC Dispatch Registry:** `src/main/ipc/index.ts` (all `ipcMain.handle` registrations route here).
 7. **Portal Root:** `<div id="radix-portal"></div>` in `index.html` (single target for Radix portals).

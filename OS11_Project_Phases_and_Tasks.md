@@ -240,7 +240,7 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
 
 ### Database Bootstrap
 
-- [ ] Create `src/main/repositories/db.ts`
+- [x] Create `src/main/repositories/db.ts`
   - Open `better-sqlite3` at `app.getPath('userData')/os11.db`
   - Apply all pragmas from PERFORMANCE.md §14 before any query runs:
     ```typescript
@@ -255,13 +255,13 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
 
 ### Migration System
 
-- [ ] Create `src/main/migrations/runner.ts`
+- [x] Create `src/main/migrations/runner.ts`
   - Read `PRAGMA user_version` on startup
   - Apply pending migration files in order (`0001`, `0002`, ...)
   - Set `PRAGMA user_version` after each migration succeeds
   - Wrapped in a single transaction per migration — all or nothing
   - Must complete before any other startup operation (per PERFORMANCE.md §3)
-- [ ] Create `src/main/migrations/0001_initial_schema.sql`
+- [x] Create `src/main/migrations/0001_initial_schema.sql`
   - All Phase 1 tables from `SCHEMA.md`: `tasks`, `lists`, `list_groups`, `projects`, `sections`,
     `task_dependencies`, `milestones`, `tags`, `task_tags`, `reminders`, `attachments`,
     `comments`, `comment_reactions`, `pomodoro_sessions`, `goals`, `goal_links`,
@@ -274,36 +274,36 @@ All components use only CSS variable tokens. No hardcoded values. Verified again
   - Seed `settings` table with all defaults from SCHEMA.md
   - Seed `modules` table with all defaults from SCHEMA.md
   - `PRAGMA user_version = 1`
-- [ ] Create `src/main/migrations/README.md` — naming convention, how to add a new migration, what needs human review
+- [x] Create `src/main/migrations/README.md` — naming convention, how to add a new migration, what needs human review
 
 ### TypeScript Shared Types
 
 One interface per table. Lives in `src/shared/types/`. The renderer, main, and worker processes all import from here.
 
-- [ ] `src/shared/types/Task.ts` — mirrors `tasks` table; adds `tags: Tag[]` as a computed join field
-- [ ] `src/shared/types/List.ts`
-- [ ] `src/shared/types/ListGroup.ts`
-- [ ] `src/shared/types/Project.ts`
-- [ ] `src/shared/types/Section.ts`
-- [ ] `src/shared/types/Tag.ts`
-- [ ] `src/shared/types/Reminder.ts`
-- [ ] `src/shared/types/Attachment.ts`
-- [ ] `src/shared/types/Comment.ts`
-- [ ] `src/shared/types/PomodoroSession.ts`
-- [ ] `src/shared/types/Goal.ts`
-- [ ] `src/shared/types/GoalLink.ts`
-- [ ] `src/shared/types/NotificationHistoryItem.ts`
-- [ ] `src/shared/types/Settings.ts` — typed key-value map; every key from SCHEMA.md is a typed property
-- [ ] `src/shared/types/Module.ts`
-- [ ] `src/shared/types/LocalIdentity.ts`
-- [ ] `src/shared/types/IpcResult.ts` — `type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string }`
-- [ ] `src/shared/types/index.ts` — barrel export of all types
+- [x] `src/shared/types/Task.ts` — mirrors `tasks` table; adds `tags: Tag[]` as a computed join field
+- [x] `src/shared/types/List.ts`
+- [x] `src/shared/types/ListGroup.ts`
+- [x] `src/shared/types/Project.ts`
+- [x] `src/shared/types/Section.ts`
+- [x] `src/shared/types/Tag.ts`
+- [x] `src/shared/types/Reminder.ts`
+- [x] `src/shared/types/Attachment.ts`
+- [x] `src/shared/types/Comment.ts`
+- [x] `src/shared/types/PomodoroSession.ts`
+- [x] `src/shared/types/Goal.ts`
+- [x] `src/shared/types/GoalLink.ts`
+- [x] `src/shared/types/NotificationHistoryItem.ts`
+- [x] `src/shared/types/Settings.ts` — typed key-value map; every key from SCHEMA.md is a typed property
+- [x] `src/shared/types/Module.ts`
+- [x] `src/shared/types/LocalIdentity.ts`
+- [x] `src/shared/types/IpcResult.ts` — `type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string }`
+- [x] `src/shared/types/index.ts` — barrel export of all types
 
 ### Repository Layer
 
 One file per domain. All parameterized statements. No string concatenation in queries. Ever.
 
-- [ ] Create `src/main/repositories/TaskRepository.ts`
+- [x] Create `src/main/repositories/TaskRepository.ts`
   - `getByListId(listId, offset, limit): Task[]` — paginated, used for lazy loading
   - `getFirst50(listId): Task[]` — startup preload
   - `getByProjectId(projectId): Task[]`
@@ -327,26 +327,26 @@ One file per domain. All parameterized statements. No string concatenation in qu
   - `addToMyDay(id, date): void`
   - `removeFromMyDay(id): void`
   - `updateSortOrder(id, sortOrder): void`
-- [ ] Create `src/main/repositories/ListRepository.ts`
+- [x] Create `src/main/repositories/ListRepository.ts`
   - `getAll(): List[]`
   - `getById(id): List | null`
   - `create(payload): List`
   - `update(id, fields): List`
   - `delete(id): void` — cascades to tasks via FK
   - `reorder(updates: Array<{ id: string; sortOrder: number }>): void` — batch update via transaction
-- [ ] Create `src/main/repositories/ListGroupRepository.ts`
-- [ ] Create `src/main/repositories/ProjectRepository.ts`
+- [x] Create `src/main/repositories/ListGroupRepository.ts`
+- [x] Create `src/main/repositories/ProjectRepository.ts`
   - `getAll(): Project[]`
   - `getById(id): Project | null`
   - `create(payload): Project`
   - `update(id, fields): Project`
   - `archive(id): void` — sets `status = 'archived'`
-- [ ] Create `src/main/repositories/SectionRepository.ts`
+- [x] Create `src/main/repositories/SectionRepository.ts`
   - `getByProjectId(projectId): Section[]`
   - `create(payload): Section`
   - `update(id, fields): Section`
   - `delete(id): void`
-- [ ] Create `src/main/repositories/TagRepository.ts`
+- [x] Create `src/main/repositories/TagRepository.ts`
   - `getAll(): Tag[]`
   - `create(payload): Tag`
   - `update(id, fields): Tag`
@@ -355,22 +355,22 @@ One file per domain. All parameterized statements. No string concatenation in qu
   - `addTagToTask(taskId, tagId): void`
   - `removeTagFromTask(taskId, tagId): void`
   - `getTasksForTag(tagId): Task[]` — for Tag View
-- [ ] Create `src/main/repositories/ReminderRepository.ts`
+- [x] Create `src/main/repositories/ReminderRepository.ts`
   - `getUpcomingAndOverdue(): Reminder[]` — `WHERE is_triggered = 0` ordered by `remind_at`
   - `create(payload): Reminder`
   - `markTriggered(id): void`
   - `snooze(id, snoozedUntil): void`
   - `deleteByTaskId(taskId): void`
-- [ ] Create `src/main/repositories/AttachmentRepository.ts`
+- [x] Create `src/main/repositories/AttachmentRepository.ts`
   - `getByTaskId(taskId): Attachment[]`
   - `create(payload): Attachment`
   - `delete(id): Attachment` — returns record so caller can delete the file from disk
-- [ ] Create `src/main/repositories/PomodoroRepository.ts`
+- [x] Create `src/main/repositories/PomodoroRepository.ts`
   - `create(payload): PomodoroSession`
   - `complete(id, endedAt): void`
   - `getByTaskId(taskId): PomodoroSession[]`
   - `getStats(from, to): { totalSessions: number; totalMinutes: number; sessionsByDay: Record<string, number> }`
-- [ ] Create `src/main/repositories/GoalRepository.ts`
+- [x] Create `src/main/repositories/GoalRepository.ts`
   - `getAll(): Goal[]`
   - `create(payload): Goal`
   - `update(id, fields): Goal`
@@ -378,60 +378,60 @@ One file per domain. All parameterized statements. No string concatenation in qu
   - `addLink(goalId, resourceType, resourceId): void`
   - `removeLink(goalId, resourceId): void`
   - `getLinks(goalId): GoalLink[]`
-- [ ] Create `src/main/repositories/SettingsRepository.ts`
+- [x] Create `src/main/repositories/SettingsRepository.ts`
   - `get(key): any` — JSON-parsed
   - `set(key, value): void` — JSON-stringified
   - `getAll(): Record<string, any>`
-- [ ] Create `src/main/repositories/ModuleRepository.ts`
+- [x] Create `src/main/repositories/ModuleRepository.ts`
   - `getAll(): Module[]`
   - `isEnabled(moduleName): boolean`
   - `toggle(moduleName, enabled): void`
-- [ ] Create `src/main/repositories/NotificationRepository.ts`
+- [x] Create `src/main/repositories/NotificationRepository.ts`
   - `add(payload): void`
   - `getAll(): NotificationHistoryItem[]` — virtualized in UI; returns all for now
   - `markRead(id): void`
   - `markAllRead(): void`
-- [ ] Create `src/main/repositories/IdentityRepository.ts`
+- [x] Create `src/main/repositories/IdentityRepository.ts`
   - `get(): LocalIdentity`
   - `create(): LocalIdentity` — UUID v4 via `uuid`; called once on first launch
   - `updateDisplayName(name): void`
-- [ ] Create `src/main/repositories/SearchRepository.ts`
+- [x] Create `src/main/repositories/SearchRepository.ts`
   - `search(query): Array<{ id: string; title: string; snippet: string; listId: string }>` — FTS5 query with snippet()
 
 ### Domain Layer (Pure Functions — No I/O, No Side Effects)
 
-- [ ] Create `src/main/domain/task-validation.ts`
+- [x] Create `src/main/domain/task-validation.ts`
   - `validateCreate(payload): void` — throws with message if invalid
   - `validateUpdate(fields): void`
   - Rules: title required, max 500 chars; priority 0–4; dates valid ISO 8601; RRULE valid if present
-- [ ] Create `src/main/domain/recurrence.ts`
+- [x] Create `src/main/domain/recurrence.ts`
   - `nextOccurrence(rruleString, fromDate): Date | null` — `rrule` library
   - `humanReadableRRule(str): string` — "Every Monday", "Daily", etc.
   - `isValidRRule(str): boolean`
   - `expandOccurrences(str, from, to): Date[]` — for agenda/timeline views
-- [ ] Create `src/main/domain/nlp.ts`
+- [x] Create `src/main/domain/nlp.ts`
   - `parseQuickAdd(input): ParsedTaskInput` — `chrono-node` for dates + regex for modifiers
   - Returns: `{ title, dueDate, dueTime, allDay, priority, tagNames, listName, pomodoroRequested, recurrenceRule }`
   - Handles all syntax from Feature Spec §5.4: `#tag`, `@list`, `!priority`, `🍅`, natural date strings
-- [ ] Create `src/main/domain/fractional-index.ts`
+- [x] Create `src/main/domain/fractional-index.ts`
   - `between(prev: number | null, next: number | null): number`
   - `atStart(first: number): number`
   - `atEnd(last: number): number`
-- [ ] Create `src/main/domain/dependency-check.ts`
+- [x] Create `src/main/domain/dependency-check.ts`
   - `wouldCreateCycle(taskId, dependsOnId, getAllDependencies): boolean`
-- [ ] Create `src/shared/utils/date.ts`
+- [x] Create `src/shared/utils/date.ts`
   - `toISODate(date: Date): string` — always `YYYY-MM-DD`
   - `toISODateTime(date: Date): string` — always `YYYY-MM-DDTHH:mm:ss.sssZ`
   - `formatForDisplay(isoString): string` — "Today", "Tomorrow", "Mon, Jan 6", etc. using `date-fns`
   - `isOverdue(dueDateISO): boolean`
-- [ ] Create `src/shared/utils/uuid.ts` — thin wrapper on `uuid` v4 package
+- [x] Create `src/shared/utils/uuid.ts` — thin wrapper on `uuid` v4 package
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md — document all repositories, domain functions, and shared utils
-- [ ] CHANGELOG_INTERNAL.md: "Phase 2 complete: Full SQLite schema, all repositories, domain functions, shared types."
-- [ ] Run `npm audit` — must come back clean
-- [ ] Commit: `"Phase 2 complete: Database, repositories, domain layer"`
+- [x] Update UTILITIES.md — document all repositories, domain functions, and shared utils
+- [x] CHANGELOG_INTERNAL.md: "Phase 2 complete: Full SQLite schema, all repositories, domain functions, shared types."
+- [x] Run `npm audit` — must come back clean
+- [x] Commit: `"Phase 2 complete: Database, repositories, domain layer"`
 
 ---
 

@@ -2,6 +2,9 @@
  * Pure utility functions (no I/O, no side effects per ARCHITECTURE.md).
  */
 
+export * from './date.js';
+export * from './uuid.js';
+
 export function toIsoString(date: Date = new Date()): string {
   return date.toISOString();
 }
