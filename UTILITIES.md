@@ -36,6 +36,7 @@
 | `Sidebar` | `src/renderer/features/sidebar/Sidebar.tsx` | Uses `ScrollArea` | No (CSS transitions) | Main navigation sidebar (critical initial bundle) |
 | `TaskList` | `src/renderer/features/tasks/TaskList.tsx` | Uses `ScrollArea` | **Site #3 (Reorder layoutId)** | Primary task stream with virtual scroll and priority styling (critical initial bundle) |
 | `DetailPanel` | `src/renderer/features/tasks/DetailPanel.tsx` | No | **Site #2 (Spring slide-in)** | Task metadata/notes editor with spring slide-in from right (critical initial bundle) |
+| `OmnibarView` | `src/renderer/features/omnibar/OmnibarView.tsx` | No | No (CSS transitions) | Centered keyboard task capture overlay with live modifier parsing and auto-dismiss |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
@@ -135,7 +136,22 @@
 
 ---
 
-## 8. Do NOT Create a Duplicate Of
+## 8. Window & System Shell Infrastructure (`src/main/window/`, `src/main/tray/`, `src/main/shortcuts.ts`)
+
+*System shell components, window lifecycle managers, and OS-level integration.*
+
+| Module | File Path | Key Functions / Responsibilities |
+|---|---|---|
+| `MainWindow` | `src/main/window/main-window.ts` | `createMainWindow()`, `showMainWindow()`, `hideMainWindow()`, `toggleMainWindow()`, `setAlwaysOnTop()`, `focusQuickAdd()` — hidden on create, intercepts close event to hide to tray |
+| `SplashWindow` | `src/main/window/splash-window.ts` | `createSplashWindow()`, `destroySplashWindow()`, `resolveSplashHtmlPath()` — zero-JS cold start coverage |
+| `OmnibarWindow` | `src/main/window/omnibar-window.ts` | `createOmnibarWindow()`, `showOmnibarWindow()`, `hideOmnibarWindow()`, `toggleOmnibarWindow()` — centered, blur-to-hide |
+| `TrayManager` | `src/main/tray/tray.ts` | `initTray()`, `updateTrayBadge(count, pomodoro)`, `destroyTray()` — in-memory SVG badge icon and context menu |
+| `GlobalShortcuts` | `src/main/shortcuts.ts` | `registerGlobalShortcuts()`, `unregisterGlobalShortcuts()` — OS global hotkeys (`Ctrl+Shift+Space`, `Ctrl+Space`, `Ctrl+N`, `Ctrl+Shift+H`, `Ctrl+Shift+T`) |
+| `AutoUpdater` | `src/main/services/updater.ts` | `initAutoUpdater()`, `checkForUpdates()` — background non-blocking updates via `electron-updater` |
+
+---
+
+## 9. Do NOT Create a Duplicate Of
 
 *The following items must exist ONLY ONCE in the codebase:*
 
@@ -144,7 +160,10 @@
 3. **Database Connection:** `src/main/repositories/db.ts` / `src/main/database.ts` (only one `better-sqlite3` instance exists in the main process).
 4. **Database Migration Runner:** `src/main/migrations/runner.ts` (tracks `PRAGMA user_version` and executes sequentially in transactions).
 5. **Main Window Lifecycle Manager:** `src/main/window/main-window.ts` (sole owner of `BrowserWindow` creation, state, and sizing).
-6. **IPC Dispatch Registry:** `src/main/ipc/index.ts` (all `ipcMain.handle` registrations route here).
-7. **Portal Root:** `<div id="radix-portal"></div>` in `index.html` (single target for Radix portals).
-8. **Preload Script Bridge:** `src/main/window/preload.ts` (exposes only `window.electron.invoke` and `window.electron.on`).
-9. **Worker Thread Entry:** `src/worker/worker-main.ts` (handles heavy background jobs off the main loop).
+6. **Splash Window Lifecycle Manager:** `src/main/window/splash-window.ts` (sole owner of cold-start splash coverage).
+7. **Omnibar Window Lifecycle Manager:** `src/main/window/omnibar-window.ts` (sole owner of quick-capture omnibar window).
+8. **System Tray Lifecycle Manager:** `src/main/tray/tray.ts` (sole owner of tray icon and badge rendering).
+9. **IPC Dispatch Registry:** `src/main/ipc/index.ts` (all `ipcMain.handle` registrations route here).
+10. **Portal Root:** `<div id="radix-portal"></div>` in `index.html` (single target for Radix portals).
+11. **Preload Script Bridge:** `src/main/window/preload.ts` (exposes only `window.electron.invoke` and `window.electron.on`).
+12. **Worker Thread Entry:** `src/worker/worker-main.ts` (handles heavy background jobs off the main loop).

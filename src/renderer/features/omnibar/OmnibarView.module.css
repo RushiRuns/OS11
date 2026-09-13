@@ -1,0 +1,134 @@
+.omnibarOverlay {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.omnibarCard {
+  width: 100%;
+  max-width: 600px;
+  background: var(--bg-surface, #0f172a);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  gap: var(--space-3);
+}
+
+.omnibarIcon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-accent-blue, #3b82f6);
+  flex-shrink: 0;
+}
+
+.omnibarInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans, inherit);
+  font-size: var(--text-base, 16px);
+  color: var(--text-primary, #f8fafc);
+  caret-color: var(--color-accent-blue, #3b82f6);
+}
+
+.omnibarInput::placeholder {
+  color: var(--text-tertiary, #64748b);
+}
+
+.escBadge {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #94a3b8);
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 4px);
+  font-family: monospace;
+}
+
+.previewSection {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 120px;
+}
+
+.badgesRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs, 12px);
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 9999px);
+  font-weight: 500;
+}
+
+.badgeTag {
+  background: rgba(147, 51, 234, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+}
+
+.badgeList {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badgePriority {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badgeDate {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgePomodoro {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.hintRow {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #64748b);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.hintShortcut {
+  color: var(--text-secondary, #94a3b8);
+  font-family: monospace;
+}

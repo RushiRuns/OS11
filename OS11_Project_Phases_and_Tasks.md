@@ -565,7 +565,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Main Window (Hidden on Create)
 
-- [ ] Create `src/main/window/main-window.ts`
+- [x] Create `src/main/window/main-window.ts`
   - `new BrowserWindow({ show: false, ... })` — never shown on create (PERFORMANCE.md §1)
   - Security config: `contextIsolation: true, nodeIntegration: false, sandbox: true`
   - `win.on('close', (e) => { e.preventDefault(); win.hide(); })` — hide on close, never destroy
@@ -574,15 +574,15 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Splash Screen (Cold Start Coverage)
 
-- [ ] Create `src/main/window/splash-window.ts` — transparent, frameless, `alwaysOnTop: true` (PERFORMANCE.md §2)
-- [ ] Create `src/splash/splash.html` + `src/splash/splash.css`
+- [x] Create `src/main/window/splash-window.ts` — transparent, frameless, `alwaysOnTop: true` (PERFORMANCE.md §2)
+- [x] Create `src/splash/splash.html` + `src/splash/splash.css`
   - No JS bundle, no framework, no Vite
   - Logo + minimal CSS animation — renders before Chromium finishes loading the main bundle
   - `mainWindow.once('ready-to-show', () => { splash.destroy(); mainWindow.show(); })`
 
 ### Omnibar Window
 
-- [ ] Create `src/main/window/omnibar-window.ts`
+- [x] Create `src/main/window/omnibar-window.ts`
   - Frameless, `alwaysOnTop: true`, centered on active monitor
   - `show: false` at startup
   - `win.on('blur', () => win.hide())` — closes on click-outside
@@ -590,7 +590,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### System Tray
 
-- [ ] Create `src/main/tray/tray.ts`
+- [x] Create `src/main/tray/tray.ts`
   - Tray icon with today's pending task count badge (updated whenever tasks change)
   - Context menu: Open OS11 / Quick Add (→ open Omnibar) / Today's Tasks / Pomodoro controls / Quit
   - macOS: menu bar icon; Windows/Linux: system tray icon
@@ -598,30 +598,30 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Global Shortcuts (OS-Level)
 
-- [ ] Register in `src/main/main.ts` via `globalShortcut.register()`:
+- [x] Register in `src/main/main.ts` via `globalShortcut.register()`:
   - `Ctrl+Shift+Space` (Win/Linux) / `Cmd+Shift+Space` (Mac) → show and focus main window
   - `Ctrl+Space` / `Cmd+Space` → show Omnibar
   - `Ctrl+N` / `Cmd+N` → show main window + focus quick-add input
   - `Ctrl+Shift+H` → toggle app visibility
-- [ ] Unregister all on `app.on('will-quit')` — required by Electron
+- [x] Unregister all on `app.on('will-quit')` — required by Electron
 
 ### Login Item (Launch at Login)
 
-- [ ] `app.setLoginItemSettings({ openAtLogin: true })` applied on first launch (default per SCHEMA.md `launch_at_login`)
-- [ ] Wired to `SettingsService.applyLoginItem(enabled)` — controlled via Settings → "Launch at Login" toggle
-- [ ] Starts minimized to tray on login — no window shown
+- [x] `app.setLoginItemSettings({ openAtLogin: true })` applied on first launch (default per SCHEMA.md `launch_at_login`)
+- [x] Wired to `SettingsService.applyLoginItem(enabled)` — controlled via Settings → "Launch at Login" toggle
+- [x] Starts minimized to tray on login — no window shown
 
 ### Always on Top
 
-- [ ] Toggle button in Titlebar component
-- [ ] `Ctrl+Shift+T` shortcut
-- [ ] `win.setAlwaysOnTop(true)` / `win.setAlwaysOnTop(false)` via IPC from renderer
-- [ ] Opacity control (50%–100%) when "Always on Top" is active
-- [ ] State saved in `settings` table (`always_on_top`, `always_on_top_opacity`)
+- [x] Toggle button in Titlebar component
+- [x] `Ctrl+Shift+T` shortcut
+- [x] `win.setAlwaysOnTop(true)` / `win.setAlwaysOnTop(false)` via IPC from renderer
+- [x] Opacity control (50%–100%) when "Always on Top" is active
+- [x] State saved in `settings` table (`always_on_top`, `always_on_top_opacity`)
 
 ### Auto-Updater
 
-- [ ] Create `src/main/services/updater.ts` using `electron-updater`
+- [x] Create `src/main/services/updater.ts` using `electron-updater`
   - Check for updates on startup (background, non-blocking)
   - Download update in background
   - Emit IPC to renderer when update is ready → renderer shows changelog highlight (not a modal)
@@ -629,16 +629,16 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Performance Validation (Must Pass Before Phase Closes)
 
-- [ ] Warm-start time: `win.show()` perceived < 30ms — measure with `console.time()` / `win.webContents.on('did-finish-load')`
-- [ ] Cold-start time: < 1.5 seconds to interactive — measure with Playwright
-- [ ] Initial JS bundle: run `npm run analyze` → verify < 200KB gzipped
-- [ ] Initial CSS: verify < 30KB
-- [ ] Confirm lazy chunks are present and not in the initial bundle: Dashboard, Agenda, Projects, Settings, Pomodoro
+- [x] Warm-start time: `win.show()` perceived < 30ms — measure with `console.time()` / `win.webContents.on('did-finish-load')`
+- [x] Cold-start time: < 1.5 seconds to interactive — measure with Playwright
+- [x] Initial JS bundle: run `npm run analyze` → verify < 200KB gzipped
+- [x] Initial CSS: verify < 30KB
+- [x] Confirm lazy chunks are present and not in the initial bundle: Dashboard, Agenda, Projects, Settings, Pomodoro
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 4 complete: Window infrastructure, tray, global shortcuts, splash, warm-start performance verified."
-- [ ] Commit: `"Phase 4 complete: Electron window infrastructure and performance baseline"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 4 complete: Window infrastructure, tray, global shortcuts, splash, warm-start performance verified."
+- [x] Commit: `"Phase 4 complete: Electron window infrastructure and performance baseline"`
 
 ---
 

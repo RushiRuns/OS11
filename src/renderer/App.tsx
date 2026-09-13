@@ -6,6 +6,9 @@ import { Titlebar } from './components/Titlebar/Titlebar.js';
 import { Sidebar } from './features/sidebar/Sidebar.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { DetailPanel } from './features/tasks/DetailPanel.js';
+import { OmnibarView } from './features/omnibar/OmnibarView.js';
+import { ipc } from './services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
 
 // Lazy views — loaded on-demand per PERFORMANCE.md §5 & vite.config.ts manualChunks
@@ -33,12 +36,27 @@ function ViewSkeleton(): React.ReactElement {
 }
 
 export function App(): React.ReactElement {
+  const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
+
   const { activeListId, systemInfo, fetchSystemInfo } = useAppStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchSystemInfo();
+
+    const unsubFocus = ipc.on(IPC.APP.FOCUS_QUICK_ADD, () => {
+      const quickAddInput = document.querySelector('input[placeholder*="Add a task"]') as HTMLInputElement;
+      quickAddInput?.focus();
+    });
+
+    return () => {
+      unsubFocus?.();
+    };
   }, [fetchSystemInfo]);
+
+  if (isOmnibar) {
+    return <OmnibarView />;
+  }
 
   const renderMainContent = () => {
     switch (activeListId) {
@@ -87,7 +105,13 @@ export function App(): React.ReactElement {
   return (
     <div className={layoutStyles.container}>
       {/* Custom Frameless Titlebar */}
-      <Titlebar title="OS11" version={systemInfo?.version} />
+      <Titlebar
+        title="OS11"
+        version={systemInfo?.version}
+        onToggleAlwaysOnTop={(pinned) => {
+          ipc.invoke(IPC.APP.SET_ALWAYS_ON_TOP, { pinned }).catch(console.error);
+        }}
+      />
 
       {/* Three-Column CSS Grid Shell */}
       <div

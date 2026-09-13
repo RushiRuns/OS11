@@ -5,6 +5,26 @@
 
 ---
 
+### [2026-09-13] — Phase 4 complete: Window infrastructure, tray, global shortcuts, splash, warm-start performance verified
+- **What was built:**
+  - Hardened `BrowserWindow` main window manager in `src/main/window/main-window.ts`:
+    - Enforced `show: false` on creation per PERFORMANCE.md §1.
+    - Intercepted `close` event with `e.preventDefault(); win.hide()` to keep the process and SQLite WAL connection alive in the tray.
+    - Exported lifecycle controls (`showMainWindow()`, `hideMainWindow()`, `toggleMainWindow()`, `setAlwaysOnTop()`, `focusQuickAdd()`).
+    - Pinned Always-on-Top mode with opacity clamping between 50% and 100%, persisted to SQLite `settings`.
+  - Zero-JS lightweight HTML/CSS splash screen (`src/splash/splash.html`, `src/splash/splash.css`, `src/main/window/splash-window.ts`) for cold-start coverage, smoothly destroyed when `mainWindow` emits `ready-to-show`.
+  - Centered keyboard-native Omnibar window (`src/main/window/omnibar-window.ts`) with blur-to-hide and `OmnibarView` (`src/renderer/features/omnibar/`) providing live hashtag, list, priority, and pomodoro modifier previews.
+  - Reactive system tray manager (`src/main/tray/tray.ts`) with crisp in-memory SVG badge icon generator (`nativeImage.createFromDataURL`), displaying today's pending task counts and active Pomodoro countdowns (`🍅 24m`), plus context menu.
+  - OS-level global shortcut registration (`src/main/shortcuts.ts`) for `Ctrl+Shift+Space` (focus main window), `Ctrl+Space` (Omnibar), `Ctrl+N` (Quick Add), `Ctrl+Shift+H` (toggle app visibility), and `Ctrl+Shift+T` (always on top).
+  - Background non-blocking auto-updater service (`src/main/services/updater.ts`) powered by `electron-updater`.
+  - Comprehensive unit test suite in `tests/window/window-and-tray.test.ts` (all 12 test suites passing, 71 tests total).
+  - Verified bundle size and performance constraints: initial CSS = 24.43 kB (< 30 kB), initial JS = 96.89 kB gzipped (< 200 kB), and 5 code-split lazy chunks (`dashboard`, `agenda`, `projects`, `settings`, `pomodoro`).
+- **What changed architecturally:**
+  - Electron window destruction replaced by warm-start hide-on-close lifecycle, ensuring perceived window reopen time < 30ms.
+  - Multi-window shell architecture established: MainWindow, SplashWindow, OmnibarWindow, and TrayManager operating harmoniously through central IPC and shortcut dispatchers.
+
+---
+
 ### [2026-09-13] — Phase 3 complete: Full IPC contract, service layer, worker thread, parallel startup sequence
 - **What was built:**
   - Standard IPC envelope enforcement (`{ ok: true, data }` / `{ ok: false, error }`) across all 16 IPC channel categories in `src/main/ipc/`.

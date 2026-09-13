@@ -1,6 +1,10 @@
 import { ipcMain, BrowserWindow, app } from 'electron';
 import { IPC } from '@shared/ipc-channels.js';
 import { getStartupData } from '../startup.js';
+import { getMainWindow, setAlwaysOnTop } from '../window/main-window.js';
+import { showOmnibarWindow, hideOmnibarWindow } from '../window/omnibar-window.js';
+import { checkForUpdates } from '../services/updater.js';
+import { SettingsRepository } from '../repositories/SettingsRepository.js';
 
 export function registerAppHandlers(): void {
   ipcMain.handle(IPC.APP.GET_STARTUP_DATA, async () => {
@@ -79,6 +83,80 @@ export function registerAppHandlers(): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  // Always on top & opacity controls
+  ipcMain.handle(
+    IPC.APP.SET_ALWAYS_ON_TOP,
+    async (_event, payload: { pinned: boolean; opacity?: number }) => {
+      try {
+        const settingsRepo = new SettingsRepository();
+        const pinned = setAlwaysOnTop(payload.pinned, payload.opacity);
+        settingsRepo.set('always_on_top', pinned);
+        if (payload.opacity !== undefined) {
+          settingsRepo.set('always_on_top_opacity', payload.opacity);
+        }
+
+        return { ok: true, data: { pinned, opacity: payload.opacity ?? 1.0 } };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  ipcMain.handle(IPC.APP.GET_ALWAYS_ON_TOP, async () => {
+    try {
+      const win = getMainWindow();
+      const isPinned = win ? win.isAlwaysOnTop() : false;
+      return { ok: true, data: isPinned };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.APP.SET_OPACITY, async (_event, payload: { opacity: number }) => {
+    try {
+      const settingsRepo = new SettingsRepository();
+      const win = getMainWindow();
+      const clamped = Math.max(0.5, Math.min(1.0, payload.opacity));
+      if (win && !win.isDestroyed()) {
+        win.setOpacity(clamped);
+      }
+      settingsRepo.set('always_on_top_opacity', clamped);
+      return { ok: true, data: clamped };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  // Omnibar window controls
+  ipcMain.handle(IPC.APP.SHOW_OMNIBAR, async () => {
+    try {
+      showOmnibarWindow();
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.APP.HIDE_OMNIBAR, async () => {
+    try {
+      hideOmnibarWindow();
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  // Update check
+  ipcMain.handle(IPC.APP.CHECK_FOR_UPDATES, async () => {
+    try {
+      checkForUpdates();
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerAppHandlers;
+

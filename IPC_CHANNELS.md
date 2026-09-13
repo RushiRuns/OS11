@@ -9,13 +9,23 @@
 ## 1. Channel Groups
 
 ### APP
-Window lifecycle, initial preloaded payload, and system chrome controls.
+Window lifecycle, initial preloaded payload, system chrome controls, omnibar, and auto-updates.
 - `app:get-startup-data` — Returns preloaded lists, initial 50 tasks, settings, identity for instant startup.
 - `app:get-info` — Returns app version, OS platform, build metadata.
 - `app:minimize` — Minimizes the active window.
 - `app:maximize` — Toggles maximize / restore on the active window.
 - `app:close` — Closes / hides the active window to tray.
 - `app:quit` — Quits the entire application.
+- `app:trim-memory` — Requests renderer to prune cache upon OS memory pressure.
+- `app:set-always-on-top` — Sets always-on-top pin state and persists to settings.
+- `app:get-always-on-top` — Retrieves current always-on-top state.
+- `app:set-opacity` — Adjusts window opacity (50%–100%) and persists to settings.
+- `app:show-omnibar` — Displays centered omnibar overlay window.
+- `app:hide-omnibar` — Dismisses omnibar window.
+- `app:focus-quick-add` — Focuses quick-add bar in main window.
+- `app:check-for-updates` — Checks for application updates in background.
+- `app:update-available` — Broadcasts when an update is available.
+- `app:update-downloaded` — Broadcasts when an update has been downloaded and ready to install.
 
 ### TASKS
 Task entity CRUD, completion toggling, filtering, and reordering.
