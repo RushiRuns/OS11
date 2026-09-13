@@ -3,6 +3,21 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-13] — Phase 5 complete: Core task CRUD, virtual list, detail panel, optimistic updates, undo, filtering
+- **What was built:**
+  - Normalized Zustand task store (`src/renderer/stores/taskStore.ts` and `task-store.ts`) with `tasksById: Record<string, Task>`, derived selectors (`useTask`, `useTasksByList`, `useMyDay`, `useImportant`, `usePlanned`, `useSubtasks`, `useCompletedTasks`, `useAllActiveTasks`), optimistic updates with rollback snapshots, and pagination/`loadMore`.
+  - Progressive disclosure `TaskCard` (`src/renderer/features/tasks/TaskCard.tsx` + `.module.css`): `React.memo` container with Layer 1 (checkbox + title), Layer 2 (hover/focus: due date chip, tag dots, pomodoro count `🍅 ×N`, subtask count `M/N`, action buttons), Layer 3 (click to open detail panel), inline title editing on double-click/Enter, priority left border with critical pulse animation, and spring completion.
+  - Virtualized `TaskList` (`src/renderer/features/tasks/TaskList.tsx` + `.module.css`): `@tanstack/react-virtual` with comfortable height defaults (`estimateSize: 44px`, `overscan: 10`), keyboard navigation (`j`/`k`, `x`, `Delete`, `*`), collapsible completed tasks section, and undo toast integration.
+  - Slide-in `DetailPanel` drawer (`src/renderer/features/tasks/DetailPanel.tsx` + `.module.css`): Framer Motion spring slide-in (`x: 320 -> 0`), rich TipTap editor (`@tiptap/react`, `@tiptap/starter-kit`) sanitized with `DOMPurify` before IPC persistence, inline subtask manager, reminder trigger chips, and recurrence info.
+  - Application-wide undo/redo system (`src/renderer/hooks/useUndoRedo.ts`) with 100-entry history stack, `Ctrl+Z`/`Ctrl+Y` shortcuts, and a 5-second `Toast` with immediate Undo action.
+  - Memoized search, filter, and sort hook (`src/renderer/hooks/useFilteredTasks.ts`) and expandable `TaskListHeader` (`src/renderer/features/tasks/TaskListHeader.tsx` + `.module.css`).
+  - Task duplication IPC handler (`TASKS.DUPLICATE`) and `TaskService.duplicate(id)`.
+  - 8 unit tests across `tests/domain/task-store.test.ts` and `tests/domain/undo-redo.test.ts` (all 14 test suites and 79 tests passing).
+- **What changed architecturally:**
+  - Renderer task state strictly follows PERFORMANCE.md §12: normalized map `tasksById: Record<string, Task>`, preventing unnecessary array re-allocations and card re-renders.
+  - ADR-0009 animation sites adhered to: Spring Checkbox bounce (Site #1) and Slide-in DetailPanel (Site #2).
+  - Full client-side optimistic UI with rollback guarantee across task creation, updates, completion, and trash.
+
 ---
 
 ### [2026-09-13] — Phase 4 complete: Window infrastructure, tray, global shortcuts, splash, warm-start performance verified

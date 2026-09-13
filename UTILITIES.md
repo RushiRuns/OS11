@@ -13,7 +13,11 @@
 | Hook | File Path | Description | Scope / Notes |
 |---|---|---|---|
 | `useAppStore` | `src/renderer/stores/app-store.ts` | Global application UI state (theme, active view, active list, sidebar state) | Renderer global |
-| `useTaskStore` | `src/renderer/stores/task-store.ts` | Reactive task collection, optimistic task mutations, active selection | Renderer global |
+| `useTaskStore` | `src/renderer/stores/taskStore.ts` | Normalized Zustand task store (`tasksById: Record<string, Task>`) with optimistic mutations, rollback, and pagination | Renderer global |
+| `useTask` | `src/renderer/stores/taskStore.ts` | Single task selector by ID for fine-grained subscription and zero-re-render cards | Component scope |
+| `useTasksByList` | `src/renderer/stores/taskStore.ts` | Filtered, sorted task selector by list ID | Component scope |
+| `useUndoRedo` | `src/renderer/hooks/useUndoRedo.ts` | Global undo/redo action stack (100 entries) with `Ctrl+Z` / `Ctrl+Y` and toast triggers | Renderer global |
+| `useFilteredTasks` | `src/renderer/hooks/useFilteredTasks.ts` | Memoized task filtering (tags, priority, dates) and sorting (due date, priority, alphabetical, manual) | Component scope |
 
 ---
 
@@ -34,8 +38,10 @@
 | `Tooltip` | `src/renderer/components/Tooltip/Tooltip.tsx` | **Yes (`@radix-ui/react-tooltip`)** | No (CSS fade-in) | Keyboard-shortcut hint tooltip with kbd badge |
 | `QuickAdd` | `src/renderer/components/QuickAdd/QuickAdd.tsx` | No | **Site #4 (Scale & opacity)** | Instant task entry bar with spring scale/opacity appear/dismiss |
 | `Sidebar` | `src/renderer/features/sidebar/Sidebar.tsx` | Uses `ScrollArea` | No (CSS transitions) | Main navigation sidebar (critical initial bundle) |
-| `TaskList` | `src/renderer/features/tasks/TaskList.tsx` | Uses `ScrollArea` | **Site #3 (Reorder layoutId)** | Primary task stream with virtual scroll and priority styling (critical initial bundle) |
-| `DetailPanel` | `src/renderer/features/tasks/DetailPanel.tsx` | No | **Site #2 (Spring slide-in)** | Task metadata/notes editor with spring slide-in from right (critical initial bundle) |
+| `TaskList` | `src/renderer/features/tasks/TaskList.tsx` | Uses `@tanstack/react-virtual` | **Site #3 (Reorder layoutId)** | Primary task stream with virtual scroll, keyboard navigation, and collapsible completed tasks (critical initial bundle) |
+| `TaskListHeader` | `src/renderer/features/tasks/TaskListHeader.tsx` | No | No (CSS transitions) | Dynamic task list header with active task count and expandable filter/sort drawer |
+| `TaskCard` | `src/renderer/features/tasks/TaskCard.tsx` | Uses `Checkbox` | **Site #1 (Spring completion)** | `React.memo` task card with 3 layers of progressive disclosure, priority pulse, and inline title editing |
+| `DetailPanel` | `src/renderer/features/tasks/DetailPanel.tsx` | Uses `@tiptap/react` | **Site #2 (Spring slide-in)** | Task metadata/notes editor with DOMPurify sanitization, subtasks, and spring slide-in from right (critical initial bundle) |
 | `OmnibarView` | `src/renderer/features/omnibar/OmnibarView.tsx` | No | No (CSS transitions) | Centered keyboard task capture overlay with live modifier parsing and auto-dismiss |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)

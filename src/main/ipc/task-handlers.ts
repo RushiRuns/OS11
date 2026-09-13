@@ -49,9 +49,81 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
     }
   });
 
+  ipcMain.handle(IPC.TASKS.RESTORE, async (_event, id: string) => {
+    try {
+      const data = taskService.restore(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(IPC.TASKS.TOGGLE_COMPLETE, async (_event, id: string) => {
     try {
       const data = taskService.toggleComplete(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.STAR, async (_event, id: string) => {
+    try {
+      const data = taskService.star(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.UNSTAR, async (_event, id: string) => {
+    try {
+      const data = taskService.unstar(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.DUPLICATE, async (_event, id: string) => {
+    try {
+      const data = taskService.duplicate(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.MAKE_SUBTASK, async (_event, { id, parentId }: { id: string; parentId: string }) => {
+    try {
+      const data = taskService.makeSubtask(id, parentId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.PROMOTE_SUBTASK, async (_event, id: string) => {
+    try {
+      const data = taskService.promoteToTask(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.GET_SUBTASKS, async (_event, parentId: string) => {
+    try {
+      const data = taskService.getSubtasks(parentId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.GET_BY_LIST, async (_event, { listId, offset, limit }: { listId: string; offset?: number; limit?: number }) => {
+    try {
+      const data = taskService.getByListId(listId, offset, limit);
       return { ok: true, data };
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };

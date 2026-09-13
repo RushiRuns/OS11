@@ -31,10 +31,18 @@ Window lifecycle, initial preloaded payload, system chrome controls, omnibar, an
 Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:get-all` — Fetch tasks with optional list/project/tag/due date filters.
 - `tasks:get-by-id` — Fetch single task entity by UUID.
+- `tasks:get-by-list` — Fetch tasks for a specific list ID.
 - `tasks:create` — Create a new task entity.
 - `tasks:update` — Update specified attributes of an existing task.
-- `tasks:delete` — Delete or move task to trash.
+- `tasks:delete` — Move task to trash.
+- `tasks:restore` — Restore task from trash.
 - `tasks:toggle-complete` — Toggle task completion status and update timestamps.
+- `tasks:star` — Mark task as starred/important.
+- `tasks:unstar` — Remove starred mark from task.
+- `tasks:duplicate` — Duplicate task and append " (Copy)".
+- `tasks:make-subtask` — Assign parent task ID with cycle detection.
+- `tasks:promote-subtask` — Promote subtask to top-level task.
+- `tasks:get-subtasks` — Fetch subtasks for a parent task.
 - `tasks:reorder` — Update `sort_order` using fractional indexing.
 - `tasks:batch-update` — Perform atomic update on multiple task IDs.
 

@@ -253,6 +253,25 @@ export class TaskService {
     this.taskRepo.updateSortOrder(id, sortOrder);
     return this.getById(id);
   }
+
+  public duplicate(id: string): Task {
+    const existing = this.getById(id);
+    return this.create({
+      title: `${existing.title} (Copy)`,
+      notes: existing.notes,
+      list_id: existing.list_id,
+      project_id: existing.project_id,
+      section_id: existing.section_id,
+      due_date: existing.due_date,
+      due_time: existing.due_time,
+      all_day: existing.all_day === 1,
+      recurrence_rule: existing.recurrence_rule,
+      recurrence_basis: existing.recurrence_basis,
+      priority: existing.priority,
+      is_starred: existing.is_starred === 1,
+      estimated_minutes: existing.estimated_minutes,
+    });
+  }
 }
 
 export default TaskService;

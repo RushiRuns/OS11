@@ -649,7 +649,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Zustand Task Store
 
-- [ ] Create `src/renderer/stores/taskStore.ts`
+- [x] Create `src/renderer/stores/taskStore.ts`
   - Shape: `tasksById: Record<string, Task>` — keyed by ID, NOT an array (PERFORMANCE.md §12)
   - Ordered list for rendering is a derived selector computed from the keyed map
   - Selectors: `useTask(id)`, `useTasksByList(listId)`, `useMyDay()`, `useImportant()`, `usePlanned()`
@@ -658,7 +658,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Task Card Component
 
-- [ ] Create `src/renderer/features/tasks/TaskCard.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tasks/TaskCard.tsx` + `.module.css`
   - Apply `React.memo` — re-renders only when `tasksById[task.id]` changes (PERFORMANCE.md §16)
   - Subscribe to: `const task = useTask(task.id)` — not `useTaskStore()`
   - **Layer 1 (always visible):** Checkbox + title
@@ -674,7 +674,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Task List with Virtual Scrolling
 
-- [ ] Create `src/renderer/features/tasks/TaskList.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tasks/TaskList.tsx` + `.module.css`
   - `@tanstack/react-virtual` mandatory — no exceptions (PERFORMANCE.md §9)
   - `estimateSize: () => 44` — `var(--task-height-comfortable)`; updates to 34 or 56 with density class
   - `overscan: 10` — render 10 items above/below the visible viewport
@@ -684,7 +684,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Task Detail Panel
 
-- [ ] Create `src/renderer/features/tasks/DetailPanel.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tasks/DetailPanel.tsx` + `.module.css`
   - Right-side drawer — `var(--detail-panel-width)`: 320px
   - Framer Motion: `AnimatePresence` + `initial={{ x: 320 }}` `animate={{ x: 0 }}` — slide in/out, < 200ms, `ease-out`
   - Sections (Notes, Subtasks, Attachments, Reminders, Recurrence) collapsed by default; each expands individually
@@ -695,26 +695,26 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Task CRUD
 
-- [ ] Task creation — three entry points, one IPC path:
+- [x] Task creation — three entry points, one IPC path:
   - Quick Add bar at top of list
   - `Enter` when no task is selected (cursor goes to end of list)
   - Omnibar (Phase 7 wires NLP; here handle plain title)
   - Flow: input → `taskStore.optimisticUpdate` (pending state) → IPC `TASKS.CREATE` → on success, replace pending task with real task
-- [ ] Task completion:
+- [x] Task completion:
   - Checkbox click → `taskStore.optimisticUpdate(id, { is_completed: 1 })` → IPC `TASKS.COMPLETE`
   - If recurring: service generates next occurrence automatically
   - Completed tasks collapse into "Completed" section at bottom of list (collapsible)
-- [ ] Task deletion (FEEL UI — no aggressive modal, no friction):
+- [x] Task deletion (FEEL UI — no aggressive modal, no friction):
   - Delete → `taskStore.optimisticDelete(id)` → IPC `TASKS.TRASH` (moves to trash, not permanent)
   - Undo toast (5 seconds) — clicking Undo calls `TASKS.RESTORE`
   - After 30 days in trash, tasks are permanently purged automatically
-- [ ] Task inline editing:
+- [x] Task inline editing:
   - Click title → title becomes editable `input`, focused immediately → `Enter` saves, `Escape` cancels
   - Click due date chip → opens `DatePicker` popover, closes on selection (no OK button)
   - Click priority dot → 5-option inline picker (None / Low / Medium / High / Critical)
-- [ ] Task starring: `Ctrl+I` or star icon on card → `TASKS.STAR`
-- [ ] Task duplication: copies all fields, appends " (Copy)" to title
-- [ ] Subtask creation:
+- [x] Task starring: `Ctrl+I` or star icon on card → `TASKS.STAR`
+- [x] Task duplication: copies all fields, appends " (Copy)" to title
+- [x] Subtask creation:
   - `Tab` inside a task → creates indented subtask below with cursor ready
   - Subtask inherits parent's list, tags (per Feature Spec §3.4 smart defaults)
   - `Shift+Tab` → promotes subtask to standalone task in the same list
@@ -722,7 +722,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Undo / Redo System
 
-- [ ] Create `src/renderer/hooks/useUndoRedo.ts`
+- [x] Create `src/renderer/hooks/useUndoRedo.ts`
   - Application-wide `Ctrl+Z` / `Ctrl+Y` — not just text editing
   - Per-session action stack: records `{ action, undoFn, redoFn }` for every destructive operation
   - Max 100 entries (oldest dropped when exceeded)
@@ -731,20 +731,20 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Sorting & Filtering
 
-- [ ] Create `src/renderer/features/tasks/TaskListHeader.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tasks/TaskListHeader.tsx` + `.module.css`
   - FEEL UI: when no filters are active, shows only a subtle filter icon — does not occupy permanent space
   - Click icon → filter/sort row expands
   - Sort by: Due date, Priority, Alphabetical, Creation date, Manual (drag)
   - Filter by: Tag, Priority, Due date range, Incomplete only, Has attachments
-- [ ] Create `src/renderer/hooks/useFilteredTasks.ts`
+- [x] Create `src/renderer/hooks/useFilteredTasks.ts`
   - Takes active filters/sort config → returns filtered + sorted task ID list
   - `useMemo` on filter config — does not recompute unless filters change
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `TaskCard`, `TaskList`, `DetailPanel`, `useTask`, `useFilteredTasks`, `useUndoRedo`, `useInfiniteTaskLoader`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 5 complete: Core task CRUD, virtual list, detail panel, optimistic updates, undo, filtering."
-- [ ] Commit: `"Phase 5 complete: Core task management"`
+- [x] Update UTILITIES.md: `TaskCard`, `TaskList`, `DetailPanel`, `useTask`, `useFilteredTasks`, `useUndoRedo`, `useInfiniteTaskLoader`
+- [x] CHANGELOG_INTERNAL.md: "Phase 5 complete: Core task CRUD, virtual list, detail panel, optimistic updates, undo, filtering."
+- [x] Commit: `"Phase 5 complete: Core task management"`
 
 ---
 

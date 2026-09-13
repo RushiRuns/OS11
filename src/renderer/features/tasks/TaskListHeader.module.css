@@ -1,0 +1,96 @@
+.headerContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-2) var(--space-6);
+  background: var(--bg-surface, #0f172a);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: var(--text-2xl, 24px);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filterToggleBtn {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 6px);
+  color: var(--text-secondary, #94a3b8);
+  padding: 6px 10px;
+  font-size: var(--text-xs, 12px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.filterToggleBtn:hover,
+.filterToggleBtnActive {
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #f8fafc);
+  border-color: var(--color-accent-blue, #3b82f6);
+}
+
+/* Expanded Filter Bar */
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary, #94a3b8);
+  animation: slideDown 0.18s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filterSelect {
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #f8fafc);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 8px;
+  font-size: var(--text-xs, 12px);
+  outline: none;
+}
+
+.filterCheckboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}

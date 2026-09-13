@@ -1,0 +1,177 @@
+.taskCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  min-height: var(--task-height-comfortable, 44px);
+  background: var(--bg-surface, #0f172a);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-md, 8px);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+
+.taskCard:hover {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.04));
+  border-color: var(--border-hover, rgba(255, 255, 255, 0.15));
+}
+
+.taskCardSelected {
+  background: var(--bg-surface-active, rgba(59, 130, 246, 0.12));
+  border-color: var(--color-accent-blue, #3b82f6);
+}
+
+/* Priority Left Borders */
+.priority1 {
+  border-left-color: var(--priority-1, #3b82f6);
+}
+
+.priority2 {
+  border-left-color: var(--priority-2, #eab308);
+}
+
+.priority3 {
+  border-left-color: var(--priority-3, #f97316);
+}
+
+.priority4 {
+  border-left-color: var(--priority-4, #ef4444);
+}
+
+.priorityCriticalPulse {
+  animation: border-pulse 2s infinite ease-in-out;
+}
+
+@keyframes border-pulse {
+  0%, 100% {
+    border-left-color: var(--priority-4, #ef4444);
+  }
+  50% {
+    border-left-color: rgba(239, 68, 68, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .priorityCriticalPulse {
+    animation: none;
+  }
+}
+
+/* Layer 1: Always Visible */
+.checkboxWrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.titleArea {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.titleText {
+  font-size: var(--text-sm, 14px);
+  color: var(--text-primary, #f8fafc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.completedTitle {
+  color: var(--text-tertiary, #64748b);
+  text-decoration: line-through;
+}
+
+.titleInput {
+  width: 100%;
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--color-accent-blue, #3b82f6);
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px 6px;
+  font-size: var(--text-sm, 14px);
+  color: var(--text-primary, #f8fafc);
+  outline: none;
+}
+
+/* Layer 2: Metadata & Badges (Visible on hover/focus or when active) */
+.metadataWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.dueDateChip {
+  font-size: var(--text-xs, 12px);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, #94a3b8);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.dueDateOverdue {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.tagDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tag-purple, #a855f7);
+  flex-shrink: 0;
+}
+
+.badgePill {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Actions Row: hover reveal */
+.actionsRow {
+  display: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.taskCard:hover .actionsRow,
+.taskCard:focus-within .actionsRow {
+  display: flex;
+}
+
+.iconButton {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary, #64748b);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.iconButton:hover {
+  color: var(--text-primary, #f8fafc);
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+}
+
+.starButtonActive {
+  color: #eab308;
+}
+
+.starButtonActive:hover {
+  color: #facc15;
+}

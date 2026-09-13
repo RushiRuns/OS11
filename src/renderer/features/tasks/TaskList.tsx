@@ -1,11 +1,18 @@
-import React, { useEffect } from 'react';
-import { useTaskStore } from '../../stores/task-store.js';
+import React, { useState, useRef, useEffect, useDeferredValue, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import {
+  useTaskStore,
+  useCompletedTasks,
+} from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
-import { Checkbox } from '../../components/Checkbox/Checkbox.js';
+import { TaskCard } from './TaskCard.js';
+import { TaskListHeader } from './TaskListHeader.js';
 import { QuickAdd } from '../../components/QuickAdd/QuickAdd.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
-import { ScrollArea } from '../../components/primitives/ScrollArea/ScrollArea.js';
-import type { Task } from '../../../shared/types/task.js';
+import { Toast } from '../../components/Toast/Toast.js';
+import { useFilteredTasks, DEFAULT_FILTER_CONFIG } from '../../hooks/useFilteredTasks.js';
+import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import type { Task } from '@shared/types/task.js';
 import styles from './TaskList.module.css';
 
 interface TaskListProps {
@@ -17,114 +24,275 @@ export function TaskList({
   onSelectTask,
   selectedTaskId,
 }: TaskListProps): React.ReactElement {
-  const { tasks, loading, fetchTasks, createTask, toggleComplete, deleteTask } = useTaskStore();
   const { activeListId } = useAppStore();
+  const {
+    loadTasks,
+    createTask,
+    updateTask,
+    toggleComplete,
+    toggleStar,
+    deleteTask,
+    restoreTask,
+    duplicateTask,
+  } = useTaskStore();
+
+  const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
+  const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const parentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    loadTasks();
+  }, [loadTasks, activeListId]);
 
+  // Derive active tasks based on current smart list or user list
+  const activeTasks = useTaskStore(
+    useCallback(
+      (state) => {
+        const tasks = Object.values(state.tasksById).filter((t) => t.is_trashed === 0);
+        const today = new Date().toISOString().split('T')[0];
+        switch (activeListId) {
+          case 'smart_my_day':
+            return tasks
+              .filter((t) => t.my_day_date === today)
+              .sort((a, b) => a.sort_order - b.sort_order);
+          case 'smart_important':
+            return tasks
+              .filter((t) => t.is_starred === 1)
+              .sort((a, b) => a.sort_order - b.sort_order);
+          case 'smart_planned':
+            return tasks
+              .filter((t) => t.due_date !== null)
+              .sort((a, b) => {
+                if (a.due_date && b.due_date) {
+                  return a.due_date.localeCompare(b.due_date);
+                }
+                return a.sort_order - b.sort_order;
+              });
+          case 'smart_all':
+          case 'smart_all_tasks':
+            return tasks
+              .filter((t) => t.parent_task_id === null)
+              .sort((a, b) => a.sort_order - b.sort_order);
+          default:
+            return tasks
+              .filter((t) => t.list_id === activeListId && t.parent_task_id === null)
+              .sort((a, b) => a.sort_order - b.sort_order);
+        }
+      },
+      [activeListId]
+    )
+  );
+
+  const completedTasks = useCompletedTasks(activeListId);
+
+  // Filter & Sort (deferred value avoids blocking user inputs)
+  const deferredConfig = useDeferredValue(filterConfig);
+  const filteredIncomplete = useFilteredTasks(
+    activeTasks.filter((t) => t.is_completed === 0),
+    deferredConfig
+  );
+
+  // TanStack Virtualizer
+  const virtualizer = useVirtualizer({
+    count: filteredIncomplete.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 44, // var(--task-height-comfortable)
+    overscan: 10,
+  });
+
+  // Task creation handler
   const handleCreateTask = async (title: string) => {
+    const listId = activeListId.startsWith('smart_') ? 'list_inbox' : activeListId;
     await createTask({
       title,
-      list_id: activeListId.startsWith('smart_') ? 'list_inbox' : activeListId,
+      list_id: listId,
     });
   };
 
-  const getPriorityClass = (priority: number): string => {
-    switch (priority) {
-      case 1:
-        return styles.priorityLow;
-      case 2:
-        return styles.priorityMedium;
-      case 3:
-        return styles.priorityHigh;
-      case 4:
-        return `${styles.priorityCritical} ${styles.priorityCriticalPulse}`;
-      default:
-        return '';
-    }
-  };
+  // Task deletion with Undo Toast
+  const handleDeleteTask = useCallback(
+    async (id: string) => {
+      const target = activeTasks.find((t) => t.id === id);
+      if (!target) return;
 
-  const activeTitle = activeListId.startsWith('smart_')
-    ? activeListId
-        .replace('smart_', '')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase())
-    : 'Tasks';
+      await deleteTask(id);
+
+      pushAction({
+        description: `Task "${target.title}" moved to trash`,
+        undoFn: async () => {
+          await restoreTask(target.id);
+        },
+        redoFn: async () => {
+          await deleteTask(target.id);
+        },
+      });
+    },
+    [activeTasks, deleteTask, pushAction, restoreTask]
+  );
+
+  // Keyboard navigation & Shortcuts (j/k, x, Delete, etc.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if (filteredIncomplete.length === 0) return;
+
+      const currentIndex = filteredIncomplete.findIndex((t) => t.id === selectedTaskId);
+
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        const nextIdx = currentIndex < filteredIncomplete.length - 1 ? currentIndex + 1 : 0;
+        onSelectTask?.(filteredIncomplete[nextIdx]);
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        const prevIdx = currentIndex > 0 ? currentIndex - 1 : filteredIncomplete.length - 1;
+        onSelectTask?.(filteredIncomplete[prevIdx]);
+      } else if (e.key === 'x' && selectedTaskId) {
+        e.preventDefault();
+        toggleComplete(selectedTaskId);
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedTaskId) {
+        e.preventDefault();
+        handleDeleteTask(selectedTaskId);
+      } else if (e.key === '*' && selectedTaskId) {
+        e.preventDefault();
+        toggleStar(selectedTaskId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredIncomplete, selectedTaskId, onSelectTask, toggleComplete, toggleStar, handleDeleteTask]);
+
+  const headerTitle = (() => {
+    switch (activeListId) {
+      case 'smart_my_day':
+        return 'My Day';
+      case 'smart_important':
+        return 'Important';
+      case 'smart_planned':
+        return 'Planned';
+      case 'smart_all':
+      case 'smart_all_tasks':
+        return 'All Tasks';
+      default:
+        return activeListId.startsWith('list_') ? 'Tasks' : 'Tasks';
+    }
+  })();
 
   return (
     <div className={styles.taskListContainer}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{activeTitle}</h1>
-      </header>
+      {/* Header with Search/Filter bar */}
+      <TaskListHeader
+        title={headerTitle}
+        count={filteredIncomplete.length}
+        filterConfig={filterConfig}
+        onFilterChange={setFilterConfig}
+      />
 
-      <div className={styles.quickAddWrapper}>
-        <QuickAdd onAdd={handleCreateTask} />
+      {/* Quick Add Bar */}
+      <div className={styles.quickAddRow}>
+        <QuickAdd onAdd={handleCreateTask} placeholder="Add a task (e.g. 'Review pull request tomorrow !high')..." />
       </div>
 
-      <div className={styles.listScroll}>
-        <ScrollArea orientation="vertical">
-          {loading && tasks.length === 0 ? (
-            <EmptyState title="Loading tasks..." description="Fetching your latest items" />
-          ) : tasks.length === 0 ? (
-            <EmptyState
-              icon="✓"
-              title="All clear"
-              description="No tasks in this list. Enjoy your day or add a new task above."
-            />
-          ) : (
-            <div className={styles.tasks}>
-              {tasks.map(task => {
-                const isCompleted = task.is_completed === 1;
-                const priorityClass = getPriorityClass(task.priority);
-                const isSelected = selectedTaskId === task.id;
+      {/* Virtual Scroll Area */}
+      <div ref={parentRef} className={styles.virtualScrollArea}>
+        {filteredIncomplete.length === 0 && completedTasks.length === 0 ? (
+          <EmptyState
+            title="All clear"
+            description="No tasks in this list. Press Ctrl+N to add one."
+          />
+        ) : (
+          <div
+            className={styles.virtualInner}
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const task = filteredIncomplete[virtualItem.index];
+              if (!task) return null;
 
-                return (
-                  <div
-                    key={task.id}
-                    className={`${styles.taskItem} ${isCompleted ? styles.taskCompleted : ''} ${
-                      isSelected ? styles.taskItemActive : ''
-                    } ${priorityClass}`}
-                    onClick={() => onSelectTask?.(task)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        onSelectTask?.(task);
-                      }
-                    }}
-                  >
-                    <Checkbox
-                      checked={isCompleted}
-                      onChange={() => toggleComplete(task.id)}
-                      ariaLabel={`Mark "${task.title}" as ${isCompleted ? 'incomplete' : 'complete'}`}
-                    />
+              return (
+                <div
+                  key={task.id}
+                  className={styles.virtualItem}
+                  style={{
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <TaskCard
+                    task={task}
+                    isSelected={selectedTaskId === task.id}
+                    onSelect={onSelectTask}
+                    onToggleComplete={toggleComplete}
+                    onToggleStar={toggleStar}
+                    onUpdateTitle={(id, title) => updateTask({ id, title })}
+                    onDelete={handleDeleteTask}
+                    onDuplicate={duplicateTask}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-                    <span className={styles.taskTitle}>{task.title}</span>
-
-                    <button
-                      type="button"
-                      className={styles.deleteButton}
-                      onClick={e => {
-                        e.stopPropagation();
-                        deleteTask(task.id);
-                        if (selectedTaskId === task.id) {
-                          onSelectTask?.(null);
-                        }
-                      }}
-                      title="Delete task"
-                      aria-label={`Delete "${task.title}"`}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
+        {/* Collapsible Completed Section */}
+        {completedTasks.length > 0 && (
+          <div className={styles.completedSection}>
+            <div
+              className={styles.completedHeader}
+              onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+            >
+              <span
+                className={`${styles.completedCaret} ${
+                  isCompletedOpen ? styles.completedCaretOpen : ''
+                }`}
+              >
+                ▶
+              </span>
+              <span>Completed ({completedTasks.length})</span>
             </div>
-          )}
-        </ScrollArea>
+
+            {isCompletedOpen && (
+              <div className={styles.completedList}>
+                {completedTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isSelected={selectedTaskId === task.id}
+                    onSelect={onSelectTask}
+                    onToggleComplete={toggleComplete}
+                    onToggleStar={toggleStar}
+                    onUpdateTitle={(id, title) => updateTask({ id, title })}
+                    onDelete={handleDeleteTask}
+                    onDuplicate={duplicateTask}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Undo Toast Container */}
+      {lastToastAction && (
+        <div className={styles.toastWrap}>
+          <Toast
+            id="undo-toast"
+            message={lastToastAction.description}
+            variant="undo"
+            actionLabel="Undo"
+            onAction={async () => {
+              await undo();
+              clearToast();
+            }}
+            onDismiss={() => clearToast()}
+            duration={5000}
+          />
+        </div>
+      )}
     </div>
   );
 }
