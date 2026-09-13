@@ -147,6 +147,60 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(IPC.TASKS.GET_MY_DAY, async (_event, date?: string) => {
+    try {
+      const data = taskService.getMyDay(date);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.GET_IMPORTANT, async () => {
+    try {
+      const data = taskService.getImportant();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.GET_PLANNED, async () => {
+    try {
+      const data = taskService.getPlanned();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.GET_COMPLETED, async () => {
+    try {
+      const data = taskService.getCompleted();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.ADD_TO_MY_DAY, async (_event, { id, date }: { id: string; date?: string }) => {
+    try {
+      const data = taskService.addToMyDay(id, date);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.REMOVE_FROM_MY_DAY, async (_event, id: string) => {
+    try {
+      const data = taskService.removeFromMyDay(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerTaskHandlers;

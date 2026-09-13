@@ -1,11 +1,14 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useAppStore } from './stores/app-store.js';
+import { useActiveList } from './stores/listStore.js';
 import { Titlebar } from './components/Titlebar/Titlebar.js';
 
 // Critical path — always in initial bundle (PERFORMANCE.md §5)
 import { Sidebar } from './features/sidebar/Sidebar.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { DetailPanel } from './features/tasks/DetailPanel.js';
+import { MyDayView } from './features/lists/MyDayView.js';
+import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
 import { ipc } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
@@ -39,6 +42,7 @@ export function App(): React.ReactElement {
   const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
 
   const { activeListId, systemInfo, fetchSystemInfo } = useAppStore();
+  const activeList = useActiveList();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
@@ -60,6 +64,13 @@ export function App(): React.ReactElement {
 
   const renderMainContent = () => {
     switch (activeListId) {
+      case 'smart_my_day':
+        return (
+          <MyDayView
+            onSelectTask={(task) => setSelectedTask(task)}
+            selectedTaskId={selectedTask?.id}
+          />
+        );
       case 'view_dashboard':
         return (
           <Suspense fallback={<ViewSkeleton />}>
@@ -93,7 +104,7 @@ export function App(): React.ReactElement {
       default:
         return (
           <TaskList
-            onSelectTask={task => setSelectedTask(task)}
+            onSelectTask={(task) => setSelectedTask(task)}
             selectedTaskId={selectedTask?.id}
           />
         );
@@ -101,6 +112,19 @@ export function App(): React.ReactElement {
   };
 
   const isDetailVisible = !activeListId.startsWith('view_') && Boolean(selectedTask);
+
+  // Per-list background theming
+  const mainStyle: React.CSSProperties = {};
+  if (activeList?.background_type === 'solid' && activeList.background_value) {
+    mainStyle.backgroundColor = activeList.background_value;
+  } else if (activeList?.background_type === 'gradient' && activeList.background_value) {
+    mainStyle.background = activeList.background_value;
+  } else if (activeList?.background_type === 'image' && activeList.background_value) {
+    mainStyle.backgroundImage = `url(${activeList.background_value})`;
+    mainStyle.backgroundSize = 'cover';
+    mainStyle.backgroundPosition = 'center';
+    mainStyle.backdropFilter = 'blur(10px)';
+  }
 
   return (
     <div className={layoutStyles.container}>
@@ -123,14 +147,19 @@ export function App(): React.ReactElement {
           <Sidebar />
         </div>
 
-        {/* Column 2: Center Main Content (TaskList or Lazy View) */}
-        <main className={layoutStyles.mainCol}>{renderMainContent()}</main>
+        {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
+        <main className={layoutStyles.mainCol} style={mainStyle}>
+          {renderMainContent()}
+        </main>
 
         {/* Column 3: Detail Panel (Critical path) */}
         <div className={layoutStyles.detailCol}>
           <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
         </div>
       </div>
+
+      {/* Rollover Prompt on day change for incomplete yesterday tasks */}
+      <RolloverPrompt />
     </div>
   );
 }

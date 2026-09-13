@@ -14,6 +14,8 @@
 |---|---|---|---|
 | `useAppStore` | `src/renderer/stores/app-store.ts` | Global application UI state (theme, active view, active list, sidebar state) | Renderer global |
 | `useTaskStore` | `src/renderer/stores/taskStore.ts` | Normalized Zustand task store (`tasksById: Record<string, Task>`) with optimistic mutations, rollback, and pagination | Renderer global |
+| `useListStore` | `src/renderer/stores/listStore.ts` | Normalized Zustand list store (`listsById: Record<string, List>`) with smart list protection and folder grouping | Renderer global |
+| `useModuleStore` | `src/renderer/stores/moduleStore.ts` | Feature module toggle store (`isEnabled(name)`) controlling view visibility | Renderer global |
 | `useTask` | `src/renderer/stores/taskStore.ts` | Single task selector by ID for fine-grained subscription and zero-re-render cards | Component scope |
 | `useTasksByList` | `src/renderer/stores/taskStore.ts` | Filtered, sorted task selector by list ID | Component scope |
 | `useUndoRedo` | `src/renderer/hooks/useUndoRedo.ts` | Global undo/redo action stack (100 entries) with `Ctrl+Z` / `Ctrl+Y` and toast triggers | Renderer global |
@@ -37,11 +39,18 @@
 | `LoadingSpinner` | `src/renderer/components/LoadingSpinner/LoadingSpinner.tsx` | No | No (CSS spin, reduced-motion static) | Accent-colored CSS spinner with reduced-motion static mode |
 | `Tooltip` | `src/renderer/components/Tooltip/Tooltip.tsx` | **Yes (`@radix-ui/react-tooltip`)** | No (CSS fade-in) | Keyboard-shortcut hint tooltip with kbd badge |
 | `QuickAdd` | `src/renderer/components/QuickAdd/QuickAdd.tsx` | No | **Site #4 (Scale & opacity)** | Instant task entry bar with spring scale/opacity appear/dismiss |
-| `Sidebar` | `src/renderer/features/sidebar/Sidebar.tsx` | Uses `ScrollArea` | No (CSS transitions) | Main navigation sidebar (critical initial bundle) |
+| `Sidebar` | `src/renderer/features/sidebar/Sidebar.tsx` | Uses native scroll | No (CSS transitions) | Fluid resizable navigation sidebar (180px–280px) with smart lists, user lists, and module filtering (critical initial bundle) |
+| `ListItem` | `src/renderer/features/sidebar/ListItem.tsx` | No | No (CSS transitions) | `React.memo` sidebar list item with icon/color, zero-count suppressed badge, and context menu |
+| `SmartListGroup` | `src/renderer/features/sidebar/SmartListGroup.tsx` | No | No (CSS transitions) | Collapsible smart lists drawer grouping My Day, Important, Planned, All Tasks, Completed |
 | `TaskList` | `src/renderer/features/tasks/TaskList.tsx` | Uses `@tanstack/react-virtual` | **Site #3 (Reorder layoutId)** | Primary task stream with virtual scroll, keyboard navigation, and collapsible completed tasks (critical initial bundle) |
 | `TaskListHeader` | `src/renderer/features/tasks/TaskListHeader.tsx` | No | No (CSS transitions) | Dynamic task list header with active task count and expandable filter/sort drawer |
 | `TaskCard` | `src/renderer/features/tasks/TaskCard.tsx` | Uses `Checkbox` | **Site #1 (Spring completion)** | `React.memo` task card with 3 layers of progressive disclosure, priority pulse, and inline title editing |
 | `DetailPanel` | `src/renderer/features/tasks/DetailPanel.tsx` | Uses `@tiptap/react` | **Site #2 (Spring slide-in)** | Task metadata/notes editor with DOMPurify sanitization, subtasks, and spring slide-in from right (critical initial bundle) |
+| `MyDayView` | `src/renderer/features/lists/MyDayView.tsx` | Uses `TaskList` | No (CSS transitions) | My Day specialized view with formatted date header and intelligent "Add to My Day" suggestions |
+| `RolloverPrompt` | `src/renderer/features/lists/RolloverPrompt.tsx` | No | Uses `framer-motion` | Morning rollover banner offering cherry-picking and bulk rollover of unfinished tasks |
+| `CreateListModal` | `src/renderer/features/lists/CreateListModal.tsx` | **Yes (`@radix-ui/react-dialog`)** | No (CSS transitions) | Modal for creating and editing lists with emoji presets, color swatches, and background theming |
+| `ListGroupModal` | `src/renderer/features/lists/ListGroupModal.tsx` | **Yes (`@radix-ui/react-dialog`)** | No (CSS transitions) | Modal for managing sidebar folder groups |
+| `ListContextMenu` | `src/renderer/features/lists/ListContextMenu.tsx` | No | No (CSS transitions) | Floating context menu for renaming, duplicating, exporting, and deleting lists |
 | `OmnibarView` | `src/renderer/features/omnibar/OmnibarView.tsx` | No | No (CSS transitions) | Centered keyboard task capture overlay with live modifier parsing and auto-dismiss |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)

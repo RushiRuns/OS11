@@ -752,7 +752,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Zustand List Store
 
-- [ ] Create `src/renderer/stores/listStore.ts`
+- [x] Create `src/renderer/stores/listStore.ts`
   - `listsById: Record<string, List>`, `orderedIds: string[]`
   - `activeListId: string` — which list is currently shown
   - Smart lists (My Day, Important, Planned, All Tasks, Completed) seeded from DB; never deleted
@@ -760,7 +760,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Sidebar
 
-- [ ] Create `src/renderer/features/sidebar/Sidebar.tsx` + `.module.css`
+- [x] Create `src/renderer/features/sidebar/Sidebar.tsx` + `.module.css`
   - Width: `var(--sidebar-width)` (224px), min 180px, max 280px — resizable via drag handle
   - Surface: `var(--surface-sidebar)` (#F0EFEC light / #181719 dark)
   - List items: name + optional emoji icon; pending count badge only when non-zero (FEEL UI)
@@ -770,17 +770,17 @@ One service per domain. Validation happens in domain functions called from here.
   - Hover: `var(--surface-hover)` background
   - "+" button at bottom → create new list inline
   - Drag to reorder user lists (within their section — not mixing with smart lists)
-- [ ] Create `src/renderer/features/sidebar/ListItem.tsx` + `.module.css`
+- [x] Create `src/renderer/features/sidebar/ListItem.tsx` + `.module.css`
   - `React.memo` — only re-renders when this list's data changes
-- [ ] Create `src/renderer/features/sidebar/SmartListGroup.tsx` + `.module.css`
+- [x] Create `src/renderer/features/sidebar/SmartListGroup.tsx` + `.module.css`
 
 ### List Management
 
-- [ ] Create `src/renderer/features/lists/CreateListModal.tsx` — name, emoji icon, accent color
-- [ ] Create `src/renderer/features/lists/ListContextMenu.tsx`
+- [x] Create `src/renderer/features/lists/CreateListModal.tsx` — name, emoji icon, accent color
+- [x] Create `src/renderer/features/lists/ListContextMenu.tsx`
   - Right-click list in sidebar → Rename, Change color/icon, Duplicate, Export, Sort options, Set background, Delete
-- [ ] Create `src/renderer/features/lists/ListGroupModal.tsx` — create and manage list groups (folders)
-- [ ] Implement per-list background theming:
+- [x] Create `src/renderer/features/lists/ListGroupModal.tsx` — create and manage list groups (folders)
+- [x] Implement per-list background theming:
   - Solid color: CSS `background-color` override on the task list content area
   - Gradient: CSS `background: linear-gradient(...)`
   - Custom image: stored in `userData/backgrounds/`, loaded as CSS `background-image`
@@ -788,24 +788,24 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Smart List Queries
 
-- [ ] Wire `TaskRepository` smart list methods to IPC handlers: `TASKS.GET_MY_DAY`, `TASKS.GET_IMPORTANT`, `TASKS.GET_PLANNED`, `TASKS.GET_ALL`, `TASKS.GET_COMPLETED`
-- [ ] Each smart list updates dynamically when tasks change — task store actions emit to the relevant smart list store selector
+- [x] Wire `TaskRepository` smart list methods to IPC handlers: `TASKS.GET_MY_DAY`, `TASKS.GET_IMPORTANT`, `TASKS.GET_PLANNED`, `TASKS.GET_ALL`, `TASKS.GET_COMPLETED`
+- [x] Each smart list updates dynamically when tasks change — task store actions emit to the relevant smart list store selector
 
 ### My Day
 
-- [ ] Create `src/renderer/features/lists/MyDayView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/lists/MyDayView.tsx` + `.module.css`
   - Header: date + optional weather chip (if calendar integration or OS weather API enabled — optional module)
   - "Add to My Day" suggestion panel: surfaces tasks due today + upcoming high-priority, one tap to add
-- [ ] Create `src/renderer/features/lists/RolloverPrompt.tsx` + `.module.css`
+- [x] Create `src/renderer/features/lists/RolloverPrompt.tsx` + `.module.css`
   - Triggered on first open of the day when `my_day_date < today` tasks exist
   - Framer Motion: slide-up from bottom, `AnimatePresence`
   - Actions: "Keep All" / "Dismiss All" / per-task checkboxes for cherry-picking
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `Sidebar`, `ListItem`, `listStore`, `SmartListGroup`, `RolloverPrompt`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 6 complete: Lists, smart lists, sidebar, My Day, rollover prompt."
-- [ ] Commit: `"Phase 6 complete: Lists, smart lists, My Day"`
+- [x] Update UTILITIES.md: `Sidebar`, `ListItem`, `listStore`, `SmartListGroup`, `RolloverPrompt`
+- [x] CHANGELOG_INTERNAL.md: "Phase 6 complete: Lists, smart lists, sidebar, My Day, rollover prompt."
+- [x] Commit: `"Phase 6 complete: Lists, smart lists, My Day"`
 
 ---
 

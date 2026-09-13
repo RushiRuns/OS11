@@ -66,6 +66,30 @@ export const taskServiceAdapter = {
   batchUpdate(updates: UpdateTaskPayload[]): Promise<Task[]> {
     return invoke<Task[]>(IPC.TASKS.BATCH_UPDATE, updates);
   },
+
+  getMyDay(date?: string): Promise<Task[]> {
+    return invoke<Task[]>(IPC.TASKS.GET_MY_DAY, date);
+  },
+
+  getImportant(): Promise<Task[]> {
+    return invoke<Task[]>(IPC.TASKS.GET_IMPORTANT);
+  },
+
+  getPlanned(): Promise<Task[]> {
+    return invoke<Task[]>(IPC.TASKS.GET_PLANNED);
+  },
+
+  getCompleted(): Promise<Task[]> {
+    return invoke<Task[]>(IPC.TASKS.GET_COMPLETED);
+  },
+
+  addToMyDay(id: string, date?: string): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.ADD_TO_MY_DAY, { id, date });
+  },
+
+  removeFromMyDay(id: string): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.REMOVE_FROM_MY_DAY, id);
+  },
 };
 
 export default taskServiceAdapter;

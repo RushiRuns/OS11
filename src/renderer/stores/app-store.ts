@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { settingsServiceAdapter } from '../services/settings-service-adapter.js';
 import type { SystemInfo } from '@shared/types/settings.js';
 
+import { useListStore } from './listStore.js';
+
 interface AppState {
   activeListId: string;
   systemInfo: SystemInfo | null;
@@ -13,7 +15,10 @@ export const useAppStore = create<AppState>((set) => ({
   activeListId: 'smart_my_day',
   systemInfo: null,
 
-  setActiveListId: (id: string) => set({ activeListId: id }),
+  setActiveListId: (id: string) => {
+    set({ activeListId: id });
+    useListStore.getState().setActiveList(id);
+  },
 
   fetchSystemInfo: async () => {
     try {

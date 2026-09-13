@@ -43,6 +43,12 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:make-subtask` — Assign parent task ID with cycle detection.
 - `tasks:promote-subtask` — Promote subtask to top-level task.
 - `tasks:get-subtasks` — Fetch subtasks for a parent task.
+- `tasks:get-my-day` — Fetch tasks assigned to My Day for specified or current date.
+- `tasks:get-important` — Fetch starred/important active tasks.
+- `tasks:get-planned` — Fetch active tasks with a due date ordered chronologically.
+- `tasks:get-completed` — Fetch completed tasks.
+- `tasks:add-to-my-day` — Add task to My Day for specified or current date.
+- `tasks:remove-from-my-day` — Remove task from My Day.
 - `tasks:reorder` — Update `sort_order` using fractional indexing.
 - `tasks:batch-update` — Perform atomic update on multiple task IDs.
 

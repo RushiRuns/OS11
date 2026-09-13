@@ -3,6 +3,33 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-13] — Phase 6 complete: Lists, smart lists, sidebar, My Day, rollover prompt
+- **What was built:**
+  - Normalized Zustand list store (`src/renderer/stores/listStore.ts`) with `listsById: Record<string, List>`, `orderedIds: string[]`, `listGroupsById`, built-in smart list protection (`is_smart === 1`), optimistic mutations with rollback snapshots, and folder grouping.
+  - Reactive feature module toggle store (`src/renderer/stores/moduleStore.ts`) controlling on-demand visibility of optional views.
+  - Complete sidebar redesign (`src/renderer/features/sidebar/Sidebar.tsx` + `.module.css`):
+    - Smooth draggable resizer with width bounds (180px–280px).
+    - `ListItem.tsx` (`React.memo`) with custom icon/color, zero-count suppressed badge (FEEL UI), and right-click context menu.
+    - `SmartListGroup.tsx` collapsible smart lists drawer (collapsed by default).
+    - User list sections with drag-and-drop reordering.
+    - Views section strictly omitting disabled modules.
+    - Bottom action bar with "+" buttons for lists and folder groups.
+  - List management modals:
+    - `CreateListModal.tsx`: name, emoji presets, accent color swatches, background theming (solid/gradient/image), and folder assignment.
+    - `ListGroupModal.tsx`: folder group creation and management.
+    - `ListContextMenu.tsx`: floating portal menu for renaming, duplicating, exporting, and deleting lists.
+  - My Day experience:
+    - `MyDayView.tsx`: formatted date header, quote/greeting, and intelligent "Add to My Day" recommendation drawer surfacing overdue/today/high-priority tasks.
+    - `RolloverPrompt.tsx`: Framer Motion slide-up banner triggered on day start for incomplete yesterday tasks with "Keep All in Today", "Dismiss All", and selective cherry-picking.
+  - IPC enhancements: added `TASKS.GET_MY_DAY`, `TASKS.GET_IMPORTANT`, `TASKS.GET_PLANNED`, `TASKS.GET_COMPLETED`, `TASKS.ADD_TO_MY_DAY`, and `TASKS.REMOVE_FROM_MY_DAY` to `src/shared/ipc-channels.ts`, `IPC_CHANNELS.md`, and main handlers.
+  - 6 unit tests in `tests/domain/list-store.test.ts` and `tests/domain/my-day-rollover.test.ts` (all 16 test suites and 85 tests passing).
+- **What changed architecturally:**
+  - Sidebar decoupled into clean `ListItem`, `SmartListGroup`, and resizer with zero flicker.
+  - Smart list protection strictly enforced on both main process and renderer store.
+  - Per-list background theming integrated with full CSS filter support on the main viewport.
+
+---
+
 ### [2026-09-13] — Phase 5 complete: Core task CRUD, virtual list, detail panel, optimistic updates, undo, filtering
 - **What was built:**
   - Normalized Zustand task store (`src/renderer/stores/taskStore.ts` and `task-store.ts`) with `tasksById: Record<string, Task>`, derived selectors (`useTask`, `useTasksByList`, `useMyDay`, `useImportant`, `usePlanned`, `useSubtasks`, `useCompletedTasks`, `useAllActiveTasks`), optimistic updates with rollback snapshots, and pagination/`loadMore`.
