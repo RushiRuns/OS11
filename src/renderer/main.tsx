@@ -1,11 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
-import './index.css';
+import App from './App.js';
+import './styles/tokens.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error('Failed to find the root element');
+  throw new Error('Failed to find root element');
 }
 
 ReactDOM.createRoot(rootElement).render(

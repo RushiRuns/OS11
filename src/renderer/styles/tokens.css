@@ -1,0 +1,420 @@
+/**
+ * OS11 — Design Tokens
+ * Drop this file into src/styles/tokens.css
+ * Import once at the app root: import './styles/tokens.css'
+ *
+ * Rules:
+ *  1. Never use a hardcoded color, size, or radius in a component.
+ *  2. Every value comes from a var(--token) here.
+ *  3. If a token doesn't exist for something, add it here first.
+ *  4. Dark mode is handled automatically via @media prefers-color-scheme
+ *     and overridden manually via [data-theme="dark"] on <html>.
+ */
+
+/* ============================================================
+   LIGHT MODE (default)
+   ============================================================ */
+:root {
+
+  /* ----------------------------------------------------------
+     SURFACES
+     Four-layer system. 0 = main content, 1 = sidebar/panel,
+     2 = hover states, 3 = dividers / subtle borders.
+     Think of it as: 0 is the brightest (whitest) surface.
+     ---------------------------------------------------------- */
+  --surface-base:     #FFFFFF;           /* Main content area */
+  --surface-sidebar:  #F0EFEC;           /* Sidebar, secondary panes */
+  --surface-raised:   #FAFAF8;           /* Cards hovering above base */
+  --surface-overlay:  #FFFFFF;           /* Dropdowns, popovers, modals */
+  --surface-hover:    rgba(0,0,0,0.04);  /* Generic hover background */
+  --surface-selected: rgba(27,136,255,0.10); /* Selected sidebar item */
+  --surface-active:   rgba(27,136,255,0.07); /* Active / pressed state */
+
+  /* ----------------------------------------------------------
+     TEXT
+     Three-tier hierarchy. Use t1 for primary content,
+     t2 for supporting/metadata, t3 for placeholder/disabled.
+     ---------------------------------------------------------- */
+  --text-primary:     #1A1918;   /* Task titles, main labels */
+  --text-secondary:   #6C6B69;   /* Metadata, dates, subtitles */
+  --text-tertiary:    #AEADAB;   /* Tags (resting), placeholders */
+  --text-placeholder: #C8C7C5;   /* Input placeholder text */
+  --text-on-accent:   #FFFFFF;   /* Text placed on accent-colored bg */
+  --text-link:        #1B88FF;   /* Inline links */
+  --text-disabled:    #D0CFCE;   /* Disabled state */
+
+  /* ----------------------------------------------------------
+     ACCENT — the single interactive color
+     Slightly more vivid than iOS #007AFF so it reads
+     well on non-retina Windows/Linux displays.
+     ---------------------------------------------------------- */
+  --accent:           #1B88FF;
+  --accent-hover:     #0070E0;
+  --accent-active:    #005DC0;
+  --accent-muted:     rgba(27,136,255,0.12);   /* Background tint */
+  --accent-border:    rgba(27,136,255,0.30);   /* Border tint */
+
+  /* ----------------------------------------------------------
+     STATUS COLORS
+     ---------------------------------------------------------- */
+  --color-success:         #27AE60;
+  --color-success-muted:   rgba(39,174,96,0.12);
+  --color-warning:         #F39C12;
+  --color-warning-muted:   rgba(243,156,18,0.12);
+  --color-danger:          #E74C3C;
+  --color-danger-muted:    rgba(231,76,60,0.12);
+  --color-info:            #3498DB;
+  --color-info-muted:      rgba(52,152,219,0.12);
+
+  /* ----------------------------------------------------------
+     PRIORITY — shown as left-border color only, never a badge.
+     Critical additionally gets a pulsing animation.
+     ---------------------------------------------------------- */
+  --priority-none:     transparent;
+  --priority-low:      #27AE60;
+  --priority-medium:   #F39C12;
+  --priority-high:     #E74C3C;
+  --priority-critical: #C0392B;
+
+  /* ----------------------------------------------------------
+     PROJECT / TAG PALETTE — 12 curated colors
+     Used for project circles in the sidebar and tag chips.
+     Adapt slightly in dark mode (see below).
+     ---------------------------------------------------------- */
+  --tag-blue:     #1B88FF;
+  --tag-cyan:     #00B4D8;
+  --tag-teal:     #1ABC9C;
+  --tag-green:    #27AE60;
+  --tag-lime:     #8BC34A;
+  --tag-yellow:   #D4AC0D;
+  --tag-orange:   #E67E22;
+  --tag-red:      #E74C3C;
+  --tag-pink:     #E91E8C;
+  --tag-purple:   #9B59B6;
+  --tag-lavender: #7986CB;
+  --tag-gray:     #95A5A6;
+
+  /* ----------------------------------------------------------
+     BORDERS & DIVIDERS
+     Prefer subtle — most Things-style dividers are barely there.
+     ---------------------------------------------------------- */
+  --border-subtle:  rgba(0,0,0,0.06);
+  --border-default: rgba(0,0,0,0.09);
+  --border-strong:  rgba(0,0,0,0.15);
+  --border-accent:  var(--accent);
+  --border-danger:  var(--color-danger);
+
+  /* ----------------------------------------------------------
+     SHADOWS
+     Things barely uses shadows. Use the smallest one that works.
+     ---------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.18);
+
+  /* Focus ring — shown on keyboard navigation only */
+  --shadow-focus: 0 0 0 3px rgba(27,136,255,0.30);
+
+  /* ----------------------------------------------------------
+     BORDER RADIUS
+     ---------------------------------------------------------- */
+  --radius-xs:   3px;       /* Tags, small chips */
+  --radius-sm:   5px;       /* Sidebar items, buttons */
+  --radius-md:   8px;       /* Inputs, task card hover, popovers */
+  --radius-lg:   12px;      /* Panels, drawers, larger modals */
+  --radius-xl:   16px;      /* Quick-add bar, onboarding cards */
+  --radius-full: 9999px;    /* Checkboxes, project dots, pill tags */
+
+  /* ----------------------------------------------------------
+     SPACING — 4px base unit
+     Use these exclusively. Never write padding: 6px or margin: 14px.
+     ---------------------------------------------------------- */
+  --space-px:  1px;
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   28px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+
+  /* ----------------------------------------------------------
+     TYPOGRAPHY
+     One typeface: Inter. Falls back to system sans-serif on
+     platforms where Inter hasn't loaded yet. Never use
+     hardcoded font sizes or weights — always use these tokens.
+     ---------------------------------------------------------- */
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code',
+               'Consolas', monospace;
+
+  /* Font sizes */
+  --text-xs:   11px;  /* Section labels (ALL CAPS), badge counts */
+  --text-sm:   12px;  /* Metadata, dates, tag chips */
+  --text-base: 13px;  /* Sidebar items, body copy */
+  --text-md:   14px;  /* Task titles (default) */
+  --text-lg:   15px;  /* Panel titles, list names */
+  --text-xl:   20px;  /* Sub-view headers */
+  --text-2xl:  24px;  /* View title (Today, Upcoming) */
+  --text-3xl:  30px;  /* Dashboard stat numbers */
+
+  /* Font weights */
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Line heights */
+  --leading-none:    1;
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --tracking-tight:   -0.015em;  /* View titles, large headings */
+  --tracking-normal:   0em;
+  --tracking-wide:     0.03em;
+  --tracking-widest:   0.08em;   /* Section labels (ALL CAPS) */
+
+  /* ----------------------------------------------------------
+     LAYOUT / STRUCTURE
+     ---------------------------------------------------------- */
+  --sidebar-width:       224px;
+  --sidebar-min-width:   180px;
+  --sidebar-max-width:   280px;
+  --detail-panel-width:  320px;
+  --titlebar-height:      28px;  /* Electron custom titlebar */
+  --toolbar-height:       52px;
+  --quick-add-height:     52px;
+
+  /* Task item heights (three density modes) */
+  --task-height-comfortable: 44px;
+  --task-height-compact:     34px;
+  --task-height-cozy:        56px;
+  --task-height: var(--task-height-comfortable);  /* Default */
+
+  /* Checkbox */
+  --checkbox-size:         20px;
+  --checkbox-border-width: 1.5px;
+
+  /* ----------------------------------------------------------
+     MOTION
+     All transitions in the app use one of these.
+     CSS easing only — Framer Motion handles springs separately.
+     ---------------------------------------------------------- */
+  --motion-fast:    120ms;
+  --motion-default: 180ms;
+  --motion-slow:    280ms;
+  --ease-out:    cubic-bezier(0.0, 0.0, 0.2, 1.0);
+  --ease-in:     cubic-bezier(0.4, 0.0, 1.0, 1.0);
+  --ease-in-out: cubic-bezier(0.4, 0.0, 0.2, 1.0);
+  /* Spring easing for checkbox fill — slight overshoot */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1.0);
+
+  /* Convenience shorthand combos */
+  --transition-fast:    var(--motion-fast) var(--ease-out);
+  --transition-default: var(--motion-default) var(--ease-out);
+  --transition-slow:    var(--motion-slow) var(--ease-out);
+  --transition-spring:  var(--motion-fast) var(--ease-spring);
+
+  /* Reduced-motion override — use in every keyframe declaration */
+  /* @media (prefers-reduced-motion: reduce) { animation: none; transition: none; } */
+
+  /* ----------------------------------------------------------
+     Z-INDEX SCALE
+     Never use a magic number. Always use one of these.
+     ---------------------------------------------------------- */
+  --z-base:         0;
+  --z-raised:      10;   /* Task cards on drag */
+  --z-dropdown:   100;   /* Context menus, date pickers */
+  --z-sticky:     200;   /* Sticky headers, toolbar */
+  --z-overlay:    300;   /* Sidebar overlay on mobile */
+  --z-modal:      400;   /* Modals, dialogs */
+  --z-notification:500;  /* Toast, notification toasts */
+  --z-tooltip:    600;   /* Keyboard shortcut hints */
+  --z-omnibar:    700;   /* OS-level omnibar overlay */
+}
+
+
+/* ============================================================
+   DARK MODE
+   Applied automatically when the OS is in dark mode,
+   AND when <html data-theme="dark"> is set manually.
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-base:     #201F22;
+    --surface-sidebar:  #181719;
+    --surface-raised:   #252427;
+    --surface-overlay:  #2A2930;
+    --surface-hover:    rgba(255,255,255,0.05);
+    --surface-selected: rgba(77,163,255,0.15);
+    --surface-active:   rgba(77,163,255,0.10);
+
+    --text-primary:     #F0EFF0;
+    --text-secondary:   #8C8B90;
+    --text-tertiary:    #4E4D52;
+    --text-placeholder: #3A3940;
+    --text-on-accent:   #FFFFFF;
+    --text-link:        #4DA3FF;
+    --text-disabled:    #3A3940;
+
+    --accent:           #4DA3FF;
+    --accent-hover:     #6FB5FF;
+    --accent-active:    #3090EE;
+    --accent-muted:     rgba(77,163,255,0.15);
+    --accent-border:    rgba(77,163,255,0.30);
+
+    --color-success:       #36CC6A;
+    --color-success-muted: rgba(54,204,106,0.12);
+    --color-warning:       #FFCA28;
+    --color-warning-muted: rgba(255,202,40,0.12);
+    --color-danger:        #FF5252;
+    --color-danger-muted:  rgba(255,82,82,0.12);
+
+    --priority-low:      #36CC6A;
+    --priority-medium:   #FFCA28;
+    --priority-high:     #FF5252;
+    --priority-critical: #FF2D55;
+
+    --tag-blue:     #4DA3FF;
+    --tag-cyan:     #26C6DA;
+    --tag-teal:     #26D0A3;
+    --tag-green:    #36CC6A;
+    --tag-lime:     #9CCC65;
+    --tag-yellow:   #FFCA28;
+    --tag-orange:   #FFA040;
+    --tag-red:      #FF5252;
+    --tag-pink:     #F06292;
+    --tag-purple:   #BA68C8;
+    --tag-lavender: #9FA8DA;
+    --tag-gray:     #B0BEC5;
+
+    --border-subtle:  rgba(255,255,255,0.05);
+    --border-default: rgba(255,255,255,0.08);
+    --border-strong:  rgba(255,255,255,0.14);
+
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.40);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.50);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.60);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.70);
+
+    --shadow-focus: 0 0 0 3px rgba(77,163,255,0.30);
+  }
+}
+
+[data-theme="dark"] {
+  --surface-base:     #201F22;
+  --surface-sidebar:  #181719;
+  --surface-raised:   #252427;
+  --surface-overlay:  #2A2930;
+  --surface-hover:    rgba(255,255,255,0.05);
+  --surface-selected: rgba(77,163,255,0.15);
+  --surface-active:   rgba(77,163,255,0.10);
+
+  --text-primary:     #F0EFF0;
+  --text-secondary:   #8C8B90;
+  --text-tertiary:    #4E4D52;
+  --text-placeholder: #3A3940;
+  --text-on-accent:   #FFFFFF;
+  --text-link:        #4DA3FF;
+  --text-disabled:    #3A3940;
+
+  --accent:           #4DA3FF;
+  --accent-hover:     #6FB5FF;
+  --accent-active:    #3090EE;
+  --accent-muted:     rgba(77,163,255,0.15);
+  --accent-border:    rgba(77,163,255,0.30);
+
+  --color-success:       #36CC6A;
+  --color-success-muted: rgba(54,204,106,0.12);
+  --color-warning:       #FFCA28;
+  --color-warning-muted: rgba(255,202,40,0.12);
+  --color-danger:        #FF5252;
+  --color-danger-muted:  rgba(255,82,82,0.12);
+
+  --priority-low:      #36CC6A;
+  --priority-medium:   #FFCA28;
+  --priority-high:     #FF5252;
+  --priority-critical: #FF2D55;
+
+  --tag-blue:     #4DA3FF;
+  --tag-cyan:     #26C6DA;
+  --tag-teal:     #26D0A3;
+  --tag-green:    #36CC6A;
+  --tag-lime:     #9CCC65;
+  --tag-yellow:   #FFCA28;
+  --tag-orange:   #FFA040;
+  --tag-red:      #FF5252;
+  --tag-pink:     #F06292;
+  --tag-purple:   #BA68C8;
+  --tag-lavender: #9FA8DA;
+  --tag-gray:     #B0BEC5;
+
+  --border-subtle:  rgba(255,255,255,0.05);
+  --border-default: rgba(255,255,255,0.08);
+  --border-strong:  rgba(255,255,255,0.14);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.30);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.40);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.50);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.60);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.70);
+
+  --shadow-focus: 0 0 0 3px rgba(77,163,255,0.30);
+}
+
+
+/* ============================================================
+   DENSITY MODES
+   Toggle via a class on <html> or a wrapper element.
+   The --task-height token switches automatically.
+   ============================================================ */
+
+.density-compact { --task-height: var(--task-height-compact); }
+.density-cozy    { --task-height: var(--task-height-cozy);    }
+
+
+/* ============================================================
+   GLOBAL RESETS (minimal — apply once at root)
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family:    var(--font-body);
+  font-size:      var(--text-md);
+  line-height:    var(--leading-normal);
+  color:          var(--text-primary);
+  background:     var(--surface-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respect system-level reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:   0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration:  0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

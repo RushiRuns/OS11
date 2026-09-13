@@ -6,7 +6,19 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@main/*": ["src/main/*"],
+      "@worker/*": ["src/worker/*"]
+    }
   },
-  "include": ["vite.config.ts", "scripts/**/*.mjs", "electron/**/*.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "src/main/**/*.ts",
+    "src/worker/**/*.ts",
+    "src/shared/**/*.ts"
+  ]
 }
