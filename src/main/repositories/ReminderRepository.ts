@@ -7,7 +7,7 @@ export class ReminderRepository extends BaseRepository {
     const stmt = this.db.prepare(`
       SELECT * FROM reminders
       WHERE is_triggered = 0
-      ORDER BY remind_at ASC
+      ORDER BY COALESCE(snoozed_until, remind_at) ASC
     `);
     return stmt.all() as Reminder[];
   }

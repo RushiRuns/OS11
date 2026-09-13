@@ -6,6 +6,7 @@ export const IPC = {
     MAXIMIZE: 'app:maximize',
     CLOSE: 'app:close',
     QUIT: 'app:quit',
+    TRIM_MEMORY: 'app:trim-memory',
   },
   SYSTEM: {
     GET_INFO: 'system:get-info',
@@ -91,6 +92,8 @@ export const IPC = {
     GET: 'settings:get',
     SET: 'settings:set',
     RESET: 'settings:reset',
+    THEME_CHANGED: 'settings:theme-changed',
+    ACCENT_COLOR_CHANGED: 'settings:accent-color-changed',
   },
   MODULES: {
     GET_ALL: 'modules:get-all',

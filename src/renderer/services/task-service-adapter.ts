@@ -1,53 +1,29 @@
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/task.js';
-import type { IpcResult } from '@shared/types/ipc.js';
+import { invoke } from './ipc.js';
 
 export const taskServiceAdapter = {
-  async getAll(): Promise<Task[]> {
-    const result: IpcResult<Task[]> = await window.electron.invoke(IPC.TASKS.GET_ALL);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  getAll(): Promise<Task[]> {
+    return invoke<Task[]>(IPC.TASKS.GET_ALL);
   },
 
-  async getById(id: string): Promise<Task> {
-    const result: IpcResult<Task> = await window.electron.invoke(IPC.TASKS.GET_BY_ID, id);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  getById(id: string): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.GET_BY_ID, id);
   },
 
-  async create(payload: CreateTaskPayload): Promise<Task> {
-    const result: IpcResult<Task> = await window.electron.invoke(IPC.TASKS.CREATE, payload);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  create(payload: CreateTaskPayload): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.CREATE, payload);
   },
 
-  async update(payload: UpdateTaskPayload): Promise<Task> {
-    const result: IpcResult<Task> = await window.electron.invoke(IPC.TASKS.UPDATE, payload);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  update(payload: UpdateTaskPayload): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.UPDATE, payload);
   },
 
-  async toggleComplete(id: string): Promise<Task> {
-    const result: IpcResult<Task> = await window.electron.invoke(IPC.TASKS.TOGGLE_COMPLETE, id);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  toggleComplete(id: string): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.TOGGLE_COMPLETE, id);
   },
 
-  async delete(id: string): Promise<boolean> {
-    const result: IpcResult<boolean> = await window.electron.invoke(IPC.TASKS.DELETE, id);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  delete(id: string): Promise<boolean> {
+    return invoke<boolean>(IPC.TASKS.DELETE, id);
   },
 };

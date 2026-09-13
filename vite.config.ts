@@ -48,6 +48,28 @@ export default defineConfig({
           },
         },
       },
+      {
+        entry: 'src/worker/worker-main.ts',
+        vite: {
+          resolve: {
+            alias: {
+              '@shared': path.resolve(__dirname, 'src/shared'),
+              '@main': path.resolve(__dirname, 'src/main'),
+              '@worker': path.resolve(__dirname, 'src/worker'),
+            },
+          },
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['better-sqlite3'],
+              output: {
+                format: 'cjs',
+                entryFileNames: '[name].js',
+              },
+            },
+          },
+        },
+      },
     ]),
     renderer(),
   ],

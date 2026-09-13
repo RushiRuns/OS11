@@ -5,6 +5,33 @@
 
 ---
 
+### [2026-09-13] — Phase 3 complete: Full IPC contract, service layer, worker thread, parallel startup sequence
+- **What was built:**
+  - Standard IPC envelope enforcement (`{ ok: true, data }` / `{ ok: false, error }`) across all 16 IPC channel categories in `src/main/ipc/`.
+  - Hardened preload script `src/main/window/preload.ts` strictly exposing only `window.electron.invoke(channel, payload?)` and `window.electron.on(channel, handler)` with zero Node APIs leaked to renderer.
+  - Typed renderer IPC client adapter `src/renderer/services/ipc.ts` providing `invoke<T>()`, `invokeRaw<T>()`, and `on()`, unwrapping `{ ok: true, data }` or throwing standard Errors.
+  - Complete Application Service Layer under `src/main/services/`:
+    - `TaskService`: payload validation, local identity tagging, automatic recurrence next-instance calculation on `complete`, cycle detection on `makeSubtask`, reminder cleanup on `trash`, My Day membership, and fractional index reordering.
+    - `ListService`: CRUD, atomic batch reordering, and smart list deletion protection (`is_smart === 1`).
+    - `ProjectService`: CRUD and project archive lifecycle transitions.
+    - `TagService`: tag CRUD and task-tag many-to-many relationship management.
+    - `ReminderService`: Node.js `setTimeout` timer scheduling, startup overdue processing (`processOverdueAtStartup()`), system sleep/resume rescheduling (`rescheduleAfterSleep()`), snoozing, and cancellation.
+    - `NotificationService`: native desktop `Notification` dispatch with inline action buttons (`Complete`, `Snooze 15m`) and database history tracking.
+    - `SettingsService`: key-value preferences, theme, accent color, and launch-at-login integration.
+  - Dedicated background Worker Thread layer under `src/worker/`:
+    - `SearchWorker`: handles FTS5 full-text queries off the main event loop (< 150ms budget per PERFORMANCE.md).
+    - `FileProcessor`: manages attachment ingestion into `userData/attachments/`.
+    - `WorkerManager`: thread controller with request correlation IDs, timeout handling, and graceful fallback to main-process `SearchRepository`.
+    - `vite.config.ts`: added worker compilation target to build `dist-electron/worker-main.js`.
+  - Synchronous migration bootstrap and parallel startup data loading (`runStartupSequence()`) in `src/main/startup.ts`.
+  - Comprehensive unit test suites under `tests/services/` for `TaskService`, `ReminderService`, `WorkerManager`, and IPC client adapter (all 11 test suites passing, 63 tests total).
+- **What changed architecturally:**
+  - ARCHITECTURE.md Rule 4 fully enforced: every IPC handler returns `{ ok, data }` or `{ ok, error }`.
+  - Renderer code is strictly decoupled from Node.js APIs and direct Electron invocations, communicating via typed `src/renderer/services/ipc.ts`.
+  - Expensive full-text search operations moved off the main thread into a dedicated worker thread with instant main-thread fallback if unavailable.
+
+---
+
 ### [2026-09-13] — Phase 2 complete: Full SQLite schema, all repositories, domain functions, shared types
 - **What was built:**
   - Initial database migration `0001_initial_schema.sql` covering all 20 Phase 1 tables + 4 Phase 2 stub tables, FTS5 virtual table `tasks_fts` with sync triggers (`tasks_ai`, `tasks_ad`, `tasks_au`), and default seeds for smart lists, modules, and settings.

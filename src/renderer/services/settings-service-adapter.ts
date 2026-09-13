@@ -1,49 +1,33 @@
 import { IPC } from '@shared/ipc-channels.js';
-import type { IpcResult } from '@shared/types/ipc.js';
 import type { SystemInfo } from '@shared/types/settings.js';
+import { invoke } from './ipc.js';
 
 export const settingsServiceAdapter = {
-  async getAll(): Promise<Record<string, unknown>> {
-    const result: IpcResult<Record<string, unknown>> = await window.electron.invoke(IPC.SETTINGS.GET_ALL);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  getAll(): Promise<Record<string, unknown>> {
+    return invoke<Record<string, unknown>>(IPC.SETTINGS.GET_ALL);
   },
 
-  async get<T>(key: string, defaultValue: T): Promise<T> {
-    const result: IpcResult<T> = await window.electron.invoke(IPC.SETTINGS.GET, { key, defaultValue });
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  get<T>(key: string, defaultValue: T): Promise<T> {
+    return invoke<T>(IPC.SETTINGS.GET, { key, defaultValue });
   },
 
-  async set<T>(key: string, value: T): Promise<boolean> {
-    const result: IpcResult<boolean> = await window.electron.invoke(IPC.SETTINGS.SET, { key, value });
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  set<T>(key: string, value: T): Promise<boolean> {
+    return invoke<boolean>(IPC.SETTINGS.SET, { key, value });
   },
 
-  async getSystemInfo(): Promise<SystemInfo> {
-    const result: IpcResult<SystemInfo> = await window.electron.invoke(IPC.SYSTEM.GET_INFO);
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    return result.data;
+  getSystemInfo(): Promise<SystemInfo> {
+    return invoke<SystemInfo>(IPC.SYSTEM.GET_INFO);
   },
 
-  async minimize(): Promise<void> {
-    await window.electron.invoke(IPC.SYSTEM.MINIMIZE);
+  minimize(): Promise<void> {
+    return invoke<void>(IPC.SYSTEM.MINIMIZE);
   },
 
-  async maximize(): Promise<void> {
-    await window.electron.invoke(IPC.SYSTEM.MAXIMIZE);
+  maximize(): Promise<void> {
+    return invoke<void>(IPC.SYSTEM.MAXIMIZE);
   },
 
-  async close(): Promise<void> {
-    await window.electron.invoke(IPC.SYSTEM.CLOSE);
+  close(): Promise<void> {
+    return invoke<void>(IPC.SYSTEM.CLOSE);
   },
 };

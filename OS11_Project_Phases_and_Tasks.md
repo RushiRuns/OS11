@@ -442,7 +442,7 @@ One file per domain. All parameterized statements. No string concatenation in qu
 
 ### Preload Script
 
-- [ ] Create `src/main/window/preload.ts`
+- [x] Create `src/main/window/preload.ts`
   - Exposes ONLY: `window.electron.invoke(channel, payload?)` and `window.electron.on(channel, handler)`
   - `contextBridge.exposeInMainWorld()` — no other Node APIs exposed
   - `contextIsolation: true` — enforced in BrowserWindow config
@@ -450,7 +450,7 @@ One file per domain. All parameterized statements. No string concatenation in qu
 
 ### IPC Channel Registry
 
-- [ ] Create `src/shared/ipc-channels.ts`
+- [x] Create `src/shared/ipc-channels.ts`
   - Every channel defined as a typed const — e.g., `export const IPC = { TASKS: { CREATE: 'tasks:create', ... }, ... }`
   - Groups match IPC_CHANNELS.md exactly
   - No ad-hoc string literals anywhere in the codebase
@@ -471,26 +471,26 @@ ipcMain.handle(IPC.TASKS.CREATE, async (_event, payload: CreateTaskPayload) => {
 });
 ```
 
-- [ ] Create `src/main/ipc/task-handlers.ts` — registers all TASKS.* handlers; delegates to TaskService
-- [ ] Create `src/main/ipc/list-handlers.ts`
-- [ ] Create `src/main/ipc/list-group-handlers.ts`
-- [ ] Create `src/main/ipc/project-handlers.ts`
-- [ ] Create `src/main/ipc/section-handlers.ts`
-- [ ] Create `src/main/ipc/tag-handlers.ts`
-- [ ] Create `src/main/ipc/reminder-handlers.ts`
-- [ ] Create `src/main/ipc/attachment-handlers.ts`
-- [ ] Create `src/main/ipc/pomodoro-handlers.ts`
-- [ ] Create `src/main/ipc/goal-handlers.ts`
-- [ ] Create `src/main/ipc/settings-handlers.ts`
-- [ ] Create `src/main/ipc/module-handlers.ts`
-- [ ] Create `src/main/ipc/search-handlers.ts` — receives query, sends to worker, returns results
-- [ ] Create `src/main/ipc/notification-handlers.ts`
-- [ ] Create `src/main/ipc/identity-handlers.ts`
-- [ ] Create `src/main/ipc/index.ts` — calls `register*Handlers()` for each domain at app startup
+- [x] Create `src/main/ipc/task-handlers.ts` — registers all TASKS.* handlers; delegates to TaskService
+- [x] Create `src/main/ipc/list-handlers.ts`
+- [x] Create `src/main/ipc/list-group-handlers.ts`
+- [x] Create `src/main/ipc/project-handlers.ts`
+- [x] Create `src/main/ipc/section-handlers.ts`
+- [x] Create `src/main/ipc/tag-handlers.ts`
+- [x] Create `src/main/ipc/reminder-handlers.ts`
+- [x] Create `src/main/ipc/attachment-handlers.ts`
+- [x] Create `src/main/ipc/pomodoro-handlers.ts`
+- [x] Create `src/main/ipc/goal-handlers.ts`
+- [x] Create `src/main/ipc/settings-handlers.ts`
+- [x] Create `src/main/ipc/module-handlers.ts`
+- [x] Create `src/main/ipc/search-handlers.ts` — receives query, sends to worker, returns results
+- [x] Create `src/main/ipc/notification-handlers.ts`
+- [x] Create `src/main/ipc/identity-handlers.ts`
+- [x] Create `src/main/ipc/index.ts` — calls `register*Handlers()` for each domain at app startup
 
 ### Renderer IPC Service Adapter
 
-- [ ] Create `src/renderer/services/ipc.ts`
+- [x] Create `src/renderer/services/ipc.ts`
   - Typed wrappers around `window.electron.invoke()`:
     `invoke<T>(channel: string, payload?: unknown): Promise<IpcResult<T>>`
   - All Zustand stores call through this adapter — never `window.electron.invoke()` directly
@@ -500,7 +500,7 @@ ipcMain.handle(IPC.TASKS.CREATE, async (_event, payload: CreateTaskPayload) => {
 
 One service per domain. Validation happens in domain functions called from here. Cross-domain coordination happens here.
 
-- [ ] Create `src/main/services/task/TaskService.ts`
+- [x] Create `src/main/services/task/TaskService.ts`
   - `create(payload)`: `validateCreate` → `identityRepo.get()` → `taskRepo.create()` → notify worker to index → return task
   - `update(id, fields)`: `validateUpdate` → `taskRepo.update()` → notify worker to re-index → return task
   - `complete(id)`: `taskRepo.complete()` → if recurring: `recurrence.nextOccurrence()` → `taskRepo.create()` next instance
@@ -510,42 +510,42 @@ One service per domain. Validation happens in domain functions called from here.
   - `moveToList(id, listId)`: `taskRepo.update(id, { list_id: listId })`
   - `makeSubtask(id, parentId)`: validate no cycle → `taskRepo.update(id, { parent_task_id: parentId })`
   - `promoteToTask(id)`: `taskRepo.update(id, { parent_task_id: null })`
-- [ ] Create `src/main/services/list/ListService.ts`
-- [ ] Create `src/main/services/project/ProjectService.ts`
-- [ ] Create `src/main/services/tag/TagService.ts`
-- [ ] Create `src/main/services/reminder/ReminderService.ts`
+- [x] Create `src/main/services/list/ListService.ts`
+- [x] Create `src/main/services/project/ProjectService.ts`
+- [x] Create `src/main/services/tag/TagService.ts`
+- [x] Create `src/main/services/reminder/ReminderService.ts`
   - `schedule(reminder)`: sets a Node.js `setTimeout` — ID stored for later cancellation
   - `processOverdueAtStartup()`: fires any reminders that triggered while app was closed
   - `rescheduleAfterSleep()`: called on `powerMonitor.on('resume')`
   - `snooze(id, until)`: cancel existing timer, set new `setTimeout`, update DB
   - `cancel(id)`: clear `setTimeout`, mark triggered in DB
-- [ ] Create `src/main/services/notification/NotificationService.ts`
+- [x] Create `src/main/services/notification/NotificationService.ts`
   - `send(type, title, body, taskId?)`: fires OS notification (Electron `Notification` API), records to `notification_history`
   - Actionable notifications: "Complete ✓" and "Snooze 15min" actions in the notification
-- [ ] Create `src/main/services/settings/SettingsService.ts`
+- [x] Create `src/main/services/settings/SettingsService.ts`
   - `applyTheme(theme)`: update DB + emit IPC to renderer to set `data-theme` on `<html>`
   - `applyLoginItem(enabled)`: `app.setLoginItemSettings({ openAtLogin: enabled })`
   - `applyAccentColor(hex)`: emit IPC to renderer → renderer updates CSS variables
 
 ### Worker Thread
 
-- [ ] Create `src/worker/worker-main.ts` — entry point; `parentPort.on('message', dispatch)`
-- [ ] Create `src/main/services/worker-manager.ts` — spawns worker; exposes `send(type, payload)` and handles replies
-- [ ] Create `src/worker/search/SearchWorker.ts`
+- [x] Create `src/worker/worker-main.ts` — entry point; `parentPort.on('message', dispatch)`
+- [x] Create `src/main/services/worker-manager.ts` — spawns worker; exposes `send(type, payload)` and handles replies
+- [x] Create `src/worker/search/SearchWorker.ts`
   - Opens its own `better-sqlite3` connection (read-only)
   - Handles `SEARCH_QUERY` messages — FTS5 query → results back to main process
   - Target: < 150ms per query (PERFORMANCE.md)
-- [ ] Create `src/worker/file-processor/FileProcessor.ts`
+- [x] Create `src/worker/file-processor/FileProcessor.ts`
   - Handles file copy (attachment upload), thumbnail generation for images
 
 ### Main Process Entry + Startup Sequence
 
-- [ ] Create `src/main/startup.ts`
+- [x] Create `src/main/startup.ts`
   - Run migrations synchronously first (must complete before anything else)
   - `await Promise.all([loadActiveList(), initSearchWorker(), loadSettings(), loadModules()])` — parallel (PERFORMANCE.md §3)
   - Build `StartupPayload` — `{ lists, activeTasks (first 50), settings, modules, identity }`
   - Make available to `IPC.APP.GET_STARTUP_DATA` handler immediately — no "loading" state on open
-- [ ] Create `src/main/main.ts`
+- [x] Create `src/main/main.ts`
   - `app.on('ready')`: run startup → register all IPC handlers → create BrowserWindow (hidden) → spawn worker
   - `app.on('window-all-closed')`: do NOT quit on non-macOS; keep alive in tray
   - `app.on('memory-pressure')`: clear caches, emit `IPC.APP.TRIM_MEMORY` to renderer (PERFORMANCE.md §15)
@@ -553,8 +553,8 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 3 complete: Full IPC contract, service layer, worker thread, parallel startup sequence."
-- [ ] Commit: `"Phase 3 complete: Process architecture and IPC contract layer"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 3 complete: Full IPC contract, service layer, worker thread, parallel startup sequence."
+- [x] Commit: `"Phase 3 complete: Process architecture and IPC contract layer"`
 
 ---
 

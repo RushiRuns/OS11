@@ -106,7 +106,36 @@
 
 ---
 
-## 6. Do NOT Create a Duplicate Of
+## 6. Service Layer (`src/main/services/`)
+
+*All business logic, multi-repository coordination, and cross-cutting concerns reside here per ARCHITECTURE.md Rule 2.*
+
+| Service | File Path | Key Methods / Responsibilities |
+|---|---|---|
+| `TaskService` | `src/main/services/task/TaskService.ts` | Validates payloads, local identity author tagging, RRULE auto-generation on complete, cycle detection on subtasks, reminder cancellation on trash, fractional indexing |
+| `ListService` | `src/main/services/list/ListService.ts` | List CRUD, smart list protection (`is_smart === 1` cannot be deleted), atomic batch reorder |
+| `ProjectService` | `src/main/services/project/ProjectService.ts` | Project CRUD, archive status transition |
+| `TagService` | `src/main/services/tag/TagService.ts` | Tag CRUD, task-tag associations |
+| `ReminderService` | `src/main/services/reminder/ReminderService.ts` | Node.js `setTimeout` scheduler, `processOverdueAtStartup()`, `rescheduleAfterSleep()`, snooze, cancel |
+| `NotificationService` | `src/main/services/notification/NotificationService.ts` | Native desktop `Notification` dispatch with actionable buttons, persistent `notification_history` |
+| `SettingsService` | `src/main/services/settings/SettingsService.ts` | Preference key-value store, `applyTheme`, `applyAccentColor`, `applyLoginItem` |
+| `WorkerManager` | `src/main/services/worker-manager.ts` | Manages Node `worker_threads` instance with correlation IDs, timeouts, and seamless main-thread fallback |
+
+---
+
+## 7. Client IPC Adapter (`src/renderer/services/`)
+
+*Type-safe bridge between Renderer Zustand stores and Main Process IPC.*
+
+| Module | File Path | Description |
+|---|---|---|
+| `ipc` | `src/renderer/services/ipc.ts` | `invoke<T>(channel, payload)` (unwraps `{ ok: true, data }` or throws), `invokeRaw<T>`, and `on(channel, handler)` |
+| `TaskServiceAdapter` | `src/renderer/services/task-service-adapter.ts` | Typed task operations routed through `ipc.invoke` |
+| `SettingsServiceAdapter` | `src/renderer/services/settings-service-adapter.ts` | Typed settings operations routed through `ipc.invoke` |
+
+---
+
+## 8. Do NOT Create a Duplicate Of
 
 *The following items must exist ONLY ONCE in the codebase:*
 
@@ -117,3 +146,5 @@
 5. **Main Window Lifecycle Manager:** `src/main/window/main-window.ts` (sole owner of `BrowserWindow` creation, state, and sizing).
 6. **IPC Dispatch Registry:** `src/main/ipc/index.ts` (all `ipcMain.handle` registrations route here).
 7. **Portal Root:** `<div id="radix-portal"></div>` in `index.html` (single target for Radix portals).
+8. **Preload Script Bridge:** `src/main/window/preload.ts` (exposes only `window.electron.invoke` and `window.electron.on`).
+9. **Worker Thread Entry:** `src/worker/worker-main.ts` (handles heavy background jobs off the main loop).
