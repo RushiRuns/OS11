@@ -1,11 +1,7 @@
 import { BaseRepository } from './base-repository.js';
+import type { SearchResult } from '../../shared/types/search.js';
 
-export interface SearchResult {
-  id: string;
-  title: string;
-  snippet: string;
-  listId: string;
-}
+export type { SearchResult };
 
 export class SearchRepository extends BaseRepository {
   public search(query: string): SearchResult[] {

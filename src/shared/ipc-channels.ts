@@ -140,6 +140,9 @@ export const IPC = {
     PAIR_DEVICE: 'sync:pair-device',
     QUEUE_CHANGE: 'sync:queue-change',
   },
+  NLP: {
+    PARSE: 'nlp:parse',
+  },
 } as const;
 
 export type IpcChannelGroup = keyof typeof IPC;

@@ -813,18 +813,18 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Quick Add Bar (In-App)
 
-- [ ] Create `src/renderer/features/quickadd/QuickAddBar.tsx` + `.module.css`
+- [x] Create `src/renderer/features/quickadd/QuickAddBar.tsx` + `.module.css`
   - Always visible at top of task list: height `var(--quick-add-height)` (52px), radius `var(--radius-xl)`
   - `Ctrl+N` / `Cmd+N` focuses it from anywhere in the app
   - On submit → send raw input to `IPC.NLP.PARSE` → receive `ParsedTaskInput` → show parse preview chip → user confirms → `IPC.TASKS.CREATE`
   - Live parse preview chip updates as user types: shows parsed date, tag, priority, list assignment
-- [ ] Create `src/renderer/features/quickadd/ParsePreviewChip.tsx` + `.module.css`
+- [x] Create `src/renderer/features/quickadd/ParsePreviewChip.tsx` + `.module.css`
   - Shown below the input, disappears when input is empty
   - Not interactive — just a visual confirmation of what will be created
 
 ### Omnibar UI (in the Omnibar BrowserWindow)
 
-- [ ] Create `src/renderer/features/omnibar/OmnibarView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/omnibar/OmnibarView.tsx` + `.module.css`
   - Rendered in the separate omnibar `BrowserWindow`
   - Same NLP input + parse preview chip as Quick Add Bar
   - Additional modes (Tab to switch): Add Task / Search Tasks / Open List / Start Pomodoro
@@ -832,8 +832,8 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### NLP Parsing Wired to IPC
 
-- [ ] Add `IPC.NLP.PARSE` handler in main process: calls `nlp.parseQuickAdd(input)`, returns `ParsedTaskInput`
-- [ ] Full quick-add syntax supported (Feature Spec §5.4):
+- [x] Add `IPC.NLP.PARSE` handler in main process: calls `nlp.parseQuickAdd(input)`, returns `ParsedTaskInput`
+- [x] Full quick-add syntax supported (Feature Spec §5.4):
   - `#work` → assign tag "work" (creates tag if not exists)
   - `@personal` → assign to list named "personal" (fuzzy match)
   - `!high` / `!low` / `!medium` / `!critical` → set priority
@@ -843,7 +843,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### All In-App Keyboard Shortcuts
 
-- [ ] Create `src/renderer/hooks/useKeyboardShortcuts.ts`
+- [x] Create `src/renderer/hooks/useKeyboardShortcuts.ts`
   - Global `keydown` listener on the main window
   - All shortcuts from Feature Spec §5.2 wired to store actions or IPC calls:
     - `↑ ↓` → move task focus up/down
@@ -869,13 +869,13 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Vim Mode (Optional Module)
 
-- [ ] Create `src/renderer/hooks/useVimMode.ts`
+- [x] Create `src/renderer/hooks/useVimMode.ts`
   - Activated only when `moduleStore.isEnabled('vim_keybindings')` is true
   - `j/k` → move up/down, `gg/G` → top/bottom, `dd` → trash, `cc` → complete, `ss` → star, `o` → open detail
 
 ### Command Palette
 
-- [ ] Create `src/renderer/features/command-palette/CommandPalette.tsx` + `.module.css`
+- [x] Create `src/renderer/features/command-palette/CommandPalette.tsx` + `.module.css`
   - `Ctrl+K` → Spotlight-style overlay; Z-index `var(--z-modal)` (400)
   - Fuzzy search across: tasks, lists, actions, settings
   - Recent actions shown at top when input is empty
@@ -885,20 +885,20 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Search
 
-- [ ] Create `src/renderer/features/search/SearchView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/search/SearchView.tsx` + `.module.css`
   - `Ctrl+F` / `/` → opens inline at top of task list (not a modal)
   - Input wrapped in `useDeferredValue` — typing does not block task list render (PERFORMANCE.md §16)
   - IPC → worker thread → FTS5 query → results in < 150ms
   - Results virtualized (PERFORMANCE.md §9)
   - Each result: task title + list name + matched snippet from `notes`
   - `Escape` → close search, restore normal list view
-- [ ] Create `src/renderer/stores/searchStore.ts` — `query: string`, `results: TaskSearchResult[]`, `isSearching: boolean`
+- [x] Create `src/renderer/stores/searchStore.ts` — `query: string`, `results: TaskSearchResult[]`, `isSearching: boolean`
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `QuickAddBar`, `ParsePreviewChip`, `OmnibarView`, `CommandPalette`, `SearchView`, `useKeyboardShortcuts`, `useVimMode`, `searchStore`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 7 complete: Quick Add, Omnibar, NLP parsing, all keyboard shortcuts, command palette, search."
-- [ ] Commit: `"Phase 7 complete: Quick Add, NLP, keyboard-first design"`
+- [x] Update UTILITIES.md: `QuickAddBar`, `ParsePreviewChip`, `OmnibarView`, `CommandPalette`, `SearchView`, `useKeyboardShortcuts`, `useVimMode`, `searchStore`
+- [x] CHANGELOG_INTERNAL.md: "Phase 7 complete: Quick Add, Omnibar, NLP parsing, all keyboard shortcuts, command palette, search."
+- [x] Commit: `"Phase 7 complete: Quick Add, NLP, keyboard-first design"`
 
 ---
 

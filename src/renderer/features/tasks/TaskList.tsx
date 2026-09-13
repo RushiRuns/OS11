@@ -7,11 +7,14 @@ import {
 import { useAppStore } from '../../stores/app-store.js';
 import { TaskCard } from './TaskCard.js';
 import { TaskListHeader } from './TaskListHeader.js';
-import { QuickAdd } from '../../components/QuickAdd/QuickAdd.js';
+import { QuickAddBar } from '../quickadd/QuickAddBar.js';
+import { SearchView } from '../search/SearchView.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { Toast } from '../../components/Toast/Toast.js';
 import { useFilteredTasks, DEFAULT_FILTER_CONFIG } from '../../hooks/useFilteredTasks.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
+import { useVimMode } from '../../hooks/useVimMode.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './TaskList.module.css';
 
@@ -27,7 +30,6 @@ export function TaskList({
   const { activeListId } = useAppStore();
   const {
     loadTasks,
-    createTask,
     updateTask,
     toggleComplete,
     toggleStar,
@@ -101,14 +103,6 @@ export function TaskList({
     overscan: 10,
   });
 
-  // Task creation handler
-  const handleCreateTask = async (title: string) => {
-    const listId = activeListId.startsWith('smart_') ? 'list_inbox' : activeListId;
-    await createTask({
-      title,
-      list_id: listId,
-    });
-  };
 
   // Task deletion with Undo Toast
   const handleDeleteTask = useCallback(
@@ -131,41 +125,27 @@ export function TaskList({
     [activeTasks, deleteTask, pushAction, restoreTask]
   );
 
-  // Keyboard navigation & Shortcuts (j/k, x, Delete, etc.)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
+  // Vim mode navigation (gated by vim_keybindings module toggle)
+  useVimMode({
+    tasks: filteredIncomplete,
+    selectedTaskId: selectedTaskId ?? null,
+    onSelectTask,
+    onDeleteTask: handleDeleteTask,
+    onToggleComplete: toggleComplete,
+    onToggleStar: toggleStar,
+    onOpenQuickAdd: () => {
+      const input = document.querySelector('input[aria-label="Quick add task"]') as HTMLInputElement;
+      input?.focus();
+    },
+  });
 
-      if (filteredIncomplete.length === 0) return;
-
-      const currentIndex = filteredIncomplete.findIndex((t) => t.id === selectedTaskId);
-
-      if (e.key === 'ArrowDown' || e.key === 'j') {
-        e.preventDefault();
-        const nextIdx = currentIndex < filteredIncomplete.length - 1 ? currentIndex + 1 : 0;
-        onSelectTask?.(filteredIncomplete[nextIdx]);
-      } else if (e.key === 'ArrowUp' || e.key === 'k') {
-        e.preventDefault();
-        const prevIdx = currentIndex > 0 ? currentIndex - 1 : filteredIncomplete.length - 1;
-        onSelectTask?.(filteredIncomplete[prevIdx]);
-      } else if (e.key === 'x' && selectedTaskId) {
-        e.preventDefault();
-        toggleComplete(selectedTaskId);
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedTaskId) {
-        e.preventDefault();
-        handleDeleteTask(selectedTaskId);
-      } else if (e.key === '*' && selectedTaskId) {
-        e.preventDefault();
-        toggleStar(selectedTaskId);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredIncomplete, selectedTaskId, onSelectTask, toggleComplete, toggleStar, handleDeleteTask]);
+  // Feature Spec §5.2 standard keyboard shortcuts
+  useKeyboardShortcuts({
+    activeTasks: filteredIncomplete,
+    selectedTaskId: selectedTaskId ?? null,
+    onSelectTask,
+    onDeleteTask: handleDeleteTask,
+  });
 
   const headerTitle = (() => {
     switch (activeListId) {
@@ -193,9 +173,19 @@ export function TaskList({
         onFilterChange={setFilterConfig}
       />
 
-      {/* Quick Add Bar */}
+      {/* Inline FTS5 Search View (Ctrl+F or /) */}
+      <SearchView
+        onSelectTask={(taskId) => {
+          const matched = activeTasks.find((t) => t.id === taskId);
+          if (matched) {
+            onSelectTask?.(matched);
+          }
+        }}
+      />
+
+      {/* Quick Add Bar (52px height, 16px radius, Ctrl+N focus, live NLP preview chips) */}
       <div className={styles.quickAddRow}>
-        <QuickAdd onAdd={handleCreateTask} placeholder="Add a task (e.g. 'Review pull request tomorrow !high')..." />
+        <QuickAddBar />
       </div>
 
       {/* Virtual Scroll Area */}

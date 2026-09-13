@@ -157,3 +157,7 @@ Local network peer-to-peer and companion device synchronization.
 - `sync:get-status` — Retrieve local WebSocket sync server and connection state.
 - `sync:pair-device` — Generate/verify QR pairing token for companion device.
 - `sync:queue-change` — Queue local mutation into `sync_queue`.
+
+### NLP
+Natural language quick-add processing using Chrono and regular expressions.
+- `nlp:parse` — Parse unstructured task string into structured task properties (title, tags, list, priority, due date/time, recurrence, pomodoro).

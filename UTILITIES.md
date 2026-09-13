@@ -20,6 +20,9 @@
 | `useTasksByList` | `src/renderer/stores/taskStore.ts` | Filtered, sorted task selector by list ID | Component scope |
 | `useUndoRedo` | `src/renderer/hooks/useUndoRedo.ts` | Global undo/redo action stack (100 entries) with `Ctrl+Z` / `Ctrl+Y` and toast triggers | Renderer global |
 | `useFilteredTasks` | `src/renderer/hooks/useFilteredTasks.ts` | Memoized task filtering (tags, priority, dates) and sorting (due date, priority, alphabetical, manual) | Component scope |
+| `useKeyboardShortcuts` | `src/renderer/hooks/useKeyboardShortcuts.ts` | Global keydown listener wiring Feature Spec §5.2 hotkeys, Focus Mode, and Command Palette | Renderer global |
+| `useVimMode` | `src/renderer/hooks/useVimMode.ts` | Modal navigation (`j/k`, `gg/G`, `dd`, `cc`, `ss`, `o`) gated by `vim_keybindings` module | Component scope |
+| `useSearchStore` | `src/renderer/stores/searchStore.ts` | Zustand store for full-text search state, debounced queries, and results | Renderer global |
 
 ---
 
@@ -51,7 +54,11 @@
 | `CreateListModal` | `src/renderer/features/lists/CreateListModal.tsx` | **Yes (`@radix-ui/react-dialog`)** | No (CSS transitions) | Modal for creating and editing lists with emoji presets, color swatches, and background theming |
 | `ListGroupModal` | `src/renderer/features/lists/ListGroupModal.tsx` | **Yes (`@radix-ui/react-dialog`)** | No (CSS transitions) | Modal for managing sidebar folder groups |
 | `ListContextMenu` | `src/renderer/features/lists/ListContextMenu.tsx` | No | No (CSS transitions) | Floating context menu for renaming, duplicating, exporting, and deleting lists |
-| `OmnibarView` | `src/renderer/features/omnibar/OmnibarView.tsx` | No | No (CSS transitions) | Centered keyboard task capture overlay with live modifier parsing and auto-dismiss |
+| `QuickAddBar` | `src/renderer/features/quickadd/QuickAddBar.tsx` | No | No (CSS transitions) | 52px height quick-add bar with 16px radius, `Ctrl+N` keyboard focus, and live NLP preview chip |
+| `ParsePreviewChip` | `src/renderer/features/quickadd/ParsePreviewChip.tsx` | No | No (CSS transitions) | Badge chip row previewing extracted tags, list, priority, due date, pomodoro, recurrence |
+| `OmnibarView` | `src/renderer/features/omnibar/OmnibarView.tsx` | No | No (CSS transitions) | Multi-mode Omnibar with Tab switching (Add Task, Search Tasks, Open List, Start Pomodoro) |
+| `CommandPalette` | `src/renderer/features/command-palette/CommandPalette.tsx` | No | No (CSS transitions <150ms) | Spotlight overlay (`Ctrl+K`) with fuzzy filtering across Actions, Lists, Tasks, and Settings |
+| `SearchView` | `src/renderer/features/search/SearchView.tsx` | No | No (CSS transitions) | Inline FTS5 search view with mark highlighted snippets and keyboard navigation |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.

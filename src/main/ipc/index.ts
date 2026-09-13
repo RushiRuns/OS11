@@ -14,6 +14,7 @@ import { registerModuleHandlers } from './module-handlers.js';
 import { registerSearchHandlers } from './search-handlers.js';
 import { registerNotificationHandlers } from './notification-handlers.js';
 import { registerIdentityHandlers } from './identity-handlers.js';
+import { registerNlpHandlers } from './nlp-handlers.js';
 
 export function registerIpcHandlers(): void {
   registerAppHandlers();
@@ -32,6 +33,7 @@ export function registerIpcHandlers(): void {
   registerSearchHandlers();
   registerNotificationHandlers();
   registerIdentityHandlers();
+  registerNlpHandlers();
 }
 
 export default registerIpcHandlers;

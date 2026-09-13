@@ -10,6 +10,7 @@ import { DetailPanel } from './features/tasks/DetailPanel.js';
 import { MyDayView } from './features/lists/MyDayView.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
+import { CommandPalette } from './features/command-palette/CommandPalette.js';
 import { ipc } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
@@ -44,6 +45,8 @@ export function App(): React.ReactElement {
   const { activeListId, systemInfo, fetchSystemInfo } = useAppStore();
   const activeList = useActiveList();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   useEffect(() => {
     fetchSystemInfo();
@@ -53,8 +56,24 @@ export function App(): React.ReactElement {
       quickAddInput?.focus();
     });
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modKey && e.key.toLowerCase() === 'k' && !e.shiftKey) {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if (modKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setIsFocusMode((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       unsubFocus?.();
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [fetchSystemInfo]);
 
@@ -140,7 +159,9 @@ export function App(): React.ReactElement {
       {/* Three-Column CSS Grid Shell */}
       <div
         className={layoutStyles.shellGrid}
-        data-detail={isDetailVisible ? 'visible' : 'hidden'}
+        data-sidebar={isFocusMode ? 'hidden' : 'visible'}
+        data-detail={isFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
+        data-focus={isFocusMode ? 'active' : 'inactive'}
       >
         {/* Column 1: Sidebar (Critical path) */}
         <div className={layoutStyles.sidebarCol}>
@@ -160,6 +181,13 @@ export function App(): React.ReactElement {
 
       {/* Rollover Prompt on day change for incomplete yesterday tasks */}
       <RolloverPrompt />
+
+      {/* Command Palette Spotlight modal (Ctrl+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onToggleFocusMode={() => setIsFocusMode((prev) => !prev)}
+      />
     </div>
   );
 }

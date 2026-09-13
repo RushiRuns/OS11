@@ -15,3 +15,5 @@ export * from './settings.js';
 export * from './Module.js';
 export * from './LocalIdentity.js';
 export * from './IpcResult.js';
+export * from './nlp.js';
+export * from './search.js';

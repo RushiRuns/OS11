@@ -1,20 +1,7 @@
 import * as chrono from 'chrono-node';
+import type { ParsedTaskInput, ParsedQuickAddResult } from '../../shared/types/nlp.js';
 
-export interface ParsedTaskInput {
-  title: string;
-  dueDate: string | null;
-  dueTime: string | null;
-  allDay: boolean;
-  priority: number;
-  tagNames: string[];
-  listName: string | null;
-  pomodoroRequested: boolean;
-  recurrenceRule: string | null;
-}
-
-export interface ParsedQuickAddResult extends ParsedTaskInput {
-  cleanTitle: string;
-}
+export type { ParsedTaskInput, ParsedQuickAddResult };
 
 const RECURRENCE_PATTERNS: Array<{ regex: RegExp; rrule: string }> = [
   { regex: /\bevery\s+weekday\b/i, rrule: 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR' },
@@ -127,7 +114,11 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
     }
   }
 
-  const cleanTitle = workingText.replace(/\s+/g, ' ').trim() || text.trim();
+  const cleanTitle =
+    workingText
+      .replace(/\s+/g, ' ')
+      .replace(/\b(?:by|due|on|until)\s*$/i, '')
+      .trim() || text.trim();
 
   return {
     title: cleanTitle,

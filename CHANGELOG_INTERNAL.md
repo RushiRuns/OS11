@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-13] — Phase 7 complete: Quick Add, Omnibar, NLP parsing, all keyboard shortcuts, command palette, search
+- **What was built:**
+  - `QuickAddBar.tsx` + `.module.css`: Always-accessible 52px task creation bar with 16px border-radius, `Ctrl+N`/`Cmd+N` focus listener, debounced NLP parsing, and live badge preview chips.
+  - `ParsePreviewChip.tsx` + `.module.css`: Dynamic chip renderer visually previewing extracted `@list`, `#tags`, `!priority`, `📅 date/time`, `🔁 recurrence`, and `🍅 Pomodoro` indicators.
+  - Enhanced multi-mode `OmnibarView.tsx` + `.module.css`: Warm-start floating bar with Tab-based switching across 4 modes: 'Add Task', 'Search Tasks', 'Open List', and 'Start Pomodoro'.
+  - IPC NLP parsing handler (`IPC.NLP.PARSE` in `src/main/ipc/nlp-handlers.ts`) connected to `parseQuickAdd()` in `src/main/domain/nlp.ts` supporting tags, lists, priorities, Pomodoro emoji, natural language dates via Chrono, and recurrence rules.
+  - Global in-app keyboard shortcuts (`src/renderer/hooks/useKeyboardShortcuts.ts`): Implemented all bindings from Feature Spec §5.2 (`↑/↓`, `Space`, `Enter/F2`, `Delete`, `Ctrl+I`, `Tab`, `Shift+Tab`, `Ctrl+Shift+M`, `Ctrl+D`, `Ctrl+T`, `Ctrl+F`, `Ctrl+1..9`, `Ctrl+P`, `Ctrl+Shift+D`, `Ctrl+K`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+L`, `Ctrl+Shift+T`, `Ctrl+Shift+F`).
+  - Optional Vim mode hook (`src/renderer/hooks/useVimMode.ts`) gated by `moduleStore.isEnabled('vim_keybindings')` (`j/k`, `gg/G`, `dd`, `cc`, `ss`, `o`).
+  - Spotlight Command Palette (`src/renderer/features/command-palette/CommandPalette.tsx` + `.module.css`): Centered modal overlay triggered by `Ctrl+K` with fuzzy filtering across Actions, Lists, Tasks, and Settings, and animated transition < 150ms.
+  - Full-Text Search integration: `searchStore.ts` and `SearchView.tsx` + `.module.css` triggered via `Ctrl+F` or `/`, querying worker thread SQLite FTS5 table and rendering `<mark>` highlighted snippet matches.
+  - Focus Mode (`Ctrl+Shift+F`) layout support in `App.tsx` and `layout.module.css` hiding both sidebar and detail columns.
+  - Unit test suites in `tests/domain/nlp-ipc.test.ts` and `tests/domain/search-store.test.ts` (18 test suites and 93 tests passing).
+- **What changed architecturally:**
+  - Created `@shared/types/nlp.ts` and `@shared/types/search.ts` adhering to strict layer boundary rules (renderer does not import from main).
+  - Quick-add parsing runs debounced over IPC asynchronously, ensuring zero UI input lag.
+  - Natural language date parsing cleans trailing date prepositions (by, due, on, until) when extracting dates from task titles.
+
+---
+
 ### [2026-09-13] — Phase 6 complete: Lists, smart lists, sidebar, My Day, rollover prompt
 - **What was built:**
   - Normalized Zustand list store (`src/renderer/stores/listStore.ts`) with `listsById: Record<string, List>`, `orderedIds: string[]`, `listGroupsById`, built-in smart list protection (`is_smart === 1`), optimistic mutations with rollback snapshots, and folder grouping.
