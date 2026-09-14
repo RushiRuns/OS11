@@ -17,6 +17,7 @@ import { humanReadableRRule } from '../../../shared/utils/recurrence.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task, TaskHistoryRecord } from '@shared/types/index.js';
+import { getTagShapeClass } from '@shared/utils/tag-shape.js';
 import styles from './DetailPanel.module.css';
 
 export interface DetailPanelProps {
@@ -339,12 +340,14 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                   }}
                 >
                   <span
+                    className={getTagShapeClass(tag.id || tag.name)}
                     style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
+                      width: '8px',
+                      height: '8px',
+                      display: 'inline-block',
                       background: tag.color ?? 'var(--tag-gray)',
                     }}
+                    aria-hidden="true"
                   />
                   <span>#{tag.name}</span>
                   <button
@@ -360,6 +363,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                     }}
                     onClick={() => removeTagFromTask(task.id, tag.id)}
                     title="Remove tag"
+                    aria-label={`Remove tag ${tag.name}`}
                   >
                     ×
                   </button>

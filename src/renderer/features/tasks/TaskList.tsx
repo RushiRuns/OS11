@@ -294,6 +294,8 @@ export function TaskList({
               <div
                 className={styles.virtualInner}
                 style={{ height: `${virtualizer.getTotalSize()}px` }}
+                role="list"
+                aria-label="Tasks"
               >
                 {virtualizer.getVirtualItems().map((virtualItem) => {
                   const task = filteredIncomplete[virtualItem.index];
@@ -306,6 +308,7 @@ export function TaskList({
                       style={{
                         transform: `translateY(${virtualItem.start}px)`,
                       }}
+                      role="listitem"
                     >
                       <TaskCard
                         task={task}
@@ -333,12 +336,23 @@ export function TaskList({
               <div className={styles.completedSection}>
                 <div
                   className={styles.completedHeader}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isCompletedOpen}
+                  aria-label={`Completed tasks (${completedTasks.length})`}
                   onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsCompletedOpen(!isCompletedOpen);
+                    }
+                  }}
                 >
                   <span
                     className={`${styles.completedCaret} ${
                       isCompletedOpen ? styles.completedCaretOpen : ''
                     }`}
+                    aria-hidden="true"
                   >
                     ▶
                   </span>
@@ -346,24 +360,25 @@ export function TaskList({
                 </div>
 
                 {isCompletedOpen && (
-                  <div className={styles.completedList}>
+                  <div className={styles.completedList} role="list" aria-label="Completed tasks">
                     {completedTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        isSelected={selectedTaskId === task.id}
-                        allTaskIds={allTaskIds}
-                        onSelect={onSelectTask}
-                        onToggleComplete={toggleComplete}
-                        onToggleStar={toggleStar}
-                        onUpdateTitle={(id, title) => updateTask({ id, title })}
-                        onDelete={handleDeleteTask}
-                        onDuplicate={duplicateTask}
-                        onContextMenu={(e, t) => {
-                          setContextMenuTask(t);
-                          setContextMenuPos({ x: e.clientX, y: e.clientY });
-                        }}
-                      />
+                      <div key={task.id} role="listitem">
+                        <TaskCard
+                          task={task}
+                          isSelected={selectedTaskId === task.id}
+                          allTaskIds={allTaskIds}
+                          onSelect={onSelectTask}
+                          onToggleComplete={toggleComplete}
+                          onToggleStar={toggleStar}
+                          onUpdateTitle={(id, title) => updateTask({ id, title })}
+                          onDelete={handleDeleteTask}
+                          onDuplicate={duplicateTask}
+                          onContextMenu={(e, t) => {
+                            setContextMenuTask(t);
+                            setContextMenuPos({ x: e.clientX, y: e.clientY });
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}

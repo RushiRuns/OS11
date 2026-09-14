@@ -10,6 +10,7 @@ import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import type { Task } from '@shared/types/task.js';
+import { getTagShapeClass } from '@shared/utils/tag-shape.js';
 import styles from './TaskCard.module.css';
 
 export interface TaskCardProps {
@@ -241,6 +242,7 @@ export const TaskCard = memo(function TaskCard({
         <Checkbox
           checked={task.is_completed === 1}
           onChange={() => onToggleComplete?.(task.id)}
+          ariaLabel={`Mark "${task.title}" as ${task.is_completed === 1 ? 'incomplete' : 'complete'}`}
         />
       </div>
 
@@ -255,6 +257,7 @@ export const TaskCard = memo(function TaskCard({
             onBlur={handleSaveTitle}
             onKeyDown={handleKeyDown}
             onClick={(e) => e.stopPropagation()}
+            aria-label={`Edit title for ${task.title}`}
           />
         ) : (
           <span
@@ -288,20 +291,30 @@ export const TaskCard = memo(function TaskCard({
           </span>
         )}
 
-        {/* Tag Pills */}
+        {/* Tag Pills with Color-blind Accessible Shapes */}
         {taskTags.map((tag) => (
           <span
             key={tag.id}
             className={styles.tagDotPill}
+            role="button"
+            tabIndex={0}
+            aria-label={`Filter by tag ${tag.name}`}
             onClick={(e) => {
               e.stopPropagation();
               useAppStore.getState().setActiveListId(`tag:${tag.id}`);
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+              }
+            }}
             title={`Tag: #${tag.name}`}
           >
             <span
-              className={styles.tagDot}
+              className={`${styles.tagDot} ${getTagShapeClass(tag.id || tag.name)}`}
               style={{ background: tag.color ?? 'var(--tag-gray)' }}
+              aria-hidden="true"
             />
             <span>#{tag.name}</span>
           </span>

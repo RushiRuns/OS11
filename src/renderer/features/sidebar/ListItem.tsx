@@ -48,6 +48,7 @@ export const ListItem = memo(function ListItem({
       onDragOver={(e) => onDragOver?.(e, list.id)}
       onDrop={(e) => onDrop?.(e, list.id)}
       aria-selected={isActive}
+      aria-label={`${list.name}${taskCount > 0 ? `, ${taskCount} items` : ''}`}
     >
       {list.icon && <span className={styles.icon}>{list.icon}</span>}
       {!list.icon && list.color && (

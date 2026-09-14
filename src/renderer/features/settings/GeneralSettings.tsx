@@ -10,6 +10,9 @@ export function GeneralSettings(): React.ReactElement {
   const [dayStartsAt, setDayStartsAt] = useState('08:00');
   const [defaultListId, setDefaultListId] = useState('smart_my_day');
   const [autoArchiveDays, setAutoArchiveDays] = useState(0);
+  const [weeklyReviewEnabled, setWeeklyReviewEnabled] = useState(true);
+  const [weeklyReviewTime, setWeeklyReviewTime] = useState('17:00');
+  const [monthlyReviewEnabled, setMonthlyReviewEnabled] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const userLists = useUserLists();
 
@@ -22,6 +25,9 @@ export function GeneralSettings(): React.ReactElement {
           if (typeof res.day_starts_at === 'string') setDayStartsAt(res.day_starts_at);
           if (typeof res.default_list_id === 'string') setDefaultListId(res.default_list_id);
           if (typeof res.auto_archive_days === 'number') setAutoArchiveDays(res.auto_archive_days);
+          if (typeof res.weekly_review_enabled === 'boolean') setWeeklyReviewEnabled(res.weekly_review_enabled);
+          if (typeof res.weekly_review_time === 'string') setWeeklyReviewTime(res.weekly_review_time);
+          if (typeof res.monthly_review_enabled === 'boolean') setMonthlyReviewEnabled(res.monthly_review_enabled);
         }
       } catch {
         // Defaults
@@ -51,11 +57,40 @@ export function GeneralSettings(): React.ReactElement {
     await invoke(IPC.SETTINGS.SET, { key: 'auto_archive_days', value: val });
   };
 
+  const handleWeeklyReviewToggle = async () => {
+    const next = !weeklyReviewEnabled;
+    setWeeklyReviewEnabled(next);
+    await invoke(IPC.SETTINGS.SET, { key: 'weekly_review_enabled', value: next });
+  };
+
+  const handleWeeklyReviewTimeChange = async (val: string) => {
+    setWeeklyReviewTime(val);
+    await invoke(IPC.SETTINGS.SET, { key: 'weekly_review_time', value: val });
+  };
+
+  const handleMonthlyReviewToggle = async () => {
+    const next = !monthlyReviewEnabled;
+    setMonthlyReviewEnabled(next);
+    await invoke(IPC.SETTINGS.SET, { key: 'monthly_review_enabled', value: next });
+  };
+
+  const handleTriggerWeeklyReview = () => {
+    window.dispatchEvent(new CustomEvent('os11:start-weekly-review'));
+  };
+
+  const handleTriggerMonthlyReview = () => {
+    window.dispatchEvent(new CustomEvent('os11:start-monthly-review'));
+  };
+
+  const handleReplayOnboarding = () => {
+    window.dispatchEvent(new CustomEvent('os11:replay-onboarding'));
+  };
+
   return (
     <div>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>General Preferences</h2>
-        <p className={styles.sectionDesc}>Configure application startup, day boundary, and default task behavior</p>
+        <p className={styles.sectionDesc}>Configure application startup, review routines, and defaults</p>
       </div>
 
       <div className={styles.settingGroup}>
@@ -112,6 +147,90 @@ export function GeneralSettings(): React.ReactElement {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Recurring Review System */}
+      <div className={styles.settingGroup}>
+        <div className={styles.groupTitle}>Recurring Review Routines</div>
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>Weekly Review Prompt</div>
+            <div className={styles.settingDescription}>
+              Prompts every Friday to review completed tasks, triage stale tasks, and set priorities
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <Button
+              variant={weeklyReviewEnabled ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={handleWeeklyReviewToggle}
+            >
+              {weeklyReviewEnabled ? 'Enabled' : 'Disabled'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleTriggerWeeklyReview}>
+              Review Now ➔
+            </Button>
+          </div>
+        </div>
+
+        {weeklyReviewEnabled && (
+          <div className={styles.settingRow}>
+            <div className={styles.settingInfo}>
+              <div className={styles.settingLabel}>Friday Review Time</div>
+              <div className={styles.settingDescription}>Time on Friday when review prompt appears</div>
+            </div>
+            <select
+              className={styles.selectInput}
+              value={weeklyReviewTime}
+              onChange={(e) => handleWeeklyReviewTimeChange(e.target.value)}
+            >
+              <option value="15:00">3:00 PM</option>
+              <option value="16:00">4:00 PM</option>
+              <option value="17:00">5:00 PM (Default)</option>
+              <option value="18:00">6:00 PM</option>
+              <option value="19:00">7:00 PM</option>
+            </select>
+          </div>
+        )}
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>Monthly Review Prompt</div>
+            <div className={styles.settingDescription}>
+              Prompts on the 1st of each month to review goals, archive finished projects, and check streaks
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <Button
+              variant={monthlyReviewEnabled ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={handleMonthlyReviewToggle}
+            >
+              {monthlyReviewEnabled ? 'Enabled' : 'Disabled'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleTriggerMonthlyReview}>
+              Review Now ➔
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Onboarding & Guide */}
+      <div className={styles.settingGroup}>
+        <div className={styles.groupTitle}>Onboarding & Walkthrough</div>
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>First-Run Onboarding Wizard</div>
+            <div className={styles.settingDescription}>
+              Re-run the guided profile setup, demo quick-add, and keyboard shortcut overview
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleReplayOnboarding}>
+            Replay Setup 🚀
+          </Button>
         </div>
       </div>
 

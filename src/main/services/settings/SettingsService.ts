@@ -93,6 +93,16 @@ export class SettingsService {
       sound_effects_enabled: true,
       stealth_mode: false,
       auto_archive_days: 0,
+      onboarding_completed: false,
+      weekly_review_enabled: true,
+      weekly_review_time: '17:00',
+      weekly_review_day: 5,
+      last_weekly_review_week: '',
+      monthly_review_enabled: true,
+      monthly_review_day: 1,
+      last_monthly_review_month: '',
+      ambient_sound_volume: 0.5,
+      ambient_sound_track: 'rain',
     };
 
     for (const [key, value] of Object.entries(defaults)) {

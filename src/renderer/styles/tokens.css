@@ -427,12 +427,67 @@
 
 html {
   font-family:    var(--font-body);
-  font-size:      var(--text-md);
+  font-size:      100%; /* Respects OS accessibility font size */
   line-height:    var(--leading-normal);
   color:          var(--text-primary);
   background:     var(--surface-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-size: var(--text-md);
+  margin: 0;
+  padding: 0;
+}
+
+/* Global focus-visible ring — active on keyboard navigation only */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* High-contrast accessibility mode */
+@media (prefers-contrast: more) {
+  :root {
+    --border-subtle:  rgba(0, 0, 0, 0.35);
+    --border-default: rgba(0, 0, 0, 0.55);
+    --border-strong:  rgba(0, 0, 0, 0.85);
+    --text-primary:   #000000;
+    --text-secondary: #222222;
+    --text-tertiary:  #444444;
+  }
+
+  [data-theme="dark"] {
+    --border-subtle:  rgba(255, 255, 255, 0.40);
+    --border-default: rgba(255, 255, 255, 0.65);
+    --border-strong:  rgba(255, 255, 255, 0.95);
+    --text-primary:   #FFFFFF;
+    --text-secondary: #E0E0E0;
+    --text-tertiary:  #C0C0C0;
+  }
+
+  /* Remove glass effects and blurred transparencies for maximum legibility */
+  *, *::before, *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY: TAG SHAPES (Color-blind friendly)
+   ============================================================ */
+.tagDotShapeCircle {
+  border-radius: var(--radius-full) !important;
+}
+
+.tagDotShapeSquare {
+  border-radius: 2px !important;
+}
+
+.tagDotShapeTriangle {
+  border-radius: 0 !important;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
 }
 
 /* Respect system-level reduced motion preference */

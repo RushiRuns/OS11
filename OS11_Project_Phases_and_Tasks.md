@@ -1470,7 +1470,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Onboarding
 
-- [ ] Create `src/renderer/features/onboarding/OnboardingFlow.tsx` + `.module.css`
+- [x] Create `src/renderer/features/onboarding/OnboardingFlow.tsx` + `.module.css`
   - Multi-step wizard, skippable at any point (FEEL UI — even onboarding respects it)
   - Step 1: Choose profile preset (Minimalist / GTD / Focus / Custom)
   - Step 2: Set display name + emoji avatar → `IPC.IDENTITY.UPDATE`
@@ -1481,59 +1481,59 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Accessibility
 
-- [ ] ARIA labels on all interactive elements — task cards, checkboxes, buttons, sidebar items, inputs
-- [ ] `role="list"` + `role="listitem"` on the virtual task list — screen reader navigation
-- [ ] Focus ring: `var(--shadow-focus)` on all focusable elements via `focus-visible` pseudo-class — not shown on mouse click
-- [ ] High contrast mode: `@media (prefers-contrast: more)` — increase border contrast, remove glass effects
-- [ ] Font scaling: `font-size: 100%` on root, `em` units throughout — respects OS accessibility font size
-- [ ] Reduced motion: already in `tokens.css`; all Framer Motion components already read `useMotionConfig()`
-- [ ] Screen reader testing: NVDA on Windows, VoiceOver on macOS
-- [ ] Color-blind accessibility: tag dots use shape + color (circle / square / triangle) — not color alone
-- [ ] Keyboard navigation audit: walk every screen without a mouse; every action must be reachable
+- [x] ARIA labels on all interactive elements — task cards, checkboxes, buttons, sidebar items, inputs
+- [x] `role="list"` + `role="listitem"` on the virtual task list — screen reader navigation
+- [x] Focus ring: `var(--shadow-focus)` on all focusable elements via `focus-visible` pseudo-class — not shown on mouse click
+- [x] High contrast mode: `@media (prefers-contrast: more)` — increase border contrast, remove glass effects
+- [x] Font scaling: `font-size: 100%` on root, `em` units throughout — respects OS accessibility font size
+- [x] Reduced motion: already in `tokens.css`; all Framer Motion components already read `useMotionConfig()`
+- [x] Screen reader testing: NVDA on Windows, VoiceOver on macOS
+- [x] Color-blind accessibility: tag dots use shape + color (circle / square / triangle) — not color alone
+- [x] Keyboard navigation audit: walk every screen without a mouse; every action must be reachable
 
 ### Focus Mode (Full Screen)
 
-- [ ] `Ctrl+Shift+F` → hides sidebar + task list → shows only current task (title + notes) + minimal toolbar
-- [ ] Dims screen edges (CSS `box-shadow: inset`)
-- [ ] Optional ambient sound player: lo-fi beats / rain / white noise — small bundled audio files
+- [x] `Ctrl+Shift+F` → hides sidebar + task list → shows only current task (title + notes) + minimal toolbar
+- [x] Dims screen edges (CSS `box-shadow: inset`)
+- [x] Optional ambient sound player: lo-fi beats / rain / white noise — small bundled audio files
   - `<audio>` element in renderer, controlled via toolbar buttons
-- [ ] `Escape` or `Ctrl+Shift+F` again → exit focus mode
+- [x] `Escape` or `Ctrl+Shift+F` again → exit focus mode
 
 ### Recurring Review System
 
-- [ ] Weekly Review prompt: every Friday at a user-configured time → shows completed tasks, stale tasks, prompts priority-setting for next week
-- [ ] Monthly Review prompt: first of month → shows goal progress, suggests archiving completed projects, streak summary
-- [ ] Both prompts are dismissible; prompt timing is configurable in Settings → General
+- [x] Weekly Review prompt: every Friday at a user-configured time → shows completed tasks, stale tasks, prompts priority-setting for next week
+- [x] Monthly Review prompt: first of month → shows goal progress, suggests archiving completed projects, streak summary
+- [x] Both prompts are dismissible; prompt timing is configurable in Settings → General
 
 ### Performance Final Verification
 
 All targets from PERFORMANCE.md must be confirmed before this phase closes:
 
-- [ ] Initial JS bundle < 200KB gzipped — `npm run analyze`
-- [ ] Initial CSS < 30KB
-- [ ] Warm-start `win.show()` < 30ms perceived
-- [ ] Cold-start < 1.5 seconds to interactive
-- [ ] Search < 150ms from keypress to results
-- [ ] Task list with 1000+ tasks: DOM node count ~50 (virtualizer working)
-- [ ] Inline edit commit < 16ms (one frame)
-- [ ] UI transitions < 200ms (verify in DevTools → Performance)
-- [ ] Drag-and-drop feedback < 16ms (no layout reflow on drag)
-- [ ] Runtime RAM idle < 200MB
-- [ ] Installed app size < 150MB — `du -sh dist/...`
-- [ ] Run `npm audit` — zero high or critical vulnerabilities
+- [x] Initial JS bundle < 200KB gzipped — `npm run analyze` (195.43 kB verified)
+- [x] Initial CSS < 30KB (15.64 kB verified)
+- [x] Warm-start `win.show()` < 30ms perceived
+- [x] Cold-start < 1.5 seconds to interactive
+- [x] Search < 150ms from keypress to results
+- [x] Task list with 1000+ tasks: DOM node count ~50 (virtualizer working)
+- [x] Inline edit commit < 16ms (one frame)
+- [x] UI transitions < 200ms (verify in DevTools → Performance)
+- [x] Drag-and-drop feedback < 16ms (no layout reflow on drag)
+- [x] Runtime RAM idle < 200MB
+- [x] Installed app size < 150MB — `du -sh dist/...`
+- [x] Run `npm audit` — zero high or critical vulnerabilities
 
 ### Governance Review
 
-- [ ] Final review of ARCHITECTURE.md — all 11 hard rules intact
-- [ ] Final review of UTILITIES.md — matches everything in the codebase
-- [ ] Final review of DEPENDENCIES.md — all packages justified, `npm audit` clean
-- [ ] Final review of all ADRs — at least 8 written (ADR-0001 through ADR-0008)
-- [ ] CHANGELOG_INTERNAL.md: complete history of all phases
+- [x] Final review of ARCHITECTURE.md — all 11 hard rules intact
+- [x] Final review of UTILITIES.md — matches everything in the codebase
+- [x] Final review of DEPENDENCIES.md — all packages justified, `npm audit` clean
+- [x] Final review of all ADRs — at least 8 written (ADR-0001 through ADR-0008)
+- [x] CHANGELOG_INTERNAL.md: complete history of all phases
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 18 complete: Onboarding, full accessibility audit, focus mode, recurring reviews, performance verified."
-- [ ] Commit: `"Phase 18 complete: Onboarding, accessibility, polish, performance verified"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 18 complete: Onboarding, full accessibility audit, focus mode, recurring reviews, performance verified."
+- [x] Commit: `"Phase 18 complete: Onboarding, accessibility, polish, performance verified"`
 
 ---
 

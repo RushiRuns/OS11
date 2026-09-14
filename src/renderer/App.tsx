@@ -14,6 +14,9 @@ import { MiniTimerView } from './features/pomodoro/MiniTimerView.js';
 import { CommandPalette } from './features/command-palette/CommandPalette.js';
 import { TagView } from './features/tags/TagView.js';
 import { NotificationCenter } from './features/notifications/NotificationCenter.js';
+import { OnboardingFlow } from './features/onboarding/OnboardingFlow.js';
+import { FocusModeView } from './features/focus/FocusModeView.js';
+import { ReviewManager } from './features/review/ReviewManager.js';
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
@@ -63,6 +66,7 @@ export function App(): React.ReactElement {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<Record<string, unknown>>({});
   const isPomodoroFocus = usePomodoroStore((state) => state.isFocusMode);
@@ -87,6 +91,9 @@ export function App(): React.ReactElement {
       .then((settings) => {
         if (settings) {
           setGlobalSettings(settings);
+          if (settings.onboarding_completed === false || settings.onboarding_completed === undefined) {
+            setIsOnboardingOpen(true);
+          }
           if (settings.theme) applyTheme(settings.theme as 'auto');
           if (settings.accent_color) applyAccentColor(String(settings.accent_color));
           if (settings.density) applyDensity(settings.density as 'comfortable');
@@ -128,11 +135,20 @@ export function App(): React.ReactElement {
       quickAddInput?.focus();
     });
 
+    const handleReplayOnboarding = () => {
+      setIsOnboardingOpen(true);
+    };
+    window.addEventListener('os11:replay-onboarding', handleReplayOnboarding);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
-      if (modKey && e.key.toLowerCase() === 'k' && !e.shiftKey) {
+      if (e.key === 'Escape' && (isFocusMode || isPomodoroFocus)) {
+        e.preventDefault();
+        setIsFocusMode(false);
+        if (isPomodoroFocus) togglePomodoroFocus();
+      } else if (modKey && e.key.toLowerCase() === 'k' && !e.shiftKey) {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
       } else if (modKey && e.shiftKey && e.key.toLowerCase() === 'f') {
@@ -150,9 +166,10 @@ export function App(): React.ReactElement {
       unsubAccent?.();
       unsubSettingsTheme?.();
       unsubSettingsAccent?.();
+      window.removeEventListener('os11:replay-onboarding', handleReplayOnboarding);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [fetchSystemInfo, togglePomodoroFocus]);
+  }, [fetchSystemInfo, togglePomodoroFocus, isFocusMode, isPomodoroFocus]);
 
   if (isOmnibar) {
     return <OmnibarView />;
@@ -286,6 +303,14 @@ export function App(): React.ReactElement {
       {/* App Lock Protection Overlay */}
       {isLocked && <AppLockScreen onUnlock={() => setIsLocked(false)} />}
 
+      {/* Onboarding Flow for First Launch or Replay */}
+      {isOnboardingOpen && (
+        <OnboardingFlow onComplete={() => setIsOnboardingOpen(false)} />
+      )}
+
+      {/* Recurring Review Manager */}
+      <ReviewManager />
+
       {/* Custom Frameless Titlebar */}
       <Titlebar
         title="OS11"
@@ -295,28 +320,39 @@ export function App(): React.ReactElement {
         }}
       />
 
-      {/* Three-Column CSS Grid Shell */}
-      <div
-        className={layoutStyles.shellGrid}
-        data-sidebar={effectiveFocusMode ? 'hidden' : 'visible'}
-        data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
-        data-focus={effectiveFocusMode ? 'active' : 'inactive'}
-      >
-        {/* Column 1: Sidebar (Critical path) */}
-        <div className={layoutStyles.sidebarCol}>
-          <Sidebar />
-        </div>
+      {/* Full-Screen Focus Mode View or Three-Column Grid */}
+      {effectiveFocusMode ? (
+        <FocusModeView
+          task={selectedTask}
+          onClose={() => {
+            setIsFocusMode(false);
+            if (isPomodoroFocus) togglePomodoroFocus();
+          }}
+          onSelectTask={(task) => setSelectedTask(task)}
+        />
+      ) : (
+        <div
+          className={layoutStyles.shellGrid}
+          data-sidebar={effectiveFocusMode ? 'hidden' : 'visible'}
+          data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
+          data-focus={effectiveFocusMode ? 'active' : 'inactive'}
+        >
+          {/* Column 1: Sidebar (Critical path) */}
+          <div className={layoutStyles.sidebarCol}>
+            <Sidebar />
+          </div>
 
-        {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
-        <main className={`${layoutStyles.mainCol} ${bgClass}`} style={mainStyle}>
-          {renderMainContent()}
-        </main>
+          {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
+          <main className={`${layoutStyles.mainCol} ${bgClass}`} style={mainStyle}>
+            {renderMainContent()}
+          </main>
 
-        {/* Column 3: Detail Panel (Critical path) */}
-        <div className={layoutStyles.detailCol}>
-          <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+          {/* Column 3: Detail Panel (Critical path) */}
+          <div className={layoutStyles.detailCol}>
+            <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Rollover Prompt on day change for incomplete yesterday tasks */}
       <RolloverPrompt />

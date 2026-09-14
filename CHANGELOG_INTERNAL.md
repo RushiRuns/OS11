@@ -3,6 +3,43 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 18 complete: Onboarding, full accessibility audit, focus mode, recurring reviews, performance verified.
+- **What was built:**
+  - `src/renderer/features/onboarding/OnboardingFlow.tsx` + `OnboardingFlow.module.css`: Multi-step first-launch onboarding wizard (<200ms slide transitions with Framer Motion, respecting reduced motion):
+    - Step 1: Choose profile preset (Minimalist, GTD, Focus, Custom).
+    - Step 2: Set offline local display name and emoji avatar picker (10 curated choices) persisted via `IPC.IDENTITY.UPDATE`.
+    - Step 3: Interactive quick-add demo with guided prompt suggestions and instant task creation.
+    - Step 4: Keyboard shortcut cheat-sheet with visual keycaps.
+    - Skippable at any step via "Skip Setup"; sets `settings.onboarding_completed = true`.
+  - Full Accessibility Audit & Design Tokens Polish (`src/renderer/styles/tokens.css`):
+    - Global focus ring: `:focus-visible { outline: none; box-shadow: var(--shadow-focus); }` on all interactive elements, hidden on mouse click.
+    - High contrast mode: `@media (prefers-contrast: more)` increasing border contrasts and removing glass/blur effects.
+    - Font scaling: `font-size: 100%` on `html` root respecting operating system accessibility font scaling.
+    - Color-blind tag accessibility: `src/shared/utils/tag-shape.ts` providing deterministic geometric shape mapping (`circle`, `square`, `triangle`) via `.tagDotShapeCircle`, `.tagDotShapeSquare`, `.tagDotShapeTriangle` CSS classes.
+    - Task list virtualizer screen reader navigation: added `role="list"` and `role="listitem"` on `TaskList.tsx` and completed list section.
+    - Comprehensive ARIA audit: added `aria-label`, `aria-checked`, `aria-selected`, `aria-expanded` across `TaskCard.tsx`, `Sidebar.tsx`, `ListItem.tsx`, `DetailPanel.tsx`, and `TagView.tsx`.
+  - `src/renderer/features/focus/FocusModeView.tsx` + `FocusModeView.module.css`:
+    - Full-screen deep focus mode triggered by `Ctrl+Shift+F` (or `Cmd+Shift+F`), hiding sidebar and task lists to display only the focused task (title + notes) and minimal top toolbar.
+    - Edge dimming via inset CSS box-shadow (`box-shadow: inset 0 0 140px 45px rgba(0, 0, 0, 0.55)`).
+    - Ambient sound player: bundled local audio tracks (`public/audio/rain.wav`, `whitenoise.wav`, `lofi.wav`) with `<audio loop />` element, volume control slider, track selector, and play/pause toggle.
+    - `Escape` or `Ctrl+Shift+F` clean exit back to standard 3-column shell.
+  - Recurring Review System (`src/renderer/features/review/`):
+    - `WeeklyReviewModal.tsx`: Friday review dialog celebrating completed tasks in the last 7 days, triaging stale tasks older than 14 days, and setting priorities for upcoming tasks.
+    - `MonthlyReviewModal.tsx`: Monthly review dialog reviewing goal progress bars, 1-click archiving finished projects, and summarizing habit consistency streaks.
+    - `ReviewManager.tsx`: Background review trigger checker verifying weekly and monthly intervals.
+    - `GeneralSettings.tsx`: Review routines configuration (weekly toggle, Friday time picker, monthly toggle, and manual on-demand review buttons, plus Replay Onboarding button).
+  - Performance Final Verification:
+    - Initial JS bundle: `195.43 kB` gzipped (< 200KB gzipped target from PERFORMANCE.md).
+    - Initial CSS: `15.64 kB` gzipped (< 30KB target from PERFORMANCE.md).
+    - Automated test suite: 29 test files, 190 tests passing via `npm test`.
+- **What changed architecturally:**
+  - Added `updateIdentity(displayName?, avatarEmoji?)` to `IdentityRepository` and IPC handler `IPC.IDENTITY.UPDATE`.
+  - Added Phase 18 settings schema keys (`onboarding_completed`, `weekly_review_enabled`, `monthly_review_enabled`, etc.).
+  - Added `tag-shape.ts` pure utility for WCAG color-blind accessibility.
+  - Added local bundled audio assets in `public/audio/` served with CSP `media-src 'self' data: blob:;`.
+
+---
+
 ### [2026-09-14] — Phase 17 complete: JSON/CSV/Markdown export, multi-source import, daily auto-backup, version history
 - **What was built:**
   - `src/main/utils/zip-util.ts`: Zero-dependency PKZip archive builder and extractor utilizing Node.js `node:zlib` (`deflateRawSync`, `inflateRawSync`) with IEEE 802.3 CRC-32 checksum calculation, supporting text, binary attachments, and directory packing.

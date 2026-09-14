@@ -6,6 +6,7 @@ import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskCont
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '@shared/types/task.js';
+import { getTagShapeClass } from '@shared/utils/tag-shape.js';
 import styles from './TagView.module.css';
 
 export interface TagViewProps {
@@ -83,8 +84,9 @@ export function TagView({
       <header className={styles.header}>
         <div className={styles.tagBadgeRow}>
           <span
-            className={styles.colorDot}
+            className={`${styles.colorDot} ${getTagShapeClass(currentTag?.id || currentTag?.name || '')}`}
             style={{ background: currentTag?.color ?? 'var(--tag-gray)' }}
+            aria-hidden="true"
           />
           <h1 className={styles.tagName}>
             #{currentTag?.name ?? 'Tag'}

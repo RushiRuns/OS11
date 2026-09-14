@@ -96,6 +96,11 @@
 | `AttachmentStrip` | `src/renderer/features/attachments/AttachmentStrip.tsx` | No | No (CSS transitions) | Horizontal attachment strip with image viewer lightbox, PDF/link click-to-open, file picker, and drag & drop |
 | `SettingsView` | `src/renderer/features/settings/SettingsView.tsx` | No | No (CSS transitions) | Tabbed global preferences view (General, Appearance, Modules, Keyboard, Notifications, Privacy, Advanced) |
 | `AppLockScreen` | `src/renderer/features/settings/AppLockScreen.tsx` | No | No (CSS transitions) | Fullscreen passcode PIN lock overlay with numeric keypad, shake animation, and constant-time verification |
+| `OnboardingFlow` | `src/renderer/features/onboarding/OnboardingFlow.tsx` | No | **Site #8 (Wizard step slide < 200ms)** | Multi-step first-run onboarding wizard (preset selection, offline identity, interactive quick-add demo, shortcut cheat-sheet) |
+| `FocusModeView` | `src/renderer/features/focus/FocusModeView.tsx` | No | Uses `framer-motion` (< 200ms) | Full-screen deep focus view with edge dimming, focused task notes editor, and local ambient sound player |
+| `WeeklyReviewModal` | `src/renderer/features/review/WeeklyReviewModal.tsx` | No | Uses `framer-motion` (< 200ms) | Recurring weekly retrospective review dialog (completed task celebration, stale task triage, next week priority setting) |
+| `MonthlyReviewModal` | `src/renderer/features/review/MonthlyReviewModal.tsx` | No | Uses `framer-motion` (< 200ms) | Recurring monthly strategic review dialog (goal progress bars, project archiving, habit consistency summary) |
+| `ReviewManager` | `src/renderer/features/review/ReviewManager.tsx` | No | No | Background review trigger orchestrator and event dispatcher for weekly and monthly review prompt schedules |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
@@ -145,6 +150,7 @@
 | `isValidRRule` / `humanReadableRRule` | `src/shared/utils/recurrence.ts` | RFC 5545 validation and natural language translation for recurring schedules |
 | `buildCustomRRule` | `src/shared/utils/recurrence.ts` | Builds custom recurrence rules from frequency, interval, and weekday array |
 | `calculateNextOccurrence` | `src/shared/utils/recurrence.ts` | Calculates next occurrence for fixed (due_date) vs after-completion recurrence basis |
+| `getTagShape` / `getTagShapeClass` | `src/shared/utils/tag-shape.ts` | Deterministic geometric shape hashing (`circle`, `square`, `triangle`) and CSS class assignment for color-blind accessible tags |
 | `createZipArchive` / `extractZipArchive` | `src/main/utils/zip-util.ts` | Zero-dependency PKZip archive packaging and extraction using Node.js `node:zlib` with CRC-32 checksums |
 
 ---
@@ -169,7 +175,7 @@
 | `SettingsRepository` | `src/main/repositories/SettingsRepository.ts` | `get(key, default?)`, `set(key, val)`, `getAll()` (JSON encoded) |
 | `ModuleRepository` | `src/main/repositories/ModuleRepository.ts` | `getAll`, `isEnabled(name)`, `toggle(name, enabled)` |
 | `NotificationRepository` | `src/main/repositories/NotificationRepository.ts` | `add`, `getAll`, `markRead`, `markAllRead` |
-| `IdentityRepository` | `src/main/repositories/IdentityRepository.ts` | `get`, `create`, `updateDisplayName` |
+| `IdentityRepository` | `src/main/repositories/IdentityRepository.ts` | `get`, `create`, `updateDisplayName`, `updateIdentity` |
 | `SearchRepository` | `src/main/repositories/SearchRepository.ts` | `search(query)` via FTS5 full-text virtual table with snippets |
 | `TaskHistoryRepository` | `src/main/repositories/TaskHistoryRepository.ts` | `record(taskId, diffs)`, `getByTaskId(taskId, limit)`, `getById(id)`, `purgeOlderThan(days)` |
 

@@ -4,6 +4,7 @@
 
 export * from './date.js';
 export * from './uuid.js';
+export * from './tag-shape.js';
 
 export function toIsoString(date: Date = new Date()): string {
   return date.toISOString();

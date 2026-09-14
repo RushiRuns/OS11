@@ -47,6 +47,17 @@ export interface SettingsMap {
   // Privacy
   stealth_mode: boolean;
   auto_archive_days: number;
+  // Phase 18: Onboarding, Review & Ambient
+  onboarding_completed: boolean;
+  weekly_review_enabled: boolean;
+  weekly_review_time: string;
+  weekly_review_day: number;
+  last_weekly_review_week: string;
+  monthly_review_enabled: boolean;
+  monthly_review_day: number;
+  last_monthly_review_month: string;
+  ambient_sound_volume: number;
+  ambient_sound_track: string;
 }
 
 export type SettingKey = keyof SettingsMap;
