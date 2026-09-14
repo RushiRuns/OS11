@@ -109,6 +109,13 @@ export class GoalRepository extends BaseRepository {
     `);
     return stmt.all(goalId) as GoalLink[];
   }
+
+  public getAllLinks(): GoalLink[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM goal_links
+    `);
+    return stmt.all() as GoalLink[];
+  }
 }
 
 export default GoalRepository;

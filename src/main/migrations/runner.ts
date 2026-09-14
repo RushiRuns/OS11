@@ -24,7 +24,14 @@ export function runMigrations(db: Database.Database, migrationsDir: string): voi
       const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
       
       const applyMigration = db.transaction(() => {
-        db.exec(sql);
+        try {
+          db.exec(sql);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (!msg.includes('duplicate column')) {
+            throw err;
+          }
+        }
         db.pragma(`user_version = ${fileVersion}`);
       });
       

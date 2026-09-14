@@ -3,6 +3,28 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 13 complete: Daily/weekly agenda, goals with streaks, habit tracker
+- **What was built:**
+  - `src/renderer/features/agenda/DailyAgenda.tsx` + `DailyAgenda.module.css`: Daily chronological agenda with 14 hourly time slots (8:00 AM – 9:00 PM), overdue tasks pinned to top in red with "Reschedule to Today" shortcut, color-coded load balancing indicator pill (Green < 5 / Amber 5–10 / Red > 10 tasks), external calendar event integration, and unscheduled task drag-and-drop pool onto hour rows.
+  - `src/renderer/features/agenda/WeeklyAgenda.tsx` + `WeeklyAgenda.module.css`: 7-day scrollable column schedule with week navigation (Previous Week, Current Week, Next Week), per-day task cards, calendar events, per-day load balancing badges, and cross-day drag-and-drop task rescheduling.
+  - `src/renderer/features/agenda/GoalsView.tsx` + `GoalsView.module.css`: Goal cards displaying type tags (`habit`, `milestone`, `outcome`), flame streak counter (`🔥 ${streak}d`), linked task list with completion status, inline task linking selector, weekly review prompt banner (Friday check-in), and Goal creation modal.
+  - `src/renderer/features/agenda/HabitTracker.tsx` + `HabitTracker.module.css`: Full-year (52 weeks × 7 days) GitHub-style completion heatmap with tokenized color levels (0 to 4), active habit chain cards with today completion check-off, and optional module gating via `habit_tracker`.
+  - `src/renderer/components/ProgressBar/ProgressBar.tsx` + `ProgressBar.module.css`: Reusable progress bar component with `thin` (`4px`) and `standard` (`8px`) heights, `primary` / `success` / `warning` token fills, and percentage labels.
+  - `src/renderer/stores/goalStore.ts`: Normalized Zustand store (`goalsById`, `linksByGoalId`) with optimistic mutations, progress calculation from linked task states, streak tracking, and IPC integration.
+  - `src/renderer/features/agenda/Agenda.tsx` + `Agenda.module.css`: Top segmented tab bar routing seamlessly between Daily Agenda, Weekly Agenda, Goals, and Habit Tracker subviews.
+  - `src/renderer/features/tasks/DetailPanel.tsx`: Added `🔁 Habit` toggle in Quick Actions and Goal Link selector dropdown.
+  - `src/main/migrations/0002_habit_flag.sql`: Added `is_habit INTEGER NOT NULL DEFAULT 0` column to `tasks` table with migration runner duplicate protection.
+  - `src/main/repositories/GoalRepository.ts` & `goal-handlers.ts`: Added `getAllLinks()` and `IPC.GOALS.GET_ALL_LINKS` handler.
+  - `src/main/services/reminder/ReminderService.ts`: Added `sendMorningSummary()` method dispatching desktop notifications for today's scheduled tasks.
+  - Automated test suite `tests/services/agenda-and-goals.test.ts` (24 test files, 137 tests passing).
+- **What changed architecturally:**
+  - Added `is_habit` attribute to task schema and data models.
+  - Added `IPC.GOALS.GET_ALL_LINKS` to IPC channel catalog.
+  - Configured Vite `manualChunks` to keep Agenda (`dist/assets/agenda-*.js`) isolated as an on-demand chunk.
+  - Gated Habit Tracker behind the `habit_tracker` feature module toggle.
+
+---
+
 ### [2026-09-14] — Phase 12 complete: Pomodoro timer, mini window, tray countdown, session tracking, distraction blocker
 - **What was built:**
   - `src/renderer/stores/pomodoroStore.ts`: Zustand store managing `activeSession`, `sessionCount` in cycle, `settings` (work, break, long break durations, cycle length, sound alerts, autoStart, DND), 1s interval ticker, completion transitions, automatic long break trigger after cycle limit, and bidirectional IPC sync with main process.

@@ -6,6 +6,7 @@ import DOMPurify from 'dompurify';
 import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
+import { useGoalStore } from '../../stores/goalStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { RecurrencePicker } from './RecurrencePicker.js';
 import { ReminderEditor } from './ReminderEditor.js';
@@ -40,6 +41,17 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const [depError, setDepError] = useState<string | null>(null);
 
   const taskDependencies = task ? (dependenciesByTaskId[task.id] ?? []) : [];
+
+  const { goalsById, linksByGoalId, linkTask, unlinkTask } = useGoalStore();
+  const linkedGoal = React.useMemo(() => {
+    if (!task) return null;
+    for (const [goalId, links] of Object.entries(linksByGoalId)) {
+      if (links.some((l) => l.resource_id === task.id)) {
+        return goalsById[goalId] ?? null;
+      }
+    }
+    return null;
+  }, [linksByGoalId, goalsById, task]);
 
   // TipTap Rich Text Editor for Notes
   const editor = useEditor({
@@ -252,6 +264,19 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
               >
                 ☀️ {isMyDay ? 'In My Day' : 'Add to My Day'}
               </button>
+
+              <button
+                type="button"
+                className={`${styles.metaBtn} ${task.is_habit === 1 ? styles.metaBtnActive : ''}`}
+                onClick={() =>
+                  updateTask({
+                    id: task.id,
+                    is_habit: task.is_habit === 1 ? 0 : 1,
+                  })
+                }
+              >
+                🔁 {task.is_habit === 1 ? 'Habit' : 'Mark Habit'}
+              </button>
             </div>
           </div>
 
@@ -309,6 +334,31 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                 + Tag
               </button>
             </div>
+          </div>
+
+          {/* Goal Link */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Goal</span>
+            <select
+              className={styles.metaInput}
+              value={linkedGoal?.id || ''}
+              onChange={(e) => {
+                const nextGoalId = e.target.value;
+                if (linkedGoal) {
+                  unlinkTask(linkedGoal.id, task.id);
+                }
+                if (nextGoalId) {
+                  linkTask(nextGoalId, task.id);
+                }
+              }}
+            >
+              <option value="">None (No Goal)</option>
+              {Object.values(goalsById).map((g) => (
+                <option key={g.id} value={g.id}>
+                  🎯 {g.title}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -165,6 +165,34 @@ export class ReminderService {
     }
     this.activeTimers.clear();
   }
+
+  public sendMorningSummary(dateStr?: string): number {
+    const today = dateStr ?? new Date().toISOString().split('T')[0];
+    const myDayTasks = this.taskRepository.getMyDay(today);
+    const plannedTasks = this.taskRepository.getPlanned().filter(
+      (t) => t.due_date === today && t.is_completed === 0
+    );
+
+    const taskMap = new Map<string, typeof myDayTasks[0]>();
+    for (const t of myDayTasks) {
+      if (t.is_completed === 0) taskMap.set(t.id, t);
+    }
+    for (const t of plannedTasks) {
+      taskMap.set(t.id, t);
+    }
+
+    const todayTasks = Array.from(taskMap.values());
+    const count = todayTasks.length;
+
+    if (count > 0) {
+      const title = `Morning Agenda ☀️ (${count} task${count > 1 ? 's' : ''})`;
+      const preview = todayTasks.slice(0, 3).map((t) => t.title).join(', ');
+      const body = count > 3 ? `${preview}, and ${count - 3} more.` : preview;
+      this.notificationService.send('reminder', title, body);
+    }
+
+    return count;
+  }
 }
 
 export default ReminderService;

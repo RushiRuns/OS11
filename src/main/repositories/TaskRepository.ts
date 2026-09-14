@@ -143,6 +143,7 @@ export class TaskRepository extends BaseRepository {
       sort_order: payload.sort_order ?? Date.now(),
       my_day_date: payload.my_day_date ?? null,
       pomodoro_count: 0,
+      is_habit: typeof payload.is_habit === 'boolean' ? (payload.is_habit ? 1 : 0) : (payload.is_habit ?? 0),
       is_trashed: 0,
       trashed_at: null,
       created_at: now,
@@ -156,7 +157,7 @@ export class TaskRepository extends BaseRepository {
         recurrence_rule, recurrence_basis, priority,
         is_starred, is_completed, completed_at, estimated_minutes,
         assignee_device_id, created_by_device, sort_order,
-        my_day_date, pomodoro_count, is_trashed, trashed_at,
+        my_day_date, pomodoro_count, is_habit, is_trashed, trashed_at,
         created_at, updated_at
       ) VALUES (
         @id, @title, @notes, @list_id, @project_id, @section_id,
@@ -164,7 +165,7 @@ export class TaskRepository extends BaseRepository {
         @recurrence_rule, @recurrence_basis, @priority,
         @is_starred, @is_completed, @completed_at, @estimated_minutes,
         @assignee_device_id, @created_by_device, @sort_order,
-        @my_day_date, @pomodoro_count, @is_trashed, @trashed_at,
+        @my_day_date, @pomodoro_count, @is_habit, @is_trashed, @trashed_at,
         @created_at, @updated_at
       )
     `);
@@ -206,6 +207,9 @@ export class TaskRepository extends BaseRepository {
         : current.is_starred,
       is_completed: isCompleted,
       completed_at: completedAt,
+      is_habit: actualFields.is_habit !== undefined
+        ? (typeof actualFields.is_habit === 'boolean' ? (actualFields.is_habit ? 1 : 0) : actualFields.is_habit)
+        : (current.is_habit ?? 0),
       updated_at: new Date().toISOString(),
     };
 
@@ -230,6 +234,7 @@ export class TaskRepository extends BaseRepository {
         sort_order = @sort_order,
         my_day_date = @my_day_date,
         pomodoro_count = @pomodoro_count,
+        is_habit = @is_habit,
         is_trashed = @is_trashed,
         trashed_at = @trashed_at,
         updated_at = @updated_at

@@ -144,6 +144,7 @@ export const IPC = {
     UPDATE: 'goals:update',
     DELETE: 'goals:delete',
     LINK_TASK: 'goals:link-task',
+    GET_ALL_LINKS: 'goals:get-all-links',
   },
   SETTINGS: {
     GET_ALL: 'settings:get-all',

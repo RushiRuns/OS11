@@ -23,6 +23,7 @@ export interface Task {
   sort_order: number;
   my_day_date?: string | null;
   pomodoro_count: number;
+  is_habit?: number;
   is_trashed: number;
   trashed_at?: string | null;
   created_at: string;
@@ -45,6 +46,7 @@ export interface CreateTaskPayload {
   recurrence_basis?: 'fixed' | 'after_completion' | null;
   priority?: number;
   is_starred?: boolean | number;
+  is_habit?: boolean | number;
   estimated_minutes?: number | null;
   sort_order?: number;
   my_day_date?: string | null;
@@ -67,6 +69,7 @@ export interface UpdateTaskPayload {
   all_day?: number;
   recurrence_rule?: string | null;
   recurrence_basis?: 'fixed' | 'after_completion' | null;
+  is_habit?: number;
   estimated_minutes?: number | null;
   sort_order?: number;
   my_day_date?: string | null;

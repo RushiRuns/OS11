@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   sort_order          REAL NOT NULL DEFAULT 0,    -- Fractional indexing
   my_day_date         TEXT,
   pomodoro_count      INTEGER NOT NULL DEFAULT 0,
+  is_habit            INTEGER NOT NULL DEFAULT 0,
   is_trashed          INTEGER NOT NULL DEFAULT 0,
   trashed_at          TEXT,
   created_at          TEXT NOT NULL,

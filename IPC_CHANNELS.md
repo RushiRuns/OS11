@@ -161,6 +161,7 @@ High-level objectives linked to projects and tasks.
 - `goals:update` — Update goal progress or status.
 - `goals:delete` — Delete a goal.
 - `goals:link-task` — Associate or dissociate a task/project from a goal.
+- `goals:get-all-links` — Retrieve all task and project links across all goals.
 
 ### SETTINGS
 Key-value application preferences.

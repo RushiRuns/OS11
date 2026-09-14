@@ -65,6 +65,15 @@ export function registerGoalHandlers(repo = new GoalRepository()): void {
       }
     }
   );
+
+  ipcMain.handle(IPC.GOALS.GET_ALL_LINKS, async () => {
+    try {
+      const data = repo.getAllLinks();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerGoalHandlers;

@@ -1208,13 +1208,13 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Daily Agenda (Lazy Chunk)
 
-- [ ] Create `src/renderer/features/agenda/DailyAgenda.tsx` + `.module.css`
+- [x] Create `src/renderer/features/agenda/DailyAgenda.tsx` + `.module.css`
   - Tasks due today ordered by `due_time`; overdue tasks pinned to top in red
   - Time-block slots: each hour shown as a row; tasks with `due_time` placed in their slot
   - Drag unscheduled task onto a time slot → sets `due_time` for that task
   - "Load balancing" indicator: color-coded header (green < 5 tasks / amber 5–10 / red > 10)
   - Morning summary desktop notification sent at user-configured time via `ReminderService`
-- [ ] Create `src/renderer/features/agenda/WeeklyAgenda.tsx` + `.module.css`
+- [x] Create `src/renderer/features/agenda/WeeklyAgenda.tsx` + `.module.css`
   - 7-day scrollable column view
   - Calendar events shown alongside tasks (if calendar integration enabled)
   - Load balancing indicator per day
@@ -1222,21 +1222,21 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Goals
 
-- [ ] Create `src/renderer/stores/goalStore.ts` — `goalsById: Record<string, Goal>`
-- [ ] Create `src/renderer/features/agenda/GoalsView.tsx` + `.module.css`
+- [x] Create `src/renderer/stores/goalStore.ts` — `goalsById: Record<string, Goal>`
+- [x] Create `src/renderer/features/agenda/GoalsView.tsx` + `.module.css`
   - Create goal: title, description, type (habit / milestone / outcome), target date
   - Link tasks / projects to a goal from the goal card or from task detail panel
   - Progress bar: computed from `goal_links` → linked task completion rate
   - Goal streaks: `streak_count` column shown as a flame streak indicator
   - Weekly review prompt: shown on user-configured day (Friday by default)
-- [ ] Create `src/renderer/components/ProgressBar/ProgressBar.tsx` + `.module.css`
+- [x] Create `src/renderer/components/ProgressBar/ProgressBar.tsx` + `.module.css`
   - Height: `var(--space-1)` (4px) thin version; `var(--space-2)` (8px) standard
   - Fill: `var(--accent)` for primary goals; `var(--color-success)` for completed
 
 ### Habit Tracker (Optional Module)
 
-- [ ] Module toggle: `habit_tracker` — disabled by default
-- [ ] Create `src/renderer/features/agenda/HabitTracker.tsx` + `.module.css`
+- [x] Module toggle: `habit_tracker` — disabled by default
+- [x] Create `src/renderer/features/agenda/HabitTracker.tsx` + `.module.css`
   - Mark tasks as habits in task detail panel (boolean flag — requires migration `0002_habit_flag.sql` if not in initial schema)
   - GitHub-style heatmap calendar: 52 weeks × 7 days grid of completion dots
   - Color intensity: `var(--accent-muted)` → `var(--accent)` based on completion count per day
@@ -1244,9 +1244,9 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `DailyAgenda`, `WeeklyAgenda`, `GoalsView`, `HabitTracker`, `ProgressBar`, `goalStore`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 13 complete: Daily/weekly agenda, goals with streaks, habit tracker."
-- [ ] Commit: `"Phase 13 complete: Agenda and goals"`
+- [x] Update UTILITIES.md: `DailyAgenda`, `WeeklyAgenda`, `GoalsView`, `HabitTracker`, `ProgressBar`, `goalStore`
+- [x] CHANGELOG_INTERNAL.md: "Phase 13 complete: Daily/weekly agenda, goals with streaks, habit tracker."
+- [x] Commit: `"Phase 13 complete: Agenda and goals"`
 
 ---
 

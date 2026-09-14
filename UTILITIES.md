@@ -28,6 +28,7 @@
 | `useNotificationStore` | `src/renderer/stores/notificationStore.ts` | In-app notification center store tracking history items, unread count, and drawer visibility | Renderer global |
 | `useProjectStore` | `src/renderer/stores/projectStore.ts` | Normalized project management store (`projectsById`, `sectionsById`, `milestonesById`, `dependenciesByTaskId`) | Renderer global |
 | `usePomodoroStore` | `src/renderer/stores/pomodoroStore.ts` | Zustand store for active focus session countdown, cycle progression, sound alerts, and tray/window sync | Renderer global |
+| `useGoalStore` | `src/renderer/stores/goalStore.ts` | Normalized Zustand goal store (`goalsById`, `linksByGoalId`) with progress tracking and task-goal link management | Renderer global |
 
 ---
 
@@ -79,7 +80,12 @@
 | `ProjectTableView` | `src/renderer/features/projects/ProjectTableView.tsx` | No | No (CSS transitions) | Spreadsheet table view with inline editing, resizable columns, column show/hide, and sorting |
 | `RecurrencePicker` | `src/renderer/features/tasks/RecurrencePicker.tsx` | No | No (CSS transitions) | Recurrence rule modal with presets, custom interval/frequency builder, natural language preview, after-completion toggle, and skip occurrence |
 | `ReminderEditor` | `src/renderer/features/tasks/ReminderEditor.tsx` | No | No (CSS transitions) | Multi-reminder editor in DetailPanel with presets (at due, 1h before, 1d before), custom picker, and delete controls |
-| `Agenda` | `src/renderer/features/agenda/Agenda.tsx` | No | No (CSS transitions) | Chronological hourly timeline plotting scheduled tasks and external calendar events with two-way sync |
+| `ProgressBar` | `src/renderer/components/ProgressBar/ProgressBar.tsx` | No | No (CSS transitions) | Dynamic progress bar with `thin` (4px) and `standard` (8px) heights and semantic tokenized fills (`primary`, `success`, `warning`) |
+| `Agenda` | `src/renderer/features/agenda/Agenda.tsx` | No | No (CSS transitions) | Lazy-loaded top-level view with 4-tab segmented switcher (`Daily Agenda`, `Weekly Agenda`, `Goals`, `Habits`) |
+| `DailyAgenda` | `src/renderer/features/agenda/DailyAgenda.tsx` | No | No (CSS transitions) | Daily timeline view (8 AM – 9 PM) with overdue task pinning, time-block slots, drag rescheduling, and load balancing indicator |
+| `WeeklyAgenda` | `src/renderer/features/agenda/WeeklyAgenda.tsx` | No | No (CSS transitions) | 7-day horizontal scrollable column view with calendar event overlays, load balancing, and cross-day drag-rescheduling |
+| `GoalsView` | `src/renderer/features/agenda/GoalsView.tsx` | Uses `ProgressBar` | No (CSS transitions) | Goals dashboard with type categorization (Habit, Milestone, Outcome), progress bars, streak flame counters, and Friday check-in banner |
+| `HabitTracker` | `src/renderer/features/agenda/HabitTracker.tsx` | No | No (CSS transitions) | 52-week × 7-day GitHub-style completion heatmap with 5 tokenized intensity levels and interactive habit chain check-off cards |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
