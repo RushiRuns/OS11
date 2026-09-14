@@ -86,6 +86,12 @@
 | `WeeklyAgenda` | `src/renderer/features/agenda/WeeklyAgenda.tsx` | No | No (CSS transitions) | 7-day horizontal scrollable column view with calendar event overlays, load balancing, and cross-day drag-rescheduling |
 | `GoalsView` | `src/renderer/features/agenda/GoalsView.tsx` | Uses `ProgressBar` | No (CSS transitions) | Goals dashboard with type categorization (Habit, Milestone, Outcome), progress bars, streak flame counters, and Friday check-in banner |
 | `HabitTracker` | `src/renderer/features/agenda/HabitTracker.tsx` | No | No (CSS transitions) | 52-week × 7-day GitHub-style completion heatmap with 5 tokenized intensity levels and interactive habit chain check-off cards |
+| `Dashboard` | `src/renderer/features/dashboard/Dashboard.tsx` | No | No (CSS transitions) | Performance metrics dashboard with 4 hero cards, date range selector, PDF/CSV exports, and 5 Recharts visualizations |
+| `CompletionBarChart` | `src/renderer/features/dashboard/charts/CompletionBarChart.tsx` | No | No (CSS transitions) | Recharts bar chart showing daily task completions across date range |
+| `TaskDistributionPie` | `src/renderer/features/dashboard/charts/TaskDistributionPie.tsx` | No | No (CSS transitions) | Recharts donut chart with segmented switcher for list, tag, and priority breakdowns |
+| `CompletionTrend` | `src/renderer/features/dashboard/charts/CompletionTrend.tsx` | No | No (CSS transitions) | Recharts line chart showing daily and overall on-time completion rates with 100% target reference line |
+| `ActivityHeatmap` | `src/renderer/features/dashboard/charts/ActivityHeatmap.tsx` | No | No (CSS transitions) | 52-week full-year GitHub-style activity grid with interactive completion hover tooltips |
+| `ProjectBurndown` | `src/renderer/features/dashboard/charts/ProjectBurndown.tsx` | No | No (CSS transitions) | Project velocity metrics and remaining vs ideal burndown trajectory chart |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
@@ -179,6 +185,7 @@
 | `PomodoroService` | `src/main/services/pomodoro/PomodoroService.ts` | Session lifecycle management, task pomodoro count incrementing, OS focus mode notifications, and tray/window synchronization |
 | `SettingsService` | `src/main/services/settings/SettingsService.ts` | Preference key-value store, `applyTheme`, `applyAccentColor`, `applyLoginItem` |
 | `WorkerManager` | `src/main/services/worker-manager.ts` | Manages Node `worker_threads` instance with correlation IDs, timeouts, and seamless main-thread fallback |
+| `AnalyticsService` | `src/main/services/analytics/AnalyticsService.ts` | Stats aggregation (completed count, streak, on-time rate %, focus minutes, peak day/hour, burndown velocity), PDF print, and RFC 4180 CSV serialization |
 
 ---
 

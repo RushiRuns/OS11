@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 14 complete: Full dashboard, all 5 charts, stats aggregation, PDF/CSV export
+- **What was built:**
+  - `src/main/services/analytics/AnalyticsService.ts`: SQLite productivity engine providing `getPersonalStats` (completed count, streak, avg hours, on-time rate %, tasks today, total focus minutes), `getMostProductiveDay`, `getMostProductiveHour`, `getCompletionsByDay`, `getTasksByList`, `getTasksByTag`, `getTasksByPriority`, `getPomodoroStats`, `getProjectStats` (velocity, burndown trajectory), and RFC 4180 CSV serialization.
+  - `src/main/ipc/analytics-handlers.ts`: Handlers for all `IPC.ANALYTICS` channels, PDF rendering via `event.sender.printToPDF({ printBackground: true })`, and file saving via `dialog.showSaveDialog`.
+  - `src/renderer/features/dashboard/Dashboard.tsx` + `Dashboard.module.css`: Full Dashboard view with 4 hero stat cards (Completed Today, Current Streak, On-Time Rate %, Focus Time), secondary productivity highlights, date range filter (`7d`, `30d`, `90d`, `all`), PDF & CSV export actions, and loading skeletons.
+  - `src/renderer/features/dashboard/charts/CompletionBarChart.tsx`: Recharts `BarChart` displaying daily completed tasks with on-time/overdue breakdown.
+  - `src/renderer/features/dashboard/charts/TaskDistributionPie.tsx`: Recharts donut chart with interactive switcher for By List, By Tag, and By Priority breakdowns.
+  - `src/renderer/features/dashboard/charts/CompletionTrend.tsx`: Recharts line chart tracking on-time rate over time with 100% target reference line.
+  - `src/renderer/features/dashboard/charts/ActivityHeatmap.tsx`: Full-year 52-week × 7-day grid with hover tooltips and 5-tier color intensity.
+  - `src/renderer/features/dashboard/charts/ProjectBurndown.tsx`: Project burndown chart with project selector dropdown, velocity calculation, and ideal linear trajectory.
+  - Unit test suite `tests/services/analytics.test.ts` (25 test files, 144 tests passing).
+- **What changed architecturally:**
+  - Added `IPC.ANALYTICS` channel group to `src/shared/ipc-channels.ts`.
+  - Added shared analytics type definitions in `src/shared/types/analytics.ts`.
+  - All heavy analytics computations execute in the main process on demand per `PERFORMANCE.md §13`.
+  - Dashboard and Recharts bundled into isolated on-demand lazy chunk `dashboard` per `PERFORMANCE.md §5`.
+
+---
+
 ### [2026-09-14] — Phase 13 complete: Daily/weekly agenda, goals with streaks, habit tracker
 - **What was built:**
   - `src/renderer/features/agenda/DailyAgenda.tsx` + `DailyAgenda.module.css`: Daily chronological agenda with 14 hourly time slots (8:00 AM – 9:00 PM), overdue tasks pinned to top in red with "Reschedule to Today" shortcut, color-coded load balancing indicator pill (Green < 5 / Amber 5–10 / Red > 10 tasks), external calendar event integration, and unscheduled task drag-and-drop pool onto hour rows.

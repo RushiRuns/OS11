@@ -202,3 +202,17 @@ Local network peer-to-peer and companion device synchronization.
 ### NLP
 Natural language quick-add processing using Chrono and regular expressions.
 - `nlp:parse` — Parse unstructured task string into structured task properties (title, tags, list, priority, due date/time, recurrence, pomodoro).
+
+### ANALYTICS
+Productivity aggregation, chart metrics, and report export engine.
+- `analytics:get-personal-stats` — Fetch personal metrics (completed count, streak, avg hours, on-time rate %, focus time).
+- `analytics:get-productive-day` — Fetch day of week with highest completions.
+- `analytics:get-productive-hour` — Fetch peak completion hour of day.
+- `analytics:get-completions-by-day` — Fetch daily completion counts and on-time/late breakdown across date range.
+- `analytics:get-tasks-by-list` — Fetch task distribution counts grouped by list.
+- `analytics:get-tasks-by-tag` — Fetch task distribution counts grouped by tag.
+- `analytics:get-tasks-by-priority` — Fetch task distribution counts grouped by priority.
+- `analytics:get-pomodoro-stats` — Fetch completed pomodoro session totals, focus minutes, and daily breakdown.
+- `analytics:get-project-stats` — Fetch project velocity, task counts, and burndown trajectory.
+- `analytics:export-pdf` — Render dashboard to PDF via `printToPDF` and prompt save dialog.
+- `analytics:export-csv` — Serialize aggregated metrics into CSV and prompt save dialog.

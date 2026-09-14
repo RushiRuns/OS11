@@ -181,6 +181,19 @@ export const IPC = {
   NLP: {
     PARSE: 'nlp:parse',
   },
+  ANALYTICS: {
+    GET_PERSONAL_STATS: 'analytics:get-personal-stats',
+    GET_PRODUCTIVE_DAY: 'analytics:get-productive-day',
+    GET_PRODUCTIVE_HOUR: 'analytics:get-productive-hour',
+    GET_COMPLETIONS_BY_DAY: 'analytics:get-completions-by-day',
+    GET_TASKS_BY_LIST: 'analytics:get-tasks-by-list',
+    GET_TASKS_BY_TAG: 'analytics:get-tasks-by-tag',
+    GET_TASKS_BY_PRIORITY: 'analytics:get-tasks-by-priority',
+    GET_POMODORO_STATS: 'analytics:get-pomodoro-stats',
+    GET_PROJECT_STATS: 'analytics:get-project-stats',
+    EXPORT_PDF: 'analytics:export-pdf',
+    EXPORT_CSV: 'analytics:export-csv',
+  },
 } as const;
 
 export type IpcChannelGroup = keyof typeof IPC;

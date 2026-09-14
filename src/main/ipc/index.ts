@@ -18,6 +18,7 @@ import { registerNotificationHandlers } from './notification-handlers.js';
 import { registerIdentityHandlers } from './identity-handlers.js';
 import { registerNlpHandlers } from './nlp-handlers.js';
 import { registerCalendarHandlers } from './calendar-handlers.js';
+import { registerAnalyticsHandlers } from './analytics-handlers.js';
 
 export function registerIpcHandlers(): void {
   registerAppHandlers();
@@ -40,6 +41,7 @@ export function registerIpcHandlers(): void {
   registerIdentityHandlers();
   registerNlpHandlers();
   registerCalendarHandlers();
+  registerAnalyticsHandlers();
 }
 
 export default registerIpcHandlers;

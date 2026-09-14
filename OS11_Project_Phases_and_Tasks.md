@@ -1256,7 +1256,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Stats Aggregation (Main Process)
 
-- [ ] Create `src/main/services/analytics/AnalyticsService.ts`
+- [x] Create `src/main/services/analytics/AnalyticsService.ts`
   - `getPersonalStats(from, to)`: completed count, streak (consecutive days ≥ 1 completion), avg completion time, on-time rate
   - `getMostProductiveDay()`: GROUP BY `strftime('%w', completed_at)`, count completions
   - `getMostProductiveHour()`: GROUP BY `strftime('%H', completed_at)`, count completions
@@ -1268,7 +1268,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Dashboard View (Lazy Chunk)
 
-- [ ] Create `src/renderer/features/dashboard/Dashboard.tsx` + `.module.css`
+- [x] Create `src/renderer/features/dashboard/Dashboard.tsx` + `.module.css`
   - Opens with 4 stat cards at top: tasks completed today, current streak, on-time rate %, total focus time
   - FEEL UI: generous whitespace between charts; not a wall of numbers
   - Charts below stat cards, in order: Completion Bar → Task Distribution → Completion Trend → Activity Heatmap
@@ -1277,32 +1277,32 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Charts (Recharts)
 
-- [ ] Create `src/renderer/features/dashboard/charts/CompletionBarChart.tsx`
+- [x] Create `src/renderer/features/dashboard/charts/CompletionBarChart.tsx`
   - Tasks completed per day (last 30 days by default)
   - `recharts` `BarChart` — fill: `var(--accent)`, bar radius matches `var(--radius-xs)`
-- [ ] Create `src/renderer/features/dashboard/charts/TaskDistributionPie.tsx`
+- [x] Create `src/renderer/features/dashboard/charts/TaskDistributionPie.tsx`
   - Pie/donut — toggle between: By List / By Tag / By Priority
   - Colors: list colors, tag colors, or priority tokens respectively
-- [ ] Create `src/renderer/features/dashboard/charts/CompletionTrend.tsx`
+- [x] Create `src/renderer/features/dashboard/charts/CompletionTrend.tsx`
   - Line chart: on-time completion rate over time
   - Reference line at 100% — visual anchor
-- [ ] Create `src/renderer/features/dashboard/charts/ActivityHeatmap.tsx`
+- [x] Create `src/renderer/features/dashboard/charts/ActivityHeatmap.tsx`
   - Full-year grid: 52 weeks × 7 days
   - Color intensity from `var(--accent-muted)` → `var(--accent)` based on daily completion count
   - Tooltip on hover: "Jan 6 — 12 tasks completed"
-- [ ] Create `src/renderer/features/dashboard/charts/ProjectBurndown.tsx`
+- [x] Create `src/renderer/features/dashboard/charts/ProjectBurndown.tsx`
   - Per-project task completion rate over time
   - Shown only when a project is selected from a dropdown
 
 ### Export
 
-- [ ] PDF: `webContents.printToPDF({ printBackground: true })` — Dashboard rendered to PDF
-- [ ] CSV: main process serializes aggregated stats arrays to CSV string → `dialog.showSaveDialog()`
+- [x] PDF: `webContents.printToPDF({ printBackground: true })` — Dashboard rendered to PDF
+- [x] CSV: main process serializes aggregated stats arrays to CSV string → `dialog.showSaveDialog()`
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 14 complete: Full dashboard, all 5 charts, stats aggregation, PDF/CSV export."
-- [ ] Commit: `"Phase 14 complete: Dashboard and statistics"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 14 complete: Full dashboard, all 5 charts, stats aggregation, PDF/CSV export."
+- [x] Commit: `"Phase 14 complete: Dashboard and statistics"`
 
 ---
 
