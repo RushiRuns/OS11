@@ -58,20 +58,41 @@ export class SettingsService {
     }
   }
 
+  public emptyTrash(): number {
+    return this.repository.emptyTrash();
+  }
+
   public reset(): Record<string, unknown> {
     // Reset to factory defaults
     const defaults: Partial<SettingsMap> = {
       theme: 'auto',
       accent_color: '#1B88FF',
       font_size: 'md',
+      font_family: 'Inter',
       density: 'comfortable',
       sidebar_position: 'left',
       launch_at_login: true,
+      day_starts_at: '08:00',
       pomodoro_work_minutes: 25,
       pomodoro_break_minutes: 5,
       pomodoro_long_break_minutes: 15,
       pomodoro_sessions_before_long_break: 4,
       reduce_motion: false,
+      vim_keybindings: false,
+      active_profile_preset: 'custom',
+      app_lock_enabled: false,
+      task_card_style: 'default',
+      background_type: 'none',
+      background_value: '',
+      background_blur: 0,
+      background_animation: 'none',
+      quiet_hours_enabled: false,
+      quiet_hours_start: '22:00',
+      quiet_hours_end: '08:00',
+      notification_sound: 'default',
+      sound_effects_enabled: true,
+      stealth_mode: false,
+      auto_archive_days: 0,
     };
 
     for (const [key, value] of Object.entries(defaults)) {

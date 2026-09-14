@@ -6,15 +6,24 @@ export interface SystemInfo {
   platform: string;
 }
 
+export interface BackgroundImageInfo {
+  id: string;
+  name: string;
+  path: string;
+  url: string;
+  created_at: string;
+}
+
 export interface SettingsMap {
   theme: 'auto' | 'dark' | 'light' | 'system';
   accent_color: string;
-  font_size: 'sm' | 'md' | 'lg';
+  font_size: 'sm' | 'md' | 'lg' | string;
   font_family: string;
   density: 'compact' | 'comfortable' | 'spacious';
   sidebar_position: 'left' | 'right' | 'hidden';
   launch_at_login: boolean;
   day_starts_at: string;
+  default_list_id?: string;
   pomodoro_work_minutes: number;
   pomodoro_break_minutes: number;
   pomodoro_long_break_minutes: number;
@@ -24,6 +33,20 @@ export interface SettingsMap {
   app_lock_enabled: boolean;
   reduce_motion: boolean;
   task_card_style: 'default' | 'minimal' | 'detailed';
+  // Background engine
+  background_type: 'none' | 'solid' | 'gradient' | 'image';
+  background_value: string;
+  background_blur: number;
+  background_animation: 'none' | 'aurora' | 'particles' | 'gradient_drift';
+  // Notifications
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+  notification_sound: string;
+  sound_effects_enabled: boolean;
+  // Privacy
+  stealth_mode: boolean;
+  auto_archive_days: number;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -37,5 +60,10 @@ export interface AppSettings {
   start_at_login?: boolean;
   sidebar_position?: 'left' | 'right' | 'hidden';
   density?: 'compact' | 'comfortable' | 'spacious';
-  font_size?: 'sm' | 'md' | 'lg';
+  font_size?: 'sm' | 'md' | 'lg' | string;
+  background_type?: 'none' | 'solid' | 'gradient' | 'image';
+  background_value?: string;
+  background_blur?: number;
+  background_animation?: 'none' | 'aurora' | 'particles' | 'gradient_drift';
 }
+

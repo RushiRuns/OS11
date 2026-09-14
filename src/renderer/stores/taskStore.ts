@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/task.js';
 import { taskServiceAdapter } from '../services/task-service-adapter.js';
+import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
 
 export interface TaskStoreState {
   tasksById: Record<string, Task>;
@@ -118,6 +119,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     set((state) => ({
       tasksById: { ...state.tasksById, [tempId]: optimisticTask },
     }));
+    playTaskCreateSound();
 
     try {
       const realTask = await taskServiceAdapter.create(payload);
@@ -171,6 +173,9 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
 
     const previousSnapshot: Task = { ...existing };
     const nextCompleted = existing.is_completed === 1 ? 0 : 1;
+    if (nextCompleted === 1) {
+      playTaskCompleteSound();
+    }
     const optimistic: Task = {
       ...existing,
       is_completed: nextCompleted,
@@ -203,6 +208,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       throw new Error(`Task ${id} not found`);
     }
 
+    playTaskCompleteSound();
     const previousSnapshot: Task = { ...existing };
     const optimistic: Task = {
       ...existing,

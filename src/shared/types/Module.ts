@@ -17,4 +17,5 @@ export type ModuleName =
   | 'habit_tracker'
   | 'collaboration'
   | 'companion_sync'
-  | 'calendar_integration';
+  | 'calendar_integration'
+  | 'sound_effects';

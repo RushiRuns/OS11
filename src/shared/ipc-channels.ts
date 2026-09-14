@@ -16,6 +16,8 @@ export const IPC = {
     CHECK_FOR_UPDATES: 'app:check-for-updates',
     UPDATE_AVAILABLE: 'app:update-available',
     UPDATE_DOWNLOADED: 'app:update-downloaded',
+    SET_THEME: 'app:set-theme',
+    SET_ACCENT_COLOR: 'app:set-accent-color',
   },
   SYSTEM: {
     GET_INFO: 'system:get-info',
@@ -159,10 +161,25 @@ export const IPC = {
     RESET: 'settings:reset',
     THEME_CHANGED: 'settings:theme-changed',
     ACCENT_COLOR_CHANGED: 'settings:accent-color-changed',
+    EMPTY_TRASH: 'settings:empty-trash',
   },
   MODULES: {
     GET_ALL: 'modules:get-all',
     SET_ACTIVE: 'modules:set-active',
+    TOGGLE: 'modules:toggle',
+    APPLY_PRESET: 'modules:apply-preset',
+  },
+  SECURITY: {
+    GET_STATUS: 'security:get-status',
+    SET_PIN: 'security:set-pin',
+    VERIFY_PIN: 'security:verify-pin',
+    SET_ENABLED: 'security:set-enabled',
+    LOCK: 'security:lock',
+    UNLOCK: 'security:unlock',
+  },
+  BACKGROUNDS: {
+    UPLOAD: 'backgrounds:upload',
+    GET_ALL: 'backgrounds:get-all',
   },
   SEARCH: {
     QUERY: 'search:query',

@@ -37,4 +37,10 @@ export class SettingsRepository extends BaseRepository {
     }
     return result;
   }
+
+  public emptyTrash(): number {
+    const stmt = this.db.prepare('DELETE FROM tasks WHERE is_trashed = 1');
+    const info = stmt.run();
+    return info.changes;
+  }
 }

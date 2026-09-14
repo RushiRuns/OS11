@@ -1350,64 +1350,64 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Theme Engine
 
-- [ ] Create `src/main/services/settings/ThemeService.ts`
+- [x] Create `src/main/services/settings/ThemeService.ts`
   - Apply theme change: emit `IPC.APP.SET_THEME` → renderer sets `data-theme` on `<html>`
   - Auto mode: `nativeTheme.on('updated')` → re-emit `IPC.APP.SET_THEME` with current OS preference
-- [ ] Apply accent color at runtime: `IPC.APP.SET_ACCENT_COLOR` → renderer calls `document.documentElement.style.setProperty('--accent', hex)` + derives `--accent-hover`, `--accent-active`, `--accent-muted`, `--accent-border`
+- [x] Apply accent color at runtime: `IPC.APP.SET_ACCENT_COLOR` → renderer calls `document.documentElement.style.setProperty('--accent', hex)` + derives `--accent-hover`, `--accent-active`, `--accent-muted`, `--accent-border`
 
 ### Background Engine
 
-- [ ] Solid color: CSS `background-color` on task list content area
-- [ ] Gradient: CSS `background: linear-gradient(direction, color1, color2, ...)`
-- [ ] Built-in wallpapers: bundled JPEG/WebP files in `src/renderer/assets/backgrounds/`
-- [ ] Custom image upload: stored in `userData/backgrounds/`; loaded as `background-image: url('file://')`
-- [ ] Background blur: CSS `backdrop-filter: blur(Xpx)` on content layer above image
-- [ ] Animated backgrounds (module `animated_backgrounds`, default off): CSS `@keyframes` — aurora, particles, gradient drift
-- [ ] Per-list vs global background: `lists.background_type` / `lists.background_value` vs global `settings.background_*`
+- [x] Solid color: CSS `background-color` on task list content area
+- [x] Gradient: CSS `background: linear-gradient(direction, color1, color2, ...)`
+- [x] Built-in wallpapers: bundled JPEG/WebP files in `src/renderer/assets/backgrounds/`
+- [x] Custom image upload: stored in `userData/backgrounds/`; loaded as `background-image: url('file://')`
+- [x] Background blur: CSS `backdrop-filter: blur(Xpx)` on content layer above image
+- [x] Animated backgrounds (module `animated_backgrounds`, default off): CSS `@keyframes` — aurora, particles, gradient drift
+- [x] Per-list vs global background: `lists.background_type` / `lists.background_value` vs global `settings.background_*`
 
 ### Settings View (Lazy Chunk)
 
-- [ ] Create `src/renderer/features/settings/SettingsView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/settings/SettingsView.tsx` + `.module.css`
   - Sidebar navigation within settings: General / Appearance / Keyboard / Notifications / Privacy / Modules / Advanced
   - Advanced sub-toggles within each category — hidden by default
-- [ ] Create `src/renderer/features/settings/GeneralSettings.tsx` — launch at login, day starts at, quick-add default list
-- [ ] Create `src/renderer/features/settings/AppearanceSettings.tsx` — theme, accent color, background, font size, font family, density, sidebar position, task card style
-- [ ] Create `src/renderer/features/settings/NotificationSettings.tsx` — quiet hours, per-category toggles, notification sound
-- [ ] Create `src/renderer/features/settings/PrivacySettings.tsx` — app lock, stealth mode, data deletion, "Empty Trash"
-- [ ] Create `src/renderer/features/settings/KeyboardSettings.tsx` — shortcut viewer; Vim mode toggle
+- [x] Create `src/renderer/features/settings/GeneralSettings.tsx` — launch at login, day starts at, quick-add default list
+- [x] Create `src/renderer/features/settings/AppearanceSettings.tsx` — theme, accent color, background, font size, font family, density, sidebar position, task card style
+- [x] Create `src/renderer/features/settings/NotificationSettings.tsx` — quiet hours, per-category toggles, notification sound
+- [x] Create `src/renderer/features/settings/PrivacySettings.tsx` — app lock, stealth mode, data deletion, "Empty Trash"
+- [x] Create `src/renderer/features/settings/KeyboardSettings.tsx` — shortcut viewer; Vim mode toggle
 
 ### Module Toggle System
 
-- [ ] Create `src/renderer/stores/moduleStore.ts`
+- [x] Create `src/renderer/stores/moduleStore.ts`
   - `modulesEnabled: Record<string, boolean>`
   - `isEnabled(moduleName): boolean` — used by sidebar, toolbar, settings to conditionally render
   - Toggle: `IPC.MODULES.TOGGLE` → DB → reload → store update → UI effect is instant removal (not greyed out)
-- [ ] Create `src/renderer/features/settings/ModulesPage.tsx`
+- [x] Create `src/renderer/features/settings/ModulesPage.tsx`
   - One toggle per module with name + description
   - Phase 2 modules shown as "Coming in Phase 2 — Companion & Collaboration"
   - Profile presets at top: Minimalist / GTD / Focus / Custom (one click sets multiple toggles)
 
 ### Profile Presets
 
-- [ ] Preset "Minimalist": enable only `my_day`. Disable all others.
-- [ ] Preset "GTD Mode": enable `my_day`, `project_management`, `agenda`, `goals_habits`. Disable rest.
-- [ ] Preset "Focus Mode": enable `my_day`, `pomodoro`, `agenda`. Disable rest.
-- [ ] Preset "Custom": current state — no forced changes
-- [ ] Preset selection shown on first launch (step 1 of onboarding in Phase 18)
+- [x] Preset "Minimalist": enable only `my_day`. Disable all others.
+- [x] Preset "GTD Mode": enable `my_day`, `project_management`, `agenda`, `goals_habits`. Disable rest.
+- [x] Preset "Focus Mode": enable `my_day`, `pomodoro`, `agenda`. Disable rest.
+- [x] Preset "Custom": current state — no forced changes
+- [x] Preset selection shown on first launch (step 1 of onboarding in Phase 18)
 
 ### App Lock (Privacy)
 
-- [ ] Create `src/main/services/security/AppLockService.ts`
+- [x] Create `src/main/services/security/AppLockService.ts`
   - PIN stored in OS keychain via `keytar` — never in SQLite unencrypted
   - `verifyPin(input)`: retrieve from keychain → constant-time comparison
   - `setPin(pin)`: store in keychain
   - Biometric: Windows Hello / macOS Touch ID via Electron APIs (optional, fallback to PIN)
-- [ ] Create `src/renderer/features/settings/AppLockScreen.tsx` — shown on app open when lock is enabled
+- [x] Create `src/renderer/features/settings/AppLockScreen.tsx` — shown on app open when lock is enabled
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 16 complete: Theme engine, accent color, backgrounds, full settings, module toggles, profile presets, app lock."
-- [ ] Commit: `"Phase 16 complete: Theming, settings, module system"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 16 complete: Theme engine, accent color, backgrounds, full settings, module toggles, profile presets, app lock."
+- [x] Commit: `"Phase 16 complete: Theming, settings, module system"`
 
 ---
 

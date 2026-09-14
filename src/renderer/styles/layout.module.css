@@ -117,11 +117,44 @@
   }
 }
 
+@keyframes auroraShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes gradientDrift {
+  0% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(45deg); }
+  100% { filter: hue-rotate(0deg); }
+}
+
+.animAurora {
+  background: linear-gradient(135deg, #1e1b4b, #312e81, #1e3a8a, #0f172a) !important;
+  background-size: 300% 300% !important;
+  animation: auroraShift 16s ease infinite !important;
+}
+
+.animGradientDrift {
+  animation: gradientDrift 20s ease-in-out infinite !important;
+}
+
+.animParticles {
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 8%),
+    radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.06) 0%, transparent 10%),
+    radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.07) 0%, transparent 7%) !important;
+  background-size: 100% 100% !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeletonHeader,
   .skeletonBar,
-  .skeletonRow {
-    animation: none;
+  .skeletonRow,
+  .animAurora,
+  .animGradientDrift {
+    animation: none !important;
     opacity: 0.7;
   }
 }
+

@@ -29,4 +29,37 @@ export class ModuleRepository extends BaseRepository {
     `);
     stmt.run(moduleName, enabled ? 1 : 0);
   }
+
+  public applyPreset(preset: 'minimalist' | 'gtd' | 'focus' | 'custom'): Module[] {
+    if (preset === 'custom') {
+      return this.getAll();
+    }
+
+    const allModules = this.getAll().map((m) => m.module_name);
+    let enabledList: string[] = [];
+
+    if (preset === 'minimalist') {
+      enabledList = ['my_day'];
+    } else if (preset === 'gtd') {
+      enabledList = ['my_day', 'project_management', 'agenda', 'goals_habits'];
+    } else if (preset === 'focus') {
+      enabledList = ['my_day', 'pomodoro', 'agenda'];
+    }
+
+    const stmt = this.db.prepare(`
+      INSERT INTO modules (module_name, is_enabled)
+      VALUES (?, ?)
+      ON CONFLICT(module_name) DO UPDATE SET is_enabled = excluded.is_enabled
+    `);
+
+    const updateMany = this.db.transaction(() => {
+      for (const mod of allModules) {
+        stmt.run(mod, enabledList.includes(mod) ? 1 : 0);
+      }
+    });
+
+    updateMany();
+    return this.getAll();
+  }
 }
+

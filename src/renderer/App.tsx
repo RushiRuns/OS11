@@ -17,7 +17,7 @@ import { NotificationCenter } from './features/notifications/NotificationCenter.
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
-import { ipc } from './services/ipc.js';
+import { ipc, invoke } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
 
@@ -27,6 +27,15 @@ const Agenda = lazy(() => import('./features/agenda/Agenda.js'));
 const Projects = lazy(() => import('./features/projects/Projects.js'));
 const Settings = lazy(() => import('./features/settings/Settings.js'));
 const Pomodoro = lazy(() => import('./features/pomodoro/PomodoroView.js'));
+
+import {
+  applyTheme,
+  applyAccentColor,
+  applyDensity,
+  applyFontSize,
+  applyFontFamily,
+} from './utils/theme.js';
+import { AppLockScreen } from './features/settings/AppLockScreen.js';
 
 import layoutStyles from './styles/layout.module.css';
 
@@ -54,6 +63,8 @@ export function App(): React.ReactElement {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState<Record<string, unknown>>({});
   const isPomodoroFocus = usePomodoroStore((state) => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore((state) => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
@@ -61,6 +72,56 @@ export function App(): React.ReactElement {
   useEffect(() => {
     fetchSystemInfo();
     useAttachmentStore.getState().loadCounts();
+
+    // Check lock status
+    invoke<{ isEnabled: boolean; isLocked: boolean }>(IPC.SECURITY.GET_STATUS)
+      .then((status) => {
+        if (status?.isLocked) {
+          setIsLocked(true);
+        }
+      })
+      .catch(() => {});
+
+    // Load initial settings and apply tokens
+    invoke<Record<string, unknown>>(IPC.SETTINGS.GET_ALL)
+      .then((settings) => {
+        if (settings) {
+          setGlobalSettings(settings);
+          if (settings.theme) applyTheme(settings.theme as 'auto');
+          if (settings.accent_color) applyAccentColor(String(settings.accent_color));
+          if (settings.density) applyDensity(settings.density as 'comfortable');
+          if (settings.font_size) applyFontSize(String(settings.font_size));
+          if (settings.font_family) applyFontFamily(String(settings.font_family));
+        }
+      })
+      .catch(() => {});
+
+    // Listen to theme and accent IPC events
+    const unsubTheme = ipc.on(IPC.APP.SET_THEME, (data: unknown) => {
+      const payload = data as { theme?: 'auto' | 'dark' | 'light'; effectiveTheme?: 'dark' | 'light' };
+      if (payload) {
+        applyTheme(payload.theme ?? 'auto', payload.effectiveTheme);
+      }
+    });
+
+    const unsubAccent = ipc.on(IPC.APP.SET_ACCENT_COLOR, (data: unknown) => {
+      const payload = data as { hex?: string };
+      if (payload?.hex) {
+        applyAccentColor(payload.hex);
+      }
+    });
+
+    const unsubSettingsTheme = ipc.on(IPC.SETTINGS.THEME_CHANGED, (theme: unknown) => {
+      if (typeof theme === 'string') {
+        applyTheme(theme as 'light' | 'dark');
+      }
+    });
+
+    const unsubSettingsAccent = ipc.on(IPC.SETTINGS.ACCENT_COLOR_CHANGED, (hex: unknown) => {
+      if (typeof hex === 'string') {
+        applyAccentColor(hex);
+      }
+    });
 
     const unsubFocus = ipc.on(IPC.APP.FOCUS_QUICK_ADD, () => {
       const quickAddInput = document.querySelector('input[placeholder*="Add a task"]') as HTMLInputElement;
@@ -85,6 +146,10 @@ export function App(): React.ReactElement {
 
     return () => {
       unsubFocus?.();
+      unsubTheme?.();
+      unsubAccent?.();
+      unsubSettingsTheme?.();
+      unsubSettingsAccent?.();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [fetchSystemInfo, togglePomodoroFocus]);
@@ -178,21 +243,49 @@ export function App(): React.ReactElement {
 
   const isDetailVisible = !activeListId.startsWith('view_') && Boolean(selectedTask);
 
-  // Per-list background theming
+  // Background theming: Per-list overrides global settings
   const mainStyle: React.CSSProperties = {};
-  if (activeList?.background_type === 'solid' && activeList.background_value) {
-    mainStyle.backgroundColor = activeList.background_value;
-  } else if (activeList?.background_type === 'gradient' && activeList.background_value) {
-    mainStyle.background = activeList.background_value;
-  } else if (activeList?.background_type === 'image' && activeList.background_value) {
-    mainStyle.backgroundImage = `url(${activeList.background_value})`;
+  let bgClass = '';
+
+  const effectiveBgType = (activeList?.background_type && activeList.background_type !== 'none')
+    ? activeList.background_type
+    : (globalSettings.background_type as string ?? 'none');
+
+  const effectiveBgValue = (activeList?.background_value)
+    ? activeList.background_value
+    : (globalSettings.background_value as string ?? '');
+
+  const effectiveBlur = typeof globalSettings.background_blur === 'number'
+    ? globalSettings.background_blur
+    : 10;
+
+  if (effectiveBgType === 'solid' && effectiveBgValue) {
+    mainStyle.backgroundColor = effectiveBgValue;
+  } else if (effectiveBgType === 'gradient' && effectiveBgValue) {
+    mainStyle.background = effectiveBgValue;
+  } else if (effectiveBgType === 'image' && effectiveBgValue) {
+    mainStyle.backgroundImage = `url(${effectiveBgValue})`;
     mainStyle.backgroundSize = 'cover';
     mainStyle.backgroundPosition = 'center';
-    mainStyle.backdropFilter = 'blur(10px)';
+    if (effectiveBlur > 0) {
+      mainStyle.backdropFilter = `blur(${effectiveBlur}px)`;
+    }
+  }
+
+  // Animated background classes
+  if (globalSettings.background_animation === 'aurora') {
+    bgClass = layoutStyles.animAurora;
+  } else if (globalSettings.background_animation === 'particles') {
+    bgClass = layoutStyles.animParticles;
+  } else if (globalSettings.background_animation === 'gradient_drift') {
+    bgClass = layoutStyles.animGradientDrift;
   }
 
   return (
     <div className={layoutStyles.container}>
+      {/* App Lock Protection Overlay */}
+      {isLocked && <AppLockScreen onUnlock={() => setIsLocked(false)} />}
+
       {/* Custom Frameless Titlebar */}
       <Titlebar
         title="OS11"
@@ -215,7 +308,7 @@ export function App(): React.ReactElement {
         </div>
 
         {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
-        <main className={layoutStyles.mainCol} style={mainStyle}>
+        <main className={`${layoutStyles.mainCol} ${bgClass}`} style={mainStyle}>
           {renderMainContent()}
         </main>
 

@@ -20,6 +20,24 @@ export function registerModuleHandlers(repo = new ModuleRepository()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(IPC.MODULES.TOGGLE, async (_event, { moduleName, enabled }: { moduleName: string; enabled: boolean }) => {
+    try {
+      repo.toggle(moduleName, enabled);
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.MODULES.APPLY_PRESET, async (_event, { preset }: { preset: 'minimalist' | 'gtd' | 'focus' | 'custom' }) => {
+    try {
+      const data = repo.applyPreset(preset);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerModuleHandlers;

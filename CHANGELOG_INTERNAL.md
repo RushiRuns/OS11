@@ -3,6 +3,32 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 16 complete: Theme engine, accent color, backgrounds, full settings, module toggles, profile presets, app lock
+- **What was built:**
+  - `src/main/services/settings/ThemeService.ts`: Theme Engine managing light/dark/auto mode, subscribing to Electron `nativeTheme.on('updated')` to sync with OS theme changes, and broadcasting `IPC.APP.SET_THEME` and `IPC.APP.SET_ACCENT_COLOR`.
+  - `src/main/services/security/AppLockService.ts`: Passcode security engine supporting OS keychain PIN storage via `keytar` with constant-time string verification (`crypto.timingSafeEqual`) to eliminate timing leaks, plus secure encrypted fallback.
+  - `src/main/services/settings/BackgroundService.ts`: Custom wallpaper upload engine saving image files to `userData/backgrounds/` with file URL generation.
+  - `src/main/services/settings/SettingsService.ts`: Expanded with defaults for backgrounds, notifications, and `emptyTrash()` for permanent data cleanup.
+  - `src/main/repositories/ModuleRepository.ts`: Added `applyPreset()` supporting 1-click profiles (`minimalist`, `gtd`, `focus`, `custom`).
+  - `src/renderer/utils/theme.ts`: Runtime accent color math deriving `--accent-hover`, `--accent-active`, `--accent-muted`, `--accent-border`, plus `applyDensity`, `applyFontSize`, and `applyFontFamily`.
+  - `src/renderer/utils/sound-effects.ts`: Synthesized Web Audio API sound effects for task completion, task creation, and timer alerts.
+  - `src/renderer/features/settings/AppLockScreen.tsx` + `AppLockScreen.module.css`: Full-screen lock screen overlay with PIN dots, numeric keypad, shake animation on error, and keyboard support.
+  - `src/renderer/features/settings/SettingsView.tsx` + `SettingsView.module.css`: Tabbed settings view lazy chunk with 7 tabs:
+    - `GeneralSettings.tsx`: System login, day start time, quick-add default list, auto-archive.
+    - `AppearanceSettings.tsx`: Light/Dark/Auto theme, 8 accent presets + custom HEX picker, typography, UI density, card style, background engine (solid/gradient/image/blur/animation).
+    - `ModulesPage.tsx`: Profile presets (Minimalist, GTD, Focus, Custom), individual module toggles, Phase 2 coming-soon badges.
+    - `KeyboardSettings.tsx`: Searchable shortcut viewer and Vim keybindings toggle.
+    - `NotificationSettings.tsx`: Quiet hours schedule (`22:00` – `08:00`), category toggles, alert tone picker with audio test preview.
+    - `PrivacySettings.tsx`: App Lock setup and toggle, stealth mode, empty trash, and factory reset.
+    - `AdvancedSettings.tsx`: System runtime diagnostic info, SQLite WAL health, and memory trim.
+  - Automated test suite `tests/services/theming-and-settings.test.ts` (27 test files, 164 tests passing).
+- **What changed architecturally:**
+  - Added `IPC.SECURITY` and `IPC.BACKGROUNDS` channel groups; extended `IPC.APP`, `IPC.SETTINGS`, and `IPC.MODULES`.
+  - Settings view isolated into lazy chunk `dist/assets/settings-*.js` (`43.78 kB`) keeping the initial bundle lean per `PERFORMANCE.md §5`.
+  - Main view container dynamically blends per-list background and global settings background with customizable backdrop blur and CSS `@keyframes` animations.
+
+---
+
 ### [2026-09-14] — Phase 15 complete: File attachments — all upload sources, thumbnail generation, display, clipboard paste
 - **What was built:**
   - `src/main/services/attachment/AttachmentService.ts`: Central file management engine providing secure file uploads (`app.getPath('userData')/attachments/{taskId}/{uuid}.{ext}`), path-traversal sanitization (`sanitizeFilename`), native 80px thumbnail generation via `nativeImage`, atomic deletion from disk and SQLite, cloud storage link references (`is_link = 1`), task attachment querying, and batch export (`exportAll`).

@@ -156,6 +156,29 @@ export function registerAppHandlers(): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  // Theme & Accent Runtime Engine
+  ipcMain.handle(IPC.APP.SET_THEME, async (_event, payload: { theme: 'auto' | 'dark' | 'light' | 'system' }) => {
+    try {
+      const { ThemeService } = await import('../services/settings/ThemeService.js');
+      const service = new ThemeService();
+      const result = service.applyTheme(payload.theme);
+      return { ok: true, data: result };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.APP.SET_ACCENT_COLOR, async (_event, payload: { hex: string }) => {
+    try {
+      const { ThemeService } = await import('../services/settings/ThemeService.js');
+      const service = new ThemeService();
+      const result = service.applyAccentColor(payload.hex);
+      return { ok: true, data: result };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerAppHandlers;

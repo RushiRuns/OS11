@@ -26,6 +26,8 @@ Window lifecycle, initial preloaded payload, system chrome controls, omnibar, an
 - `app:check-for-updates` — Checks for application updates in background.
 - `app:update-available` — Broadcasts when an update is available.
 - `app:update-downloaded` — Broadcasts when an update has been downloaded and ready to install.
+- `app:set-theme` — Sets application theme (`auto`, `light`, `dark`, `system`) and broadcasts to all windows.
+- `app:set-accent-color` — Sets runtime interactive accent color and broadcasts derived color tokens.
 
 ### TASKS
 Task entity CRUD, completion toggling, filtering, and reordering.
@@ -175,11 +177,29 @@ Key-value application preferences.
 - `settings:get` — Retrieve single setting value by key.
 - `settings:set` — Persist setting key-value pair.
 - `settings:reset` — Reset settings to factory defaults.
+- `settings:empty-trash` — Permanently delete all tasks currently in trash.
 
 ### MODULES
 Feature toggle engine for modular capability management.
 - `modules:get-all` — Retrieve status (enabled/disabled) of all optional modules.
 - `modules:set-active` — Enable or disable a feature module.
+- `modules:toggle` — Toggle a feature module on/off.
+- `modules:apply-preset` — Apply profile preset (`minimalist`, `gtd`, `focus`, `custom`).
+
+### SECURITY
+App Lock and OS keychain passcode authentication.
+- `security:get-status` — Retrieve lock and biometric capability status.
+- `security:set-pin` — Set application passcode in OS keychain via Keytar.
+- `security:verify-pin` — Perform constant-time PIN verification.
+- `security:set-enabled` — Enable or disable passcode requirement.
+- `security:lock` — Manually lock application session.
+- `security:unlock` — Unlock application session.
+
+### BACKGROUNDS
+Custom desktop wallpapers and background images.
+- `backgrounds:upload` — Open native file picker or import image file to `userData/backgrounds/`.
+- `backgrounds:get-all` — Retrieve list of installed custom background images.
+
 
 ### SEARCH
 FTS5 full-text search engine queries offloaded to worker thread.

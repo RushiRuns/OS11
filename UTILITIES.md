@@ -94,6 +94,8 @@
 | `ActivityHeatmap` | `src/renderer/features/dashboard/charts/ActivityHeatmap.tsx` | No | No (CSS transitions) | 52-week full-year GitHub-style activity grid with interactive completion hover tooltips |
 | `ProjectBurndown` | `src/renderer/features/dashboard/charts/ProjectBurndown.tsx` | No | No (CSS transitions) | Project velocity metrics and remaining vs ideal burndown trajectory chart |
 | `AttachmentStrip` | `src/renderer/features/attachments/AttachmentStrip.tsx` | No | No (CSS transitions) | Horizontal attachment strip with image viewer lightbox, PDF/link click-to-open, file picker, and drag & drop |
+| `SettingsView` | `src/renderer/features/settings/SettingsView.tsx` | No | No (CSS transitions) | Tabbed global preferences view (General, Appearance, Modules, Keyboard, Notifications, Privacy, Advanced) |
+| `AppLockScreen` | `src/renderer/features/settings/AppLockScreen.tsx` | No | No (CSS transitions) | Fullscreen passcode PIN lock overlay with numeric keypad, shake animation, and constant-time verification |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
@@ -189,6 +191,9 @@
 | `WorkerManager` | `src/main/services/worker-manager.ts` | Manages Node `worker_threads` instance with correlation IDs, timeouts, and seamless main-thread fallback |
 | `AnalyticsService` | `src/main/services/analytics/AnalyticsService.ts` | Stats aggregation (completed count, streak, on-time rate %, focus minutes, peak day/hour, burndown velocity), PDF print, and RFC 4180 CSV serialization |
 | `AttachmentService` | `src/main/services/attachment/AttachmentService.ts` | Local file uploads, filename sanitization, nativeImage thumbnail generation, cloud storage links, atomic deletion, and batch export |
+| `ThemeService` | `src/main/services/settings/ThemeService.ts` | Dynamic theme change broadcasting, nativeTheme OS listener, and runtime accent color updates |
+| `AppLockService` | `src/main/services/security/AppLockService.ts` | PIN security engine using Keytar OS keychain with constant-time equality check (`crypto.timingSafeEqual`) |
+| `BackgroundService` | `src/main/services/settings/BackgroundService.ts` | Custom wallpaper and background image uploads to `userData/backgrounds/` |
 
 ---
 
