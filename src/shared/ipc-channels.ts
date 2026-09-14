@@ -122,9 +122,15 @@ export const IPC = {
   },
   ATTACHMENTS: {
     GET_ALL: 'attachments:get-all',
+    GET_EVERY_ATTACHMENT: 'attachments:get-every-attachment',
+    GET_COUNTS: 'attachments:get-counts',
     ADD: 'attachments:add',
+    UPLOAD: 'attachments:upload',
+    PICK_AND_UPLOAD: 'attachments:pick-and-upload',
+    ADD_LINK: 'attachments:add-link',
     DELETE: 'attachments:delete',
     OPEN: 'attachments:open',
+    EXPORT_ALL: 'attachments:export-all',
   },
   POMODORO: {
     START: 'pomodoro:start',

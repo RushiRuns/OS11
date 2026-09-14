@@ -16,6 +16,7 @@ import { TagView } from './features/tags/TagView.js';
 import { NotificationCenter } from './features/notifications/NotificationCenter.js';
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
+import { useAttachmentStore } from './stores/attachmentStore.js';
 import { ipc } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
@@ -59,6 +60,7 @@ export function App(): React.ReactElement {
 
   useEffect(() => {
     fetchSystemInfo();
+    useAttachmentStore.getState().loadCounts();
 
     const unsubFocus = ipc.on(IPC.APP.FOCUS_QUICK_ADD, () => {
       const quickAddInput = document.querySelector('input[placeholder*="Add a task"]') as HTMLInputElement;

@@ -10,9 +10,12 @@ import { useGoalStore } from '../../stores/goalStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { RecurrencePicker } from './RecurrencePicker.js';
 import { ReminderEditor } from './ReminderEditor.js';
+import { AttachmentStrip } from '../attachments/AttachmentStrip.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { humanReadableRRule } from '../../../shared/utils/recurrence.js';
+import { ipc } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './DetailPanel.module.css';
 
@@ -125,10 +128,33 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
 
   const isMyDay = Boolean(task.my_day_date);
 
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    if (!task) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          const filePath = (file as unknown as { path?: string }).path;
+          if (filePath) {
+            try {
+              await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, { taskId: task.id, sourcePath: filePath });
+            } catch (err) {
+              console.error('Failed to upload pasted image', err);
+            }
+          }
+        }
+      }
+    }
+  };
+
   return (
     <motion.aside
       className={styles.panelContainer}
       aria-label="Task Detail Panel"
+      onPaste={handlePaste}
       initial={shouldReduceMotion ? false : { x: 320, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={shouldReduceMotion ? undefined : { x: 320, opacity: 0 }}
@@ -511,6 +537,11 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
             dueDate={task.due_date}
             dueTime={task.due_time}
           />
+        </div>
+
+        {/* Attachments Section (Phase 15) */}
+        <div className={styles.sectionBlock}>
+          <AttachmentStrip taskId={task.id} />
         </div>
 
         {/* Rich Notes Section (TipTap) */}

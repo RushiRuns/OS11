@@ -3,6 +3,7 @@ import { useAppStore } from '../../stores/app-store.js';
 import { useListStore } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useSearchStore } from '../../stores/searchStore.js';
+import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import styles from './CommandPalette.module.css';
@@ -10,7 +11,7 @@ import styles from './CommandPalette.module.css';
 interface PaletteItem {
   id: string;
   title: string;
-  category: 'Action' | 'List' | 'Task' | 'Settings';
+  category: 'Action' | 'List' | 'Task' | 'Settings' | 'Attachment';
   icon: string;
   shortcut?: string;
   onSelect: () => void;
@@ -36,14 +37,16 @@ export function CommandPalette({
   const tasksById = useTaskStore((state) => state.tasksById);
   const { setSelectedTaskId } = useTaskStore();
   const { openSearch } = useSearchStore();
+  const { everyAttachment, loadEveryAttachment } = useAttachmentStore();
 
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
+      loadEveryAttachment();
       setTimeout(() => inputRef.current?.focus(), 20);
     }
-  }, [isOpen]);
+  }, [isOpen, loadEveryAttachment]);
 
   // Build items catalogue
   const allItems: PaletteItem[] = useMemo(() => {
@@ -155,8 +158,27 @@ export function CommandPalette({
       });
     });
 
+    // Attachments Index (Phase 15)
+    everyAttachment.forEach((att) => {
+      const parentTask = tasksById[att.task_id];
+      items.push({
+        id: `att_${att.id}`,
+        title: `${att.original_name}${parentTask ? ` (${parentTask.title})` : ''}`,
+        category: 'Attachment',
+        icon: att.is_link === 1 ? '🔗' : '📎',
+        onSelect: () => {
+          if (parentTask) {
+            if (parentTask.list_id && parentTask.list_id !== activeListId) {
+              setActiveListId(parentTask.list_id);
+            }
+            setSelectedTaskId(parentTask.id);
+          }
+        },
+      });
+    });
+
     return items;
-  }, [listsById, tasksById, activeListId, setActiveListId, setSelectedTaskId, openSearch, onToggleFocusMode]);
+  }, [listsById, tasksById, activeListId, setActiveListId, setSelectedTaskId, openSearch, onToggleFocusMode, everyAttachment]);
 
   // Fuzzy filter items
   const filteredItems = useMemo(() => {

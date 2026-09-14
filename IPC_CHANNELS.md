@@ -135,11 +135,17 @@ External calendar integration (Google, Apple, Outlook) with two-way sync.
 - `calendar:sync-task` — Sync scheduled task (`due_date`, `due_time`, `estimated_minutes`) to external calendar.
 
 ### ATTACHMENTS
-Local task attachments stored in the app data directory.
+Local task attachments and cloud storage links.
 - `attachments:get-all` — Get attachments for a specific task ID.
+- `attachments:get-every-attachment` — Get all attachments across tasks for global search and indexing.
+- `attachments:get-counts` — Get task ID to attachment count map.
 - `attachments:add` — Ingest a local file as an attachment.
-- `attachments:delete` — Remove attachment record and delete backing file.
-- `attachments:open` — Open attachment with native OS default application.
+- `attachments:upload` — Upload and sanitize local file into task storage directory.
+- `attachments:pick-and-upload` — Open native system file picker and upload selected files.
+- `attachments:add-link` — Attach cloud storage or external web URL.
+- `attachments:delete` — Remove attachment record and delete backing file atomically.
+- `attachments:open` — Open file with native OS default application or web URL in default browser.
+- `attachments:export-all` — Open directory picker and copy all physical attachments for backup.
 
 ### POMODORO
 Focus timer sessions and tracking.

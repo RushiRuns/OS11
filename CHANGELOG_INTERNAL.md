@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 15 complete: File attachments — all upload sources, thumbnail generation, display, clipboard paste
+- **What was built:**
+  - `src/main/services/attachment/AttachmentService.ts`: Central file management engine providing secure file uploads (`app.getPath('userData')/attachments/{taskId}/{uuid}.{ext}`), path-traversal sanitization (`sanitizeFilename`), native 80px thumbnail generation via `nativeImage`, atomic deletion from disk and SQLite, cloud storage link references (`is_link = 1`), task attachment querying, and batch export (`exportAll`).
+  - `src/main/repositories/AttachmentRepository.ts`: Added `getAll()`, `getCountByTaskId()`, `getAllCounts()` (grouped SQL counts for fast UI badging), and updated `create()` to persist `is_link` and `thumbnail_path`.
+  - `src/main/migrations/0003_attachment_links.sql`: Migration adding `is_link INTEGER NOT NULL DEFAULT 0` and `thumbnail_path TEXT` columns.
+  - `src/main/ipc/attachment-handlers.ts`: Handlers for `IPC.ATTACHMENTS.UPLOAD`, `IPC.ATTACHMENTS.PICK_AND_UPLOAD` (`dialog.showOpenDialog`), `IPC.ATTACHMENTS.ADD_LINK`, `IPC.ATTACHMENTS.GET_COUNTS`, `IPC.ATTACHMENTS.GET_EVERY_ATTACHMENT`, and `IPC.ATTACHMENTS.EXPORT_ALL` (`dialog.showOpenDialog` for folder selection).
+  - `src/renderer/stores/attachmentStore.ts`: Normalized Zustand store managing `attachmentsByTaskId`, `countsByTaskId`, and global search index.
+  - `src/renderer/features/attachments/AttachmentStrip.tsx` + `AttachmentStrip.module.css`: Horizontal scroll strip in DetailPanel with 80px image thumbnails, file type icons (PDF, Word, Excel, Code, Archive, Audio, Video), click-to-open lightbox viewer modal for images, `shell.openPath` for documents, `shell.openExternal` for cloud links, inline cloud link creator dialog, delete button, and drag-and-drop zone.
+  - `src/renderer/features/tasks/DetailPanel.tsx`: Added `onPaste` handler detecting clipboard images (`image/png`, `image/jpeg`) and auto-uploading via IPC.
+  - `src/renderer/features/tasks/TaskCard.tsx`: Added `📎 ×N` paperclip badge in task card metadata row and drag-and-drop file upload target.
+  - `src/renderer/features/command-palette/CommandPalette.tsx`: Indexed attachment filenames into `'Attachment'` category so users can search attachments and jump directly to owning tasks.
+  - Automated test suite `tests/services/attachments.test.ts` (26 test files, 151 tests passing).
+- **What changed architecturally:**
+  - Added `is_link` and `thumbnail_path` to `Attachment` schema.
+  - Extended `IPC.ATTACHMENTS` with comprehensive upload, dialog, link, and export operations.
+  - Fast task card badge counts are loaded via a single grouped query (`SELECT task_id, COUNT(*) FROM attachments GROUP BY task_id`) to avoid N+1 IPC overhead.
+
+---
+
 ### [2026-09-14] — Phase 14 complete: Full dashboard, all 5 charts, stats aggregation, PDF/CSV export
 - **What was built:**
   - `src/main/services/analytics/AnalyticsService.ts`: SQLite productivity engine providing `getPersonalStats` (completed count, streak, avg hours, on-time rate %, tasks today, total focus minutes), `getMostProductiveDay`, `getMostProductiveHour`, `getCompletionsByDay`, `getTasksByList`, `getTasksByTag`, `getTasksByPriority`, `getPomodoroStats`, `getProjectStats` (velocity, burndown trajectory), and RFC 4180 CSV serialization.

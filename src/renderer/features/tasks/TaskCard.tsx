@@ -6,6 +6,9 @@ import { useSelectionStore } from '../../stores/selectionStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { TagPicker } from '../tags/TagPicker.js';
+import { ipc } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
+import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './TaskCard.module.css';
 
@@ -49,6 +52,7 @@ export const TaskCard = memo(function TaskCard({
 
   const taskTags = useTagStore((state) => state.getTagsForTask(task.id));
   const loadTagsForTask = useTagStore((state) => state.loadTagsForTask);
+  const attachmentCount = useAttachmentStore((state) => state.countsByTaskId[task.id] ?? 0);
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -169,12 +173,26 @@ export const TaskCard = memo(function TaskCard({
         }
       }}
       onDragLeave={() => setFileOver(false)}
-      onDrop={(e) => {
+      onDrop={async (e) => {
         setFileOver(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
           e.preventDefault();
           e.stopPropagation();
-          onFileDrop?.(task.id, e.dataTransfer.files);
+          if (onFileDrop) {
+            onFileDrop(task.id, e.dataTransfer.files);
+          } else {
+            for (let i = 0; i < e.dataTransfer.files.length; i++) {
+              const filePath = (e.dataTransfer.files[i] as unknown as { path?: string }).path;
+              if (filePath) {
+                try {
+                  await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, { taskId: task.id, sourcePath: filePath });
+                } catch {
+                  // ignore
+                }
+              }
+            }
+            useAttachmentStore.getState().incrementCount(task.id, e.dataTransfer.files.length);
+          }
         }
       }}
       tabIndex={0}
@@ -298,6 +316,12 @@ export const TaskCard = memo(function TaskCard({
         {task.recurrence_rule && (
           <span className={styles.badgePill} title="Recurring Task">
             🔄
+          </span>
+        )}
+
+        {attachmentCount > 0 && (
+          <span className={styles.badgePill} title={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}>
+            📎 ×{attachmentCount}
           </span>
         )}
       </div>

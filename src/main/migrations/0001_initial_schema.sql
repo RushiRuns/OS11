@@ -163,14 +163,16 @@ CREATE INDEX IF NOT EXISTS idx_reminders_remind_at ON reminders(remind_at) WHERE
 
 -- 12. attachments (Local files linked to tasks)
 CREATE TABLE IF NOT EXISTS attachments (
-  id            TEXT PRIMARY KEY,
-  task_id       TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  filename      TEXT NOT NULL,
-  original_name TEXT NOT NULL,
-  mime_type     TEXT NOT NULL,
-  size_bytes    INTEGER NOT NULL,
-  local_path    TEXT NOT NULL,
-  created_at    TEXT NOT NULL
+  id             TEXT PRIMARY KEY,
+  task_id        TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  filename       TEXT NOT NULL,
+  original_name  TEXT NOT NULL,
+  mime_type      TEXT NOT NULL,
+  size_bytes     INTEGER NOT NULL,
+  local_path     TEXT NOT NULL,
+  is_link        INTEGER NOT NULL DEFAULT 0,
+  thumbnail_path TEXT,
+  created_at     TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
