@@ -26,6 +26,7 @@
 | `useSelectionStore` | `src/renderer/stores/selectionStore.ts` | Multi-select and contiguous range selection store (`selectedIds: Set<string>`) | Renderer global |
 | `useTagStore` | `src/renderer/stores/tagStore.ts` | Normalized tag store (`tagsById: Record<string, Tag>`) with task associations, tree parser, and palette | Renderer global |
 | `useNotificationStore` | `src/renderer/stores/notificationStore.ts` | In-app notification center store tracking history items, unread count, and drawer visibility | Renderer global |
+| `useProjectStore` | `src/renderer/stores/projectStore.ts` | Normalized project management store (`projectsById`, `sectionsById`, `milestonesById`, `dependenciesByTaskId`) | Renderer global |
 
 ---
 
@@ -69,6 +70,12 @@
 | `TagView` | `src/renderer/features/tags/TagView.tsx` | No | No (CSS transitions) | Cross-list tag filter view with colored header dot and active task count |
 | `TagManager` | `src/renderer/features/tags/TagManager.tsx` | No | No (CSS transitions) | Settings management panel for editing, recoloring, merging tags, and configuring auto-tag rules |
 | `NotificationCenter` | `src/renderer/features/notifications/NotificationCenter.tsx` | No | **Site #5 (Slide-in drawer from right)** | Slide-in notification center drawer grouped by date (Today, Yesterday, Earlier) with mark read and task focus |
+| `ViewSwitcher` | `src/renderer/features/projects/ViewSwitcher.tsx` | No | **Site #6 (View crossfade < 200ms)** | Segmented switcher for toggling among List, Board, Timeline, Calendar, Table views |
+| `ProjectListView` | `src/renderer/features/projects/ProjectListView.tsx` | No | No (CSS transitions) | Sectioned task list view with collapsible section blocks, inline add, and project activity feed |
+| `ProjectBoardView` | `src/renderer/features/projects/ProjectBoardView.tsx` | No | **Site #7 (Kanban landing animation)** | Kanban board view with section columns, completion rings, and card drag-and-drop |
+| `ProjectTimelineView` | `src/renderer/features/projects/ProjectTimelineView.tsx` | No | No (CSS transitions) | Gantt timeline view with zoom levels, dependency curves, diamond milestones, and drag reschedule |
+| `ProjectCalendarView` | `src/renderer/features/projects/ProjectCalendarView.tsx` | No | No (CSS transitions) | Monthly calendar grid plotting tasks by due date with drag reschedule |
+| `ProjectTableView` | `src/renderer/features/projects/ProjectTableView.tsx` | No | No (CSS transitions) | Spreadsheet table view with inline editing, resizable columns, column show/hide, and sorting |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
@@ -76,6 +83,8 @@
 3. **Task list reorder:** `layoutId` layout animation during drag-and-drop.
 4. **Quick-add bar appear/dismiss:** Scale (`0.96 → 1`) and opacity (`0 → 1`).
 5. **Notification center drawer:** Slide-in from right (`x: 360 → 0`) in < 180ms.
+6. **Project view crossfade:** Crossfade transition between the 5 project views in < 200ms.
+7. **Project Kanban card landing:** Subtle scale/fade landing animation on dropped Kanban cards.
 *All other UI animations and transitions use pure CSS.*
 
 ---

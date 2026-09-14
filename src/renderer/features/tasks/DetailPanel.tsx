@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import DOMPurify from 'dompurify';
 import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
@@ -28,6 +29,14 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const taskTags = useTagStore((state) => (task ? state.getTagsForTask(task.id) : []));
   const { loadTagsForTask, removeTagFromTask } = useTagStore();
 
+  const allTasks = useTaskStore((state) => state.tasksById);
+  const { dependenciesByTaskId, loadDependenciesForTask, addDependency, removeDependency } =
+    useProjectStore();
+  const [selectedDepId, setSelectedDepId] = useState('');
+  const [depError, setDepError] = useState<string | null>(null);
+
+  const taskDependencies = task ? (dependenciesByTaskId[task.id] ?? []) : [];
+
   // TipTap Rich Text Editor for Notes
   const editor = useEditor({
     extensions: [StarterKit],
@@ -47,11 +56,14 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     if (task) {
       setTitle(task.title);
       loadTagsForTask(task.id);
+      loadDependenciesForTask(task.id);
+      setSelectedDepId('');
+      setDepError(null);
       if (editor && editor.getHTML() !== (task.notes ?? '')) {
         editor.commands.setContent(task.notes ?? '');
       }
     }
-  }, [task, editor, loadTagsForTask]);
+  }, [task, editor, loadTagsForTask, loadDependenciesForTask]);
 
   // Close panel on Escape
   useEffect(() => {
@@ -295,6 +307,111 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
               onChange={(e) => setNewSubtaskTitle(e.target.value)}
               onKeyDown={handleAddSubtask}
             />
+          </div>
+        </div>
+
+        {/* Task Dependencies Section (Phase 10) */}
+        <div className={styles.sectionBlock}>
+          <span className={styles.sectionHeader}>
+            Depends On {taskDependencies.length > 0 && `(${taskDependencies.length})`}
+          </span>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {taskDependencies.map((depId) => {
+              const depTask = allTasks[depId];
+              const isDepDone = depTask?.is_completed === 1;
+
+              return (
+                <div
+                  key={depId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--surface-hover)',
+                    fontSize: '11px',
+                  }}
+                >
+                  <span
+                    style={{
+                      textDecoration: isDepDone ? 'line-through' : 'none',
+                      color: isDepDone ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    }}
+                  >
+                    {depTask ? depTask.title : `Task (${depId})`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeDependency(task.id, depId)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-tertiary)',
+                      fontSize: '12px',
+                    }}
+                    title="Remove dependency"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* Add Dependency Selector */}
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <select
+                style={{
+                  flex: 1,
+                  fontSize: '11px',
+                  padding: '4px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--surface-base)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                }}
+                value={selectedDepId}
+                onChange={(e) => setSelectedDepId(e.target.value)}
+              >
+                <option value="">Select task this depends on...</option>
+                {Object.values(allTasks)
+                  .filter(
+                    (t) =>
+                      t.id !== task.id &&
+                      !taskDependencies.includes(t.id) &&
+                      t.is_trashed === 0
+                  )
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className={styles.metaBtn}
+                disabled={!selectedDepId}
+                onClick={async () => {
+                  setDepError(null);
+                  try {
+                    await addDependency(task.id, selectedDepId);
+                    setSelectedDepId('');
+                  } catch (err: unknown) {
+                    setDepError(err instanceof Error ? err.message : String(err));
+                  }
+                }}
+              >
+                + Add
+              </button>
+            </div>
+
+            {depError && (
+              <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>
+                {depError}
+              </span>
+            )}
           </div>
         </div>
 

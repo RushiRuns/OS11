@@ -5,6 +5,8 @@ export * from './ListRepository.js';
 export * from './ListGroupRepository.js';
 export * from './ProjectRepository.js';
 export * from './SectionRepository.js';
+export * from './MilestoneRepository.js';
+export * from './DependencyRepository.js';
 export * from './TagRepository.js';
 export * from './ReminderRepository.js';
 export * from './AttachmentRepository.js';

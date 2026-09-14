@@ -77,6 +77,9 @@ Structured projects containing sections, milestones, and tasks.
 - `projects:update` — Update project metadata, status, or date bounds.
 - `projects:delete` — Delete project.
 - `projects:reorder` — Reorder projects.
+- `projects:archive` — Archive project status.
+- `projects:get-activity` — Retrieve notification history audit events for project tasks.
+- `projects:export-pdf` — Print project report to PDF via webContents.printToPDF.
 
 ### SECTIONS
 Named sections within a project.
@@ -85,6 +88,20 @@ Named sections within a project.
 - `sections:update` — Rename or modify section.
 - `sections:delete` — Delete section.
 - `sections:reorder` — Update fractional sort order of section.
+
+### MILESTONES
+Key target dates on project timelines.
+- `milestones:get-all` — Retrieve all milestones for a given project ID.
+- `milestones:create` — Create a new milestone with target date.
+- `milestones:update` — Update title, due date, or completion state of milestone.
+- `milestones:delete` — Remove milestone.
+
+### DEPENDENCIES
+Task dependency relationships with cycle prevention.
+- `dependencies:get-all` — Retrieve all dependencies or filter by project ID.
+- `dependencies:get-for-task` — Retrieve prerequisite task IDs for a given task ID.
+- `dependencies:add` — Add dependency link with circular dependency validation.
+- `dependencies:remove` — Disassociate dependency link between two tasks.
 
 ### TAGS
 System-wide hierarchical tags.

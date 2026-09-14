@@ -57,6 +57,36 @@ export function registerProjectHandlers(service = new ProjectService()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(IPC.PROJECTS.ARCHIVE, async (_event, id: string) => {
+    try {
+      service.archive(id);
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.PROJECTS.GET_ACTIVITY, async (_event, projectId: string) => {
+    try {
+      const data = service.getActivity(projectId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.PROJECTS.EXPORT_PDF, async (event) => {
+    try {
+      const pdfBuffer = await event.sender.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+      });
+      return { ok: true, data: Buffer.from(pdfBuffer).toString('base64') };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerProjectHandlers;

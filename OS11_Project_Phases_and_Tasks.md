@@ -1033,14 +1033,14 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Zustand Project Store
 
-- [ ] Create `src/renderer/stores/projectStore.ts`
+- [x] Create `src/renderer/stores/projectStore.ts`
   - `projectsById: Record<string, Project>`, `sectionsById: Record<string, Section>`
   - `milestonesById: Record<string, Milestone>`, `dependenciesByTaskId: Record<string, string[]>`
   - Actions: `loadProjects`, `createProject`, `archiveProject`, `createSection`, `reorderSections`
 
 ### Project List View (Baseline)
 
-- [ ] Create `src/renderer/features/projects/ProjectListView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/projects/ProjectListView.tsx` + `.module.css`
   - Tasks grouped by section; each section has a collapsible header
   - Add task inline within a section: press `Enter` at bottom of section
   - Drag tasks between sections via `@dnd-kit`
@@ -1050,7 +1050,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Project Board View (Kanban)
 
-- [ ] Create `src/renderer/features/projects/ProjectBoardView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/projects/ProjectBoardView.tsx` + `.module.css`
   - Columns map to sections in the project
   - `@dnd-kit` for card drag between columns — Framer Motion for landing animation
   - Horizontal scroll for many columns
@@ -1059,7 +1059,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Project Timeline View (Gantt)
 
-- [ ] Create `src/renderer/features/projects/ProjectTimelineView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/projects/ProjectTimelineView.tsx` + `.module.css`
   - Horizontal bar per task: position = `due_date`, width = `estimated_minutes`
   - Drag to reschedule: drag the bar to a new date → `TASKS.UPDATE` with new `due_date`
   - Milestones: diamond markers (`milestones` table) — click to complete/uncomplete
@@ -1069,7 +1069,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Project Calendar View
 
-- [ ] Create `src/renderer/features/projects/ProjectCalendarView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/projects/ProjectCalendarView.tsx` + `.module.css`
   - Monthly calendar grid
   - Tasks plotted by `due_date` — click a date cell → expand to show tasks
   - Drag task between dates → reschedules due date
@@ -1077,7 +1077,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Project Table View (Spreadsheet)
 
-- [ ] Create `src/renderer/features/projects/ProjectTableView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/projects/ProjectTableView.tsx` + `.module.css`
   - One row per task; columns: Title, Due Date, Priority, Tags, Estimated Time, Status, Assignee (Phase 2)
   - All fields editable inline (click cell → edit in place)
   - Column resize, column show/hide
@@ -1085,25 +1085,25 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### View Switcher
 
-- [ ] Create `src/renderer/features/projects/ViewSwitcher.tsx`
+- [x] Create `src/renderer/features/projects/ViewSwitcher.tsx`
   - List / Board / Timeline / Calendar / Table — one click each
   - Active view persisted per project in `projects.default_view`
   - Framer Motion: crossfade between views, < 200ms
 
 ### Project Features
 
-- [ ] Task dependencies: "Depends on" field in detail panel; arrow overlay in Timeline view; circular dependency check before insert
-- [ ] Milestones: create in Timeline view or from project header; shown as diamond markers
-- [ ] Project overview: progress ring (% tasks completed) + task counts (total / completed / overdue)
-- [ ] Activity feed: audit log of project changes — derived from `notification_history` filtered by project tasks
-- [ ] Project templates: export project structure (sections + placeholder tasks, no dates) as a reusable template
-- [ ] Project export: CSV (task list), Markdown (outline), PDF (`webContents.printToPDF()`)
+- [x] Task dependencies: "Depends on" field in detail panel; arrow overlay in Timeline view; circular dependency check before insert
+- [x] Milestones: create in Timeline view or from project header; shown as diamond markers
+- [x] Project overview: progress ring (% tasks completed) + task counts (total / completed / overdue)
+- [x] Activity feed: audit log of project changes — derived from `notification_history` filtered by project tasks
+- [x] Project templates: export project structure (sections + placeholder tasks, no dates) as a reusable template
+- [x] Project export: CSV (task list), Markdown (outline), PDF (`webContents.printToPDF()`)
 
 ### Governance Update
 
-- [ ] Update UTILITIES.md: `ViewSwitcher`, `ProjectListView`, `ProjectBoardView`, `ProjectTimelineView`, `ProjectCalendarView`, `ProjectTableView`, `projectStore`
-- [ ] CHANGELOG_INTERNAL.md: "Phase 10 complete: Full project management — 5 views, dependencies, milestones, templates, export."
-- [ ] Commit: `"Phase 10 complete: Project management"`
+- [x] Update UTILITIES.md: `ViewSwitcher`, `ProjectListView`, `ProjectBoardView`, `ProjectTimelineView`, `ProjectCalendarView`, `ProjectTableView`, `projectStore`
+- [x] CHANGELOG_INTERNAL.md: "Phase 10 complete: Full project management — 5 views, dependencies, milestones, templates, export."
+- [x] Commit: `"Phase 10 complete: Project management"`
 
 ---
 

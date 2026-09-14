@@ -1,5 +1,5 @@
 import { BaseRepository } from './base-repository.js';
-import type { Project, CreateProjectPayload, UpdateProjectPayload } from '../../shared/types/Project.js';
+import type { Project, CreateProjectPayload, UpdateProjectPayload, NotificationHistoryItem } from '../../shared/types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class ProjectRepository extends BaseRepository {
@@ -88,6 +88,18 @@ export class ProjectRepository extends BaseRepository {
       UPDATE projects SET status = 'archived', updated_at = ? WHERE id = ?
     `);
     stmt.run(now, id);
+  }
+
+  public getActivity(projectId: string): NotificationHistoryItem[] {
+    const stmt = this.db.prepare<[string], NotificationHistoryItem>(`
+      SELECT nh.id, nh.type, nh.task_id, nh.title, nh.body, nh.created_at, nh.read_at
+      FROM notification_history nh
+      JOIN tasks t ON nh.task_id = t.id
+      WHERE t.project_id = ?
+      ORDER BY nh.created_at DESC
+      LIMIT 50
+    `);
+    return stmt.all(projectId);
   }
 
   public delete(id: string): void {

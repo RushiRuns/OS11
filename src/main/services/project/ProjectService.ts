@@ -1,5 +1,5 @@
 import { ProjectRepository } from '../../repositories/ProjectRepository.js';
-import type { Project, CreateProjectPayload, UpdateProjectPayload } from '@shared/types/index.js';
+import type { Project, CreateProjectPayload, UpdateProjectPayload, NotificationHistoryItem } from '@shared/types/index.js';
 
 export class ProjectService {
   private repository: ProjectRepository;
@@ -42,6 +42,10 @@ export class ProjectService {
 
   public archive(id: string): void {
     this.repository.archive(id);
+  }
+
+  public getActivity(id: string): NotificationHistoryItem[] {
+    return this.repository.getActivity(id);
   }
 
   public delete(id: string): void {

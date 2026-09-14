@@ -69,6 +69,9 @@ export const IPC = {
     UPDATE: 'projects:update',
     DELETE: 'projects:delete',
     REORDER: 'projects:reorder',
+    ARCHIVE: 'projects:archive',
+    GET_ACTIVITY: 'projects:get-activity',
+    EXPORT_PDF: 'projects:export-pdf',
   },
   SECTIONS: {
     GET_ALL: 'sections:get-all',
@@ -76,6 +79,18 @@ export const IPC = {
     UPDATE: 'sections:update',
     DELETE: 'sections:delete',
     REORDER: 'sections:reorder',
+  },
+  MILESTONES: {
+    GET_ALL: 'milestones:get-all',
+    CREATE: 'milestones:create',
+    UPDATE: 'milestones:update',
+    DELETE: 'milestones:delete',
+  },
+  DEPENDENCIES: {
+    GET_ALL: 'dependencies:get-all',
+    GET_FOR_TASK: 'dependencies:get-for-task',
+    ADD: 'dependencies:add',
+    REMOVE: 'dependencies:remove',
   },
   TAGS: {
     GET_ALL: 'tags:get-all',

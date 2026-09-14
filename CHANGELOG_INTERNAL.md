@@ -3,6 +3,31 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 10 complete: Full project management — 5 views, dependencies, milestones, templates, export
+- **What was built:**
+  - `projectStore.ts`: Normalized Zustand store (`projectsById: Record<string, Project>`, `sectionsById: Record<string, Section>`, `milestonesById: Record<string, Milestone>`, `dependenciesByTaskId: Record<string, string[]>`) with optimistic updates, project archiving, section reordering, milestone lifecycle management, dependency tracking, and template import.
+  - Five distinct view modes in `src/renderer/features/projects/`:
+    - `ProjectListView.tsx` + `.module.css`: Tasks grouped by section with collapsible headers, inline add with Enter, `@dnd-kit` drag-and-drop between sections, and activity feed audit log.
+    - `ProjectBoardView.tsx` + `.module.css`: Kanban view with section columns, column completion rings, `@dnd-kit` card drag-and-drop, and Framer Motion landing animation (Site #7).
+    - `ProjectTimelineView.tsx` + `.module.css`: Gantt timeline view with Day/Week/Month/Quarter zoom controls, horizontal task bars with drag reschedule, diamond milestone markers, today indicator line, and SVG bezier dependency overlay curves.
+    - `ProjectCalendarView.tsx` + `.module.css`: Monthly calendar grid plotting tasks by due date with date navigation, today highlighting, and drag-and-drop date rescheduling.
+    - `ProjectTableView.tsx` + `.module.css`: Spreadsheet table view with inline editing for title/date/priority/time/section, column resizing, column show/hide picker, and header click sorting.
+  - `ViewSwitcher.tsx` + `.module.css`: Segmented tabs for the 5 views with persistence to `projects.default_view` and Framer Motion crossfade (< 200ms, Site #6).
+  - `ProjectHeader.tsx` + `.module.css`: Project metadata, SVG completion progress ring (% tasks completed), task statistics (total, completed, overdue), and quick actions.
+  - `MilestonesModal.tsx` + `.module.css`: Modal to create, toggle completion, view, and delete project milestones with diamond badges.
+  - `TemplateModal.tsx` + `.module.css`: Project template exporter (extracting structure and placeholder tasks without dates/completion) and template importer.
+  - `projectExport.ts`: Multi-format export utilities for CSV (spreadsheet), Markdown (outline), and PDF (`webContents.printToPDF()`).
+  - `DetailPanel.tsx` Task Dependencies: Added "Depends on" section with cycle detection preventing circular dependencies via `wouldCreateCycle`.
+  - Backend and IPC: `MilestoneRepository`, `DependencyRepository`, `MilestoneService`, `DependencyService` (with cycle checking), and IPC channels for `MILESTONES.*`, `DEPENDENCIES.*`, `PROJECTS.ARCHIVE`, `PROJECTS.GET_ACTIVITY`, `PROJECTS.EXPORT_PDF`.
+  - Unit test suite `tests/domain/project-management.test.ts` (21 test files, 109 tests passing).
+- **What changed architecturally:**
+  - Expanded IPC contract with `MILESTONES` and `DEPENDENCIES` channel groups adhering to layer boundary rules.
+  - Circular dependency prevention enforced in `DependencyService` domain layer using BFS graph traversal.
+  - Registered Sites #6 (view crossfade) and #7 (Kanban landing) in ADR-0009 permitted Framer Motion sites.
+  - Projects isolated into its own lazy chunk (`dist/assets/projects-*.js`) via Vite `manualChunks`.
+
+---
+
 ### [2026-09-13] — Phase 9 complete: Full tag system (nested, merge, auto-tag), notification center
 - **What was built:**
   - `tagStore.ts`: Normalized Zustand store (`tagsById: Record<string, Tag>`) with task-tag association mappings (`taskTagsByTaskId`), optimistic CRUD, lazy loading, and hierarchical tag tree parser (`buildTagTree`) supporting slash-delimited paths (`work/client/Acme`) and parent IDs.

@@ -1,0 +1,180 @@
+.listContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.sectionsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionBlock {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-raised);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sectionHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.collapseArrow {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.collapseArrowCollapsed {
+  transform: rotate(-90deg);
+}
+
+.sectionTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.taskCountBadge {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background-color: var(--surface-hover);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sectionActionBtn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.sectionActionBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.tasksBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.inlineAddRow {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.inlineAddInput {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.inlineAddInput::placeholder {
+  color: var(--text-placeholder);
+}
+
+.addSectionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  margin-top: var(--space-2);
+}
+
+.addSectionBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* Activity Feed */
+.activitySection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.activityHeading {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--surface-raised);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.activityItemTitle {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.activityItemBody {
+  color: var(--text-secondary);
+  margin-left: var(--space-2);
+}
+
+.activityItemDate {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}

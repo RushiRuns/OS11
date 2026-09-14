@@ -4,6 +4,8 @@ import { registerListHandlers } from './list-handlers.js';
 import { registerListGroupHandlers } from './list-group-handlers.js';
 import { registerProjectHandlers } from './project-handlers.js';
 import { registerSectionHandlers } from './section-handlers.js';
+import { registerMilestoneHandlers } from './milestone-handlers.js';
+import { registerDependencyHandlers } from './dependency-handlers.js';
 import { registerTagHandlers } from './tag-handlers.js';
 import { registerReminderHandlers } from './reminder-handlers.js';
 import { registerAttachmentHandlers } from './attachment-handlers.js';
@@ -23,6 +25,8 @@ export function registerIpcHandlers(): void {
   registerListGroupHandlers();
   registerProjectHandlers();
   registerSectionHandlers();
+  registerMilestoneHandlers();
+  registerDependencyHandlers();
   registerTagHandlers();
   registerReminderHandlers();
   registerAttachmentHandlers();
