@@ -22,3 +22,5 @@ export * from './nlp.js';
 export * from './search.js';
 export * from './CalendarEvent.js';
 export * from './analytics.js';
+export * from './TaskHistory.js';
+export * from './portability.js';

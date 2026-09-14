@@ -16,7 +16,7 @@ import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { humanReadableRRule } from '../../../shared/utils/recurrence.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
-import type { Task } from '@shared/types/task.js';
+import type { Task, TaskHistoryRecord } from '@shared/types/index.js';
 import styles from './DetailPanel.module.css';
 
 export interface DetailPanelProps {
@@ -32,6 +32,9 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
   const [isRecurrencePickerOpen, setIsRecurrencePickerOpen] = useState(false);
+  const [history, setHistory] = useState<TaskHistoryRecord[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const subtasks = useSubtasks(task?.id ?? '');
   const taskTags = useTagStore((state) => (task ? state.getTagsForTask(task.id) : []));
@@ -81,6 +84,16 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
       if (editor && editor.getHTML() !== (task.notes ?? '')) {
         editor.commands.setContent(task.notes ?? '');
       }
+
+      // Fetch version history
+      ipc
+        .invoke<TaskHistoryRecord[]>(IPC.TASKS.GET_HISTORY, task.id)
+        .then((records) => {
+          if (records) setHistory(records);
+        })
+        .catch(() => {
+          setHistory([]);
+        });
     }
   }, [task, editor, loadTagsForTask, loadDependenciesForTask]);
 
@@ -550,6 +563,133 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           <div className={styles.editorWrapper}>
             <EditorContent editor={editor} />
           </div>
+        </div>
+
+        {/* Version History Section (Phase 17) */}
+        <div className={styles.sectionBlock}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+          >
+            <span className={styles.sectionHeader} style={{ margin: 0 }}>
+              Version History {history.length > 0 && `(${history.length})`}
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+              {isHistoryOpen ? 'Hide ▲' : 'Show ▼'}
+            </span>
+          </div>
+
+          {isHistoryOpen && (
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {history.length === 0 ? (
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  No edit history recorded yet.
+                </span>
+              ) : (
+                history.map((record) => {
+                  const dateStr = new Date(record.changed_at).toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+                  const diffEntries = Object.entries(record.changed_fields);
+
+                  const formatVal = (v: unknown) =>
+                    v === null || v === undefined
+                      ? 'None'
+                      : typeof v === 'object'
+                        ? JSON.stringify(v)
+                        : String(v);
+
+                  return (
+                    <div
+                      key={record.id}
+                      style={{
+                        padding: '8px 10px',
+                        background: 'var(--surface-raised)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 'var(--weight-semibold)',
+                            color: 'var(--text-primary)',
+                            fontSize: '11px',
+                          }}
+                        >
+                          {dateStr}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isRestoring}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: 'var(--accent)',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontWeight: 'var(--weight-medium)',
+                            padding: 0,
+                          }}
+                          onClick={async () => {
+                            if (!confirm('Restore task to values from this edit?')) return;
+                            setIsRestoring(true);
+                            try {
+                              const updated = await ipc.invoke<Task>(
+                                IPC.TASKS.RESTORE_VERSION,
+                                record.id
+                              );
+                              if (updated) {
+                                updateTask(updated);
+                                const updatedHistory = await ipc.invoke<TaskHistoryRecord[]>(
+                                  IPC.TASKS.GET_HISTORY,
+                                  task.id
+                                );
+                                if (updatedHistory) setHistory(updatedHistory);
+                              }
+                            } catch (e: unknown) {
+                              alert(`Restore error: ${e instanceof Error ? e.message : String(e)}`);
+                            } finally {
+                              setIsRestoring(false);
+                            }
+                          }}
+                        >
+                          Restore
+                        </button>
+                      </div>
+                      {diffEntries.map(([field, diff]) => (
+                        <div
+                          key={field}
+                          style={{ color: 'var(--text-secondary)', fontSize: '11px', lineHeight: 1.4 }}
+                        >
+                          <strong style={{ color: 'var(--text-primary)' }}>{field}</strong>:{' '}
+                          <span style={{ textDecoration: 'line-through' }}>{formatVal(diff.from)}</span>{' '}
+                          &rarr; {formatVal(diff.to)}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       </div>
 

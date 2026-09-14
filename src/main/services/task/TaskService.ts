@@ -1,13 +1,15 @@
+import type Database from 'better-sqlite3';
 import { TaskRepository } from '../../repositories/TaskRepository.js';
 import { IdentityRepository } from '../../repositories/IdentityRepository.js';
 import { ReminderRepository } from '../../repositories/ReminderRepository.js';
 import { SettingsRepository } from '../../repositories/SettingsRepository.js';
 import { TagRepository } from '../../repositories/TagRepository.js';
+import { TaskHistoryRepository } from '../../repositories/TaskHistoryRepository.js';
 import { validateCreate, validateUpdate, ValidationError } from '../../domain/task-validation.js';
 import { calculateNextOccurrence } from '../../../shared/utils/recurrence.js';
 import { wouldCreateCycle } from '../../domain/dependency-check.js';
 import { workerManager } from '../worker-manager.js';
-import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/index.js';
+import type { Task, CreateTaskPayload, UpdateTaskPayload, TaskHistoryRecord } from '@shared/types/index.js';
 import DOMPurify from 'dompurify';
 
 function sanitizeHtml(html: string): string {
@@ -34,19 +36,23 @@ export class TaskService {
   private reminderRepo: ReminderRepository;
   private settingsRepo: SettingsRepository;
   private tagRepo: TagRepository;
+  private historyRepo: TaskHistoryRepository;
 
   constructor(
     taskRepo?: TaskRepository,
     identityRepo?: IdentityRepository,
     reminderRepo?: ReminderRepository,
     settingsRepo?: SettingsRepository,
-    tagRepo?: TagRepository
+    tagRepo?: TagRepository,
+    historyRepo?: TaskHistoryRepository
   ) {
     this.taskRepo = taskRepo ?? new TaskRepository();
     this.identityRepo = identityRepo ?? new IdentityRepository();
     this.reminderRepo = reminderRepo ?? new ReminderRepository();
     this.settingsRepo = settingsRepo ?? new SettingsRepository();
     this.tagRepo = tagRepo ?? new TagRepository();
+    const customDb = (this.taskRepo as unknown as { customDb?: Database.Database }).customDb;
+    this.historyRepo = historyRepo ?? new TaskHistoryRepository(customDb);
   }
 
   public getAll(): Task[] {
@@ -136,6 +142,29 @@ export class TaskService {
 
     if (actualFields.notes) {
       actualFields.notes = sanitizeHtml(actualFields.notes);
+    }
+
+    const existing = this.taskRepo.getById(id);
+    if (existing) {
+      const diffs: Record<string, { from: unknown; to: unknown }> = {};
+      for (const [key, value] of Object.entries(actualFields)) {
+        if (key === 'id' || key === 'updated_at') continue;
+        const oldVal = (existing as unknown as Record<string, unknown>)[key];
+        if (
+          oldVal !== value &&
+          !(oldVal === null && (value === undefined || value === '')) &&
+          !(oldVal === undefined && value === null)
+        ) {
+          diffs[key] = { from: oldVal ?? null, to: value ?? null };
+        }
+      }
+      if (Object.keys(diffs).length > 0) {
+        try {
+          this.historyRepo.record(id, diffs);
+        } catch {
+          // History recording is best-effort
+        }
+      }
     }
 
     const updated = this.taskRepo.update(id, actualFields);
@@ -303,6 +332,28 @@ export class TaskService {
 
   public incrementPomodoro(id: string): Task {
     return this.taskRepo.incrementPomodoro(id);
+  }
+
+  public getHistory(taskId: string, limit = 50): TaskHistoryRecord[] {
+    return this.historyRepo.getByTaskId(taskId, limit);
+  }
+
+  public restoreVersion(historyId: string): Task {
+    const record = this.historyRepo.getById(historyId);
+    if (!record) {
+      throw new ValidationError(`Task history record with id "${historyId}" not found.`);
+    }
+
+    const rollbackFields: Record<string, unknown> = { id: record.task_id };
+    for (const [field, diff] of Object.entries(record.changed_fields)) {
+      rollbackFields[field] = diff.from;
+    }
+
+    return this.update(record.task_id, rollbackFields as unknown as UpdateTaskPayload);
+  }
+
+  public purgeOldHistory(days = 30): number {
+    return this.historyRepo.purgeOlderThan(days);
   }
 }
 

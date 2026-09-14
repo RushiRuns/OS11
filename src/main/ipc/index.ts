@@ -21,6 +21,9 @@ import { registerCalendarHandlers } from './calendar-handlers.js';
 import { registerAnalyticsHandlers } from './analytics-handlers.js';
 import { registerSecurityHandlers } from './security-handlers.js';
 import { registerBackgroundHandlers } from './background-handlers.js';
+import { registerExportHandlers } from './export-handlers.js';
+import { registerImportHandlers } from './import-handlers.js';
+import { registerBackupHandlers } from './backup-handlers.js';
 
 export function registerIpcHandlers(): void {
   registerAppHandlers();
@@ -46,6 +49,9 @@ export function registerIpcHandlers(): void {
   registerAnalyticsHandlers();
   registerSecurityHandlers();
   registerBackgroundHandlers();
+  registerExportHandlers();
+  registerImportHandlers();
+  registerBackupHandlers();
 }
 
 export default registerIpcHandlers;

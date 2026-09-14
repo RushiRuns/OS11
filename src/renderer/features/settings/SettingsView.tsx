@@ -6,6 +6,7 @@ import { KeyboardSettings } from './KeyboardSettings.js';
 import { NotificationSettings } from './NotificationSettings.js';
 import { PrivacySettings } from './PrivacySettings.js';
 import { AdvancedSettings } from './AdvancedSettings.js';
+import { DataManagementSettings } from './DataManagementSettings.js';
 import styles from './SettingsView.module.css';
 
 type SettingsTab =
@@ -15,6 +16,7 @@ type SettingsTab =
   | 'keyboard'
   | 'notifications'
   | 'privacy'
+  | 'data'
   | 'advanced';
 
 interface NavTabItem {
@@ -30,6 +32,7 @@ const TABS: NavTabItem[] = [
   { id: 'keyboard', label: 'Keyboard', icon: '⌨️' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'privacy', label: 'Privacy & Lock', icon: '🔒' },
+  { id: 'data', label: 'Data & Backup', icon: '💾' },
   { id: 'advanced', label: 'Advanced', icon: '⚡' },
 ];
 
@@ -50,6 +53,8 @@ export function SettingsView(): React.ReactElement {
         return <NotificationSettings />;
       case 'privacy':
         return <PrivacySettings />;
+      case 'data':
+        return <DataManagementSettings />;
       case 'advanced':
         return <AdvancedSettings />;
       default:

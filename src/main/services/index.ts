@@ -5,4 +5,7 @@ export * from './tag/TagService.js';
 export * from './reminder/ReminderService.js';
 export * from './notification/NotificationService.js';
 export * from './settings/SettingsService.js';
+export * from './export/ExportService.js';
+export * from './import/ImportService.js';
+export * from './backup/BackupService.js';
 export * from './worker-manager.js';

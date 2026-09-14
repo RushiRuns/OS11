@@ -55,6 +55,8 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:reorder` — Update `sort_order` using fractional indexing.
 - `tasks:batch-update` — Perform atomic update on multiple task IDs.
 - `tasks:increment-pomodoro` — Increment the pomodoro count of a task upon completed focus interval.
+- `tasks:get-history` — Retrieve chronological edit history diffs for a specific task.
+- `tasks:restore-version` — Rollback task attributes to previous state recorded in a history entry.
 
 ### LISTS
 Custom lists and smart list settings.
@@ -242,3 +244,27 @@ Productivity aggregation, chart metrics, and report export engine.
 - `analytics:get-project-stats` — Fetch project velocity, task counts, and burndown trajectory.
 - `analytics:export-pdf` — Render dashboard to PDF via `printToPDF` and prompt save dialog.
 - `analytics:export-csv` — Serialize aggregated metrics into CSV and prompt save dialog.
+
+### EXPORT
+Data portability and export engine for open document standards.
+- `export:json` — Full round-trip snapshot of all tasks, lists, projects, tags, goals, pomodoro sessions, and settings.
+- `export:csv` — Flat RFC 4180 CSV export of tasks with tags, projects, and metadata.
+- `export:markdown` — Markdown export grouped by list in `- [ ]` checklist syntax.
+- `export:attachments` — ZIP archive packaging JSON export and all user attachments.
+- `export:print-pdf` — Generates print-ready HTML view for printing or saving to PDF.
+- `export:select-destination` — Prompts native save file dialog to select destination path.
+
+### IMPORT
+Data migration engine from external task managers and OS11 backups.
+- `import:select-file` — Prompts native open file dialog for JSON or CSV import.
+- `import:execute` — Ingests data wrapped in an atomic SQLite transaction with live progress broadcasting.
+- `import:progress` — Event channel broadcasting ingestion progress updates to renderer.
+
+### BACKUP
+Automated daily snapshots, rotation, and disaster recovery.
+- `backup:create` — Generates ZIP backup containing JSON export and attachments.
+- `backup:list` — Lists all backup archives in the backup folder sorted newest first.
+- `backup:restore` — Restores database records and attachments from a backup ZIP archive.
+- `backup:get-settings` — Fetches auto-backup toggle, folder, and retention limits.
+- `backup:set-settings` — Updates auto-backup preferences and retention count.
+- `backup:select-folder` — Prompts native folder picker dialog for custom backup destination.

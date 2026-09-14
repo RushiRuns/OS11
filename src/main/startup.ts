@@ -6,6 +6,8 @@ import { ModuleRepository } from './repositories/ModuleRepository.js';
 import { IdentityRepository } from './repositories/IdentityRepository.js';
 import { workerManager } from './services/worker-manager.js';
 import { ReminderService } from './services/reminder/ReminderService.js';
+import { TaskHistoryRepository } from './repositories/TaskHistoryRepository.js';
+import { BackupService } from './services/backup/BackupService.js';
 import type { List, Task, LocalIdentity, Module } from '@shared/types/index.js';
 import { app } from 'electron';
 import path from 'node:path';
@@ -52,6 +54,29 @@ export async function runStartupSequence(): Promise<StartupPayload> {
   // Start background reminder processing
   reminderServiceInstance = new ReminderService();
   reminderServiceInstance.processOverdueAtStartup();
+
+  // Background maintenance tasks (purge old history > 30 days & daily auto-backup)
+  setTimeout(async () => {
+    try {
+      const taskHistoryRepo = new TaskHistoryRepository();
+      const purged = taskHistoryRepo.purgeOlderThan(30);
+      if (purged > 0) {
+        console.log(`[OS11 Startup] Purged ${purged} task history records older than 30 days.`);
+      }
+    } catch (e) {
+      console.error('[OS11 Startup] Failed to purge old history:', e);
+    }
+
+    try {
+      const backupService = new BackupService();
+      const backup = await backupService.checkAndRunDailyAutoBackup();
+      if (backup) {
+        console.log(`[OS11 Startup] Created daily auto-backup: ${backup.fileName}`);
+      }
+    } catch (e) {
+      console.error('[OS11 Startup] Failed daily auto-backup:', e);
+    }
+  }, 1500);
 
   cachedStartupData = {
     lists,

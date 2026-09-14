@@ -50,6 +50,8 @@ export const IPC = {
     REORDER: 'tasks:reorder',
     BATCH_UPDATE: 'tasks:batch-update',
     INCREMENT_POMODORO: 'tasks:increment-pomodoro',
+    GET_HISTORY: 'tasks:get-history',
+    RESTORE_VERSION: 'tasks:restore-version',
   },
   LISTS: {
     GET_ALL: 'lists:get-all',
@@ -216,6 +218,27 @@ export const IPC = {
     GET_PROJECT_STATS: 'analytics:get-project-stats',
     EXPORT_PDF: 'analytics:export-pdf',
     EXPORT_CSV: 'analytics:export-csv',
+  },
+  EXPORT: {
+    JSON: 'export:json',
+    CSV: 'export:csv',
+    MARKDOWN: 'export:markdown',
+    ATTACHMENTS: 'export:attachments',
+    PRINT_PDF: 'export:print-pdf',
+    SELECT_DESTINATION: 'export:select-destination',
+  },
+  IMPORT: {
+    EXECUTE: 'import:execute',
+    SELECT_FILE: 'import:select-file',
+    PROGRESS: 'import:progress',
+  },
+  BACKUP: {
+    CREATE: 'backup:create',
+    LIST: 'backup:list',
+    RESTORE: 'backup:restore',
+    GET_SETTINGS: 'backup:get-settings',
+    SET_SETTINGS: 'backup:set-settings',
+    SELECT_FOLDER: 'backup:select-folder',
   },
 } as const;
 

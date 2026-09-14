@@ -17,3 +17,4 @@ export * from './ModuleRepository.js';
 export * from './NotificationRepository.js';
 export * from './IdentityRepository.js';
 export * from './SearchRepository.js';
+export * from './TaskHistoryRepository.js';

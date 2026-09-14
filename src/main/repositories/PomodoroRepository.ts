@@ -86,6 +86,14 @@ export class PomodoroRepository extends BaseRepository {
       total_seconds: totalSeconds,
     };
   }
+
+  public getAll(): PomodoroSession[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM pomodoro_sessions
+      ORDER BY started_at DESC
+    `);
+    return stmt.all() as PomodoroSession[];
+  }
 }
 
 export default PomodoroRepository;

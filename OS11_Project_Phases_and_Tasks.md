@@ -1415,7 +1415,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Export
 
-- [ ] Create `src/main/services/export/ExportService.ts`
+- [x] Create `src/main/services/export/ExportService.ts`
   - **Full JSON export:** all tasks, lists, projects, tags, goals, pomodoro sessions, settings → single `os11-export.json`
   - **CSV export:** tasks as flat table — title, list, tags (comma-separated), due date, priority, completed
   - **Markdown export:** `- [ ] Task title (due: YYYY-MM-DD)` format, grouped by list
@@ -1425,7 +1425,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Import
 
-- [ ] Create `src/main/services/import/ImportService.ts`
+- [x] Create `src/main/services/import/ImportService.ts`
   - Import from OS11 JSON export (full round-trip) — idempotent (duplicate IDs are skipped)
   - Import from **Todoist** JSON export
   - Import from **Microsoft To Do** CSV export
@@ -1436,7 +1436,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Auto-Backup
 
-- [ ] Create `src/main/services/backup/BackupService.ts`
+- [x] Create `src/main/services/backup/BackupService.ts`
   - Daily backup: triggered once per day on app startup if no backup exists for today
   - Backup destination: user-defined local folder (`dialog.showOpenDialog`)
   - Format: ZIP — JSON export + all attachments
@@ -1445,7 +1445,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Version History
 
-- [ ] Create migration `0002_task_history.sql`:
+- [x] Create migration `0004_task_history.sql`:
   ```sql
   CREATE TABLE task_history (
     id              TEXT PRIMARY KEY,
@@ -1455,14 +1455,14 @@ One service per domain. Validation happens in domain functions called from here.
   );
   CREATE INDEX idx_task_history_task_id ON task_history(task_id);
   ```
-- [ ] `TaskService.update()` inserts a `task_history` record after every field change
-- [ ] History older than 30 days purged on startup
-- [ ] UI: "History" section in detail panel — list of changes; "Restore to this version" rolls back fields
+- [x] `TaskService.update()` inserts a `task_history` record after every field change
+- [x] History older than 30 days purged on startup
+- [x] UI: "History" section in detail panel — list of changes; "Restore to this version" rolls back fields
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 17 complete: JSON/CSV/Markdown export, multi-source import, daily auto-backup, version history."
-- [ ] Commit: `"Phase 17 complete: Data portability and backup"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 17 complete: JSON/CSV/Markdown export, multi-source import, daily auto-backup, version history."
+- [x] Commit: `"Phase 17 complete: Data portability and backup"`
 
 ---
 

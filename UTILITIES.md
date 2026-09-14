@@ -145,6 +145,7 @@
 | `isValidRRule` / `humanReadableRRule` | `src/shared/utils/recurrence.ts` | RFC 5545 validation and natural language translation for recurring schedules |
 | `buildCustomRRule` | `src/shared/utils/recurrence.ts` | Builds custom recurrence rules from frequency, interval, and weekday array |
 | `calculateNextOccurrence` | `src/shared/utils/recurrence.ts` | Calculates next occurrence for fixed (due_date) vs after-completion recurrence basis |
+| `createZipArchive` / `extractZipArchive` | `src/main/utils/zip-util.ts` | Zero-dependency PKZip archive packaging and extraction using Node.js `node:zlib` with CRC-32 checksums |
 
 ---
 
@@ -170,6 +171,7 @@
 | `NotificationRepository` | `src/main/repositories/NotificationRepository.ts` | `add`, `getAll`, `markRead`, `markAllRead` |
 | `IdentityRepository` | `src/main/repositories/IdentityRepository.ts` | `get`, `create`, `updateDisplayName` |
 | `SearchRepository` | `src/main/repositories/SearchRepository.ts` | `search(query)` via FTS5 full-text virtual table with snippets |
+| `TaskHistoryRepository` | `src/main/repositories/TaskHistoryRepository.ts` | `record(taskId, diffs)`, `getByTaskId(taskId, limit)`, `getById(id)`, `purgeOlderThan(days)` |
 
 ---
 
@@ -194,6 +196,9 @@
 | `ThemeService` | `src/main/services/settings/ThemeService.ts` | Dynamic theme change broadcasting, nativeTheme OS listener, and runtime accent color updates |
 | `AppLockService` | `src/main/services/security/AppLockService.ts` | PIN security engine using Keytar OS keychain with constant-time equality check (`crypto.timingSafeEqual`) |
 | `BackgroundService` | `src/main/services/settings/BackgroundService.ts` | Custom wallpaper and background image uploads to `userData/backgrounds/` |
+| `ExportService` | `src/main/services/export/ExportService.ts` | Full JSON export, flat RFC 4180 CSV export, Markdown checklist export, Print HTML generator, and attachments ZIP packager |
+| `ImportService` | `src/main/services/import/ImportService.ts` | Multi-source data migration (OS11 JSON, Todoist JSON, MS To Do CSV, Notion CSV) in an atomic SQLite transaction with progress reporting |
+| `BackupService` | `src/main/services/backup/BackupService.ts` | Daily auto-backup scheduler on startup, retention rotation (default 7 days), manual backup creator, and archive restoration |
 
 ---
 

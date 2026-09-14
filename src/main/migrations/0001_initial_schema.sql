@@ -314,6 +314,17 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 
 CREATE INDEX IF NOT EXISTS idx_sync_queue_created_at ON sync_queue(created_at);
 
+-- 26. task_history (Task version changes)
+CREATE TABLE IF NOT EXISTS task_history (
+  id             TEXT PRIMARY KEY,
+  task_id        TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  changed_fields TEXT NOT NULL,                  -- JSON string: { [field]: { from: any, to: any } }
+  changed_at     TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_history_task_id    ON task_history(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_history_changed_at ON task_history(changed_at);
+
 -- ============================================================
 -- 25. FTS5 Full-Text Search Virtual Table & Triggers
 -- ============================================================

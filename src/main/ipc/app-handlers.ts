@@ -5,6 +5,7 @@ import { getMainWindow, setAlwaysOnTop } from '../window/main-window.js';
 import { showOmnibarWindow, hideOmnibarWindow } from '../window/omnibar-window.js';
 import { checkForUpdates } from '../services/updater.js';
 import { SettingsRepository } from '../repositories/SettingsRepository.js';
+import { ThemeService } from '../services/settings/ThemeService.js';
 
 export function registerAppHandlers(): void {
   ipcMain.handle(IPC.APP.GET_STARTUP_DATA, async () => {
@@ -160,7 +161,6 @@ export function registerAppHandlers(): void {
   // Theme & Accent Runtime Engine
   ipcMain.handle(IPC.APP.SET_THEME, async (_event, payload: { theme: 'auto' | 'dark' | 'light' | 'system' }) => {
     try {
-      const { ThemeService } = await import('../services/settings/ThemeService.js');
       const service = new ThemeService();
       const result = service.applyTheme(payload.theme);
       return { ok: true, data: result };
@@ -171,7 +171,6 @@ export function registerAppHandlers(): void {
 
   ipcMain.handle(IPC.APP.SET_ACCENT_COLOR, async (_event, payload: { hex: string }) => {
     try {
-      const { ThemeService } = await import('../services/settings/ThemeService.js');
       const service = new ThemeService();
       const result = service.applyAccentColor(payload.hex);
       return { ok: true, data: result };

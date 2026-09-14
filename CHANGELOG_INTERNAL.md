@@ -3,6 +3,32 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 17 complete: JSON/CSV/Markdown export, multi-source import, daily auto-backup, version history
+- **What was built:**
+  - `src/main/utils/zip-util.ts`: Zero-dependency PKZip archive builder and extractor utilizing Node.js `node:zlib` (`deflateRawSync`, `inflateRawSync`) with IEEE 802.3 CRC-32 checksum calculation, supporting text, binary attachments, and directory packing.
+  - `src/main/migrations/0004_task_history.sql`: Migration creating `task_history` table (`id`, `task_id`, `changed_fields`, `changed_at`) with foreign key cascade on `tasks(id)` and indexes on `task_id` and `changed_at`. Initial schema `0001_initial_schema.sql` also updated for in-memory testing.
+  - `src/main/repositories/TaskHistoryRepository.ts`: CRUD repository providing `record(taskId, diffs)`, `getByTaskId(taskId, limit)`, `getById(id)`, and `purgeOlderThan(days)`.
+  - `src/main/services/task/TaskService.ts`: Added history diff computation on `update()`, automatic diff logging, `getHistory()`, `restoreVersion()` rollback to any previous version state, and startup purge of records > 30 days.
+  - `src/main/services/export/ExportService.ts`: Full export engine with JSON (`os11-export.json` round-trip snapshot of tasks, lists, projects, tags, goals, pomodoro sessions, settings), RFC 4180 CSV table export, Markdown grouped checklist export (`- [ ] Task (due: ...)`), print-ready HTML view generator, and full attachments ZIP packager. Native save dialog integration via `dialog.showSaveDialog`.
+  - `src/main/services/import/ImportService.ts`: Multi-source data migration engine wrapped in an atomic SQLite transaction (`db.transaction()`), supporting:
+    - OS11 JSON export (idempotent; skips existing IDs).
+    - Todoist JSON export (projects, labels, priorities, due dates).
+    - Microsoft To Do CSV export (tasks, importance, completed, notes).
+    - Notion Database CSV export (tags, status, priority, due date).
+    - Progress reporting via `onProgress` and IPC broadcasting (`IPC.IMPORT.PROGRESS`).
+  - `src/main/services/backup/BackupService.ts`: Automated daily backup engine triggered once per day on app startup, saving ZIP archives containing JSON export and attachments to user-configured backup folders, with configurable retention limits (default 7 days) and older archive rotation, plus full ZIP archive restoration.
+  - `src/main/ipc/export-handlers.ts`, `import-handlers.ts`, `backup-handlers.ts`: Full IPC registration for `IPC.EXPORT`, `IPC.IMPORT`, and `IPC.BACKUP` channels; added `IPC.TASKS.GET_HISTORY` and `IPC.TASKS.RESTORE_VERSION`.
+  - `src/renderer/features/settings/DataManagementSettings.tsx` + `DataManagementSettings.module.css`: New settings tab in `SettingsView.tsx` with one-click export buttons, multi-format import with file picker, target list dropdown, live progress bar, auto-backup toggle, custom backup directory picker, retention limits, manual backup action, and interactive backups history table with rollback.
+  - `src/renderer/features/tasks/DetailPanel.tsx`: Added collapsible "Version History" section displaying chronological diffs with formatted values and one-click "Restore" rollback.
+  - Automated test suite `tests/services/data-portability.test.ts` (28 test files, 181 tests passing).
+- **What changed architecturally:**
+  - Added `task_history` table for immutable task change auditing and version rollback.
+  - Added `IPC.EXPORT`, `IPC.IMPORT`, `IPC.BACKUP` channel groups and extended `IPC.TASKS`.
+  - Added zero-dependency ZIP archive creation and extraction without external npm dependencies.
+  - Daily backup and 30-day task history purging hooked non-blocking into application startup.
+
+---
+
 ### [2026-09-14] — Phase 16 complete: Theme engine, accent color, backgrounds, full settings, module toggles, profile presets, app lock
 - **What was built:**
   - `src/main/services/settings/ThemeService.ts`: Theme Engine managing light/dark/auto mode, subscribing to Electron `nativeTheme.on('updated')` to sync with OS theme changes, and broadcasting `IPC.APP.SET_THEME` and `IPC.APP.SET_ACCENT_COLOR`.

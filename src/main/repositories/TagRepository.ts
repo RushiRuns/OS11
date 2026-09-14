@@ -80,6 +80,10 @@ export class TagRepository extends BaseRepository {
     return stmt.all(taskId) as Tag[];
   }
 
+  public getForTask(taskId: string): Tag[] {
+    return this.getTagsForTask(taskId);
+  }
+
   public addTagToTask(taskId: string, tagId: string): void {
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO task_tags (task_id, tag_id)

@@ -223,6 +223,24 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(IPC.TASKS.GET_HISTORY, async (_event, taskId: string) => {
+    try {
+      const data = taskService.getHistory(taskId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.RESTORE_VERSION, async (_event, historyId: string) => {
+    try {
+      const data = taskService.restoreVersion(historyId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerTaskHandlers;
