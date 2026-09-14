@@ -27,6 +27,7 @@
 | `useTagStore` | `src/renderer/stores/tagStore.ts` | Normalized tag store (`tagsById: Record<string, Tag>`) with task associations, tree parser, and palette | Renderer global |
 | `useNotificationStore` | `src/renderer/stores/notificationStore.ts` | In-app notification center store tracking history items, unread count, and drawer visibility | Renderer global |
 | `useProjectStore` | `src/renderer/stores/projectStore.ts` | Normalized project management store (`projectsById`, `sectionsById`, `milestonesById`, `dependenciesByTaskId`) | Renderer global |
+| `usePomodoroStore` | `src/renderer/stores/pomodoroStore.ts` | Zustand store for active focus session countdown, cycle progression, sound alerts, and tray/window sync | Renderer global |
 
 ---
 
@@ -169,6 +170,7 @@
 | `ReminderService` | `src/main/services/reminder/ReminderService.ts` | Node.js `setTimeout` scheduler, `processOverdueAtStartup()`, `rescheduleAfterSleep()`, `snooze`, `snoozePreset` (15m, 1h, tomorrow 8am), `getByTaskId`, `delete`, `cancel` |
 | `NotificationService` | `src/main/services/notification/NotificationService.ts` | Native desktop `Notification` dispatch with actionable buttons (Complete, Snooze 15m, Snooze 1h, Tomorrow 8am), persistent `notification_history` |
 | `CalendarService` | `src/main/services/calendar/CalendarService.ts` | Multi-provider calendar sync (Google OAuth2 local loopback, Apple CalDAV, Outlook Microsoft Graph), two-way sync with tasks (`syncTaskToCalendar`) |
+| `PomodoroService` | `src/main/services/pomodoro/PomodoroService.ts` | Session lifecycle management, task pomodoro count incrementing, OS focus mode notifications, and tray/window synchronization |
 | `SettingsService` | `src/main/services/settings/SettingsService.ts` | Preference key-value store, `applyTheme`, `applyAccentColor`, `applyLoginItem` |
 | `WorkerManager` | `src/main/services/worker-manager.ts` | Manages Node `worker_threads` instance with correlation IDs, timeouts, and seamless main-thread fallback |
 
@@ -195,7 +197,8 @@
 | `MainWindow` | `src/main/window/main-window.ts` | `createMainWindow()`, `showMainWindow()`, `hideMainWindow()`, `toggleMainWindow()`, `setAlwaysOnTop()`, `focusQuickAdd()` — hidden on create, intercepts close event to hide to tray |
 | `SplashWindow` | `src/main/window/splash-window.ts` | `createSplashWindow()`, `destroySplashWindow()`, `resolveSplashHtmlPath()` — zero-JS cold start coverage |
 | `OmnibarWindow` | `src/main/window/omnibar-window.ts` | `createOmnibarWindow()`, `showOmnibarWindow()`, `hideOmnibarWindow()`, `toggleOmnibarWindow()` — centered, blur-to-hide |
-| `TrayManager` | `src/main/tray/tray.ts` | `initTray()`, `updateTrayBadge(count, pomodoro)`, `destroyTray()` — in-memory SVG badge icon and context menu |
+| `TimerWindow` | `src/main/window/timer-window.ts` | `createTimerWindow()`, `showTimerWindow()`, `hideTimerWindow()`, `getTimerWindow()` — floating, always-on-top, draggable mini-timer window |
+| `TrayManager` | `src/main/tray/tray.ts` | `initTray()`, `updateTrayBadge(count, pomodoro)`, `updateTrayPomodoroState()`, `destroyTray()` — in-memory SVG badge, countdown text, and dynamic context menu |
 | `GlobalShortcuts` | `src/main/shortcuts.ts` | `registerGlobalShortcuts()`, `unregisterGlobalShortcuts()` — OS global hotkeys (`Ctrl+Shift+Space`, `Ctrl+Space`, `Ctrl+N`, `Ctrl+Shift+H`, `Ctrl+Shift+T`) |
 | `AutoUpdater` | `src/main/services/updater.ts` | `initAutoUpdater()`, `checkForUpdates()` — background non-blocking updates via `electron-updater` |
 

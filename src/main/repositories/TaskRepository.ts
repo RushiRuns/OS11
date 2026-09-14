@@ -344,6 +344,18 @@ export class TaskRepository extends BaseRepository {
     `);
     stmt.run(sortOrder, now, id);
   }
+
+  public incrementPomodoro(id: string): Task {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE tasks
+      SET pomodoro_count = pomodoro_count + 1,
+          updated_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(now, id);
+    return this.getById(id)!;
+  }
 }
 
 export default TaskRepository;

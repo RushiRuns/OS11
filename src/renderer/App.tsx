@@ -10,10 +10,12 @@ import { DetailPanel } from './features/tasks/DetailPanel.js';
 import { MyDayView } from './features/lists/MyDayView.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
+import { MiniTimerView } from './features/pomodoro/MiniTimerView.js';
 import { CommandPalette } from './features/command-palette/CommandPalette.js';
 import { TagView } from './features/tags/TagView.js';
 import { NotificationCenter } from './features/notifications/NotificationCenter.js';
 import { useTaskStore } from './stores/taskStore.js';
+import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { ipc } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
@@ -44,12 +46,16 @@ function ViewSkeleton(): React.ReactElement {
 
 export function App(): React.ReactElement {
   const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
+  const isMiniTimer = typeof window !== 'undefined' && window.location.hash.includes('mini-timer');
 
   const { activeListId, systemInfo, fetchSystemInfo } = useAppStore();
   const activeList = useActiveList();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const isPomodoroFocus = usePomodoroStore((state) => state.isFocusMode);
+  const togglePomodoroFocus = usePomodoroStore((state) => state.toggleFocusMode);
+  const effectiveFocusMode = isFocusMode || isPomodoroFocus;
 
   useEffect(() => {
     fetchSystemInfo();
@@ -69,6 +75,7 @@ export function App(): React.ReactElement {
       } else if (modKey && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         setIsFocusMode((prev) => !prev);
+        togglePomodoroFocus();
       }
     };
 
@@ -78,10 +85,14 @@ export function App(): React.ReactElement {
       unsubFocus?.();
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [fetchSystemInfo]);
+  }, [fetchSystemInfo, togglePomodoroFocus]);
 
   if (isOmnibar) {
     return <OmnibarView />;
+  }
+
+  if (isMiniTimer) {
+    return <MiniTimerView />;
   }
 
   const handleFocusTask = async (taskId: string) => {
@@ -192,9 +203,9 @@ export function App(): React.ReactElement {
       {/* Three-Column CSS Grid Shell */}
       <div
         className={layoutStyles.shellGrid}
-        data-sidebar={isFocusMode ? 'hidden' : 'visible'}
-        data-detail={isFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
-        data-focus={isFocusMode ? 'active' : 'inactive'}
+        data-sidebar={effectiveFocusMode ? 'hidden' : 'visible'}
+        data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
+        data-focus={effectiveFocusMode ? 'active' : 'inactive'}
       >
         {/* Column 1: Sidebar (Critical path) */}
         <div className={layoutStyles.sidebarCol}>
@@ -219,7 +230,10 @@ export function App(): React.ReactElement {
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        onToggleFocusMode={() => setIsFocusMode((prev) => !prev)}
+        onToggleFocusMode={() => {
+          setIsFocusMode((prev) => !prev);
+          togglePomodoroFocus();
+        }}
       />
 
       {/* Slide-In In-App Notification Center Drawer */}

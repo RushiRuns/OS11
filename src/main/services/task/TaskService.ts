@@ -300,6 +300,10 @@ export class TaskService {
       estimated_minutes: existing.estimated_minutes,
     });
   }
+
+  public incrementPomodoro(id: string): Task {
+    return this.taskRepo.incrementPomodoro(id);
+  }
 }
 
 export default TaskService;

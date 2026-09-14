@@ -47,6 +47,7 @@ export const IPC = {
     REMOVE_FROM_MY_DAY: 'tasks:remove-from-my-day',
     REORDER: 'tasks:reorder',
     BATCH_UPDATE: 'tasks:batch-update',
+    INCREMENT_POMODORO: 'tasks:increment-pomodoro',
   },
   LISTS: {
     GET_ALL: 'lists:get-all',
@@ -131,6 +132,10 @@ export const IPC = {
     STOP: 'pomodoro:stop',
     GET_TODAY_STATS: 'pomodoro:get-today-stats',
     GET_SESSIONS: 'pomodoro:get-sessions',
+    SYNC_STATE: 'pomodoro:sync-state',
+    SHOW_MINI_WINDOW: 'pomodoro:show-mini-window',
+    HIDE_MINI_WINDOW: 'pomodoro:hide-mini-window',
+    ACTION: 'pomodoro:action',
   },
   GOALS: {
     GET_ALL: 'goals:get-all',

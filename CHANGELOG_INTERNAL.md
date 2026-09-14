@@ -3,6 +3,32 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 12 complete: Pomodoro timer, mini window, tray countdown, session tracking, distraction blocker
+- **What was built:**
+  - `src/renderer/stores/pomodoroStore.ts`: Zustand store managing `activeSession`, `sessionCount` in cycle, `settings` (work, break, long break durations, cycle length, sound alerts, autoStart, DND), 1s interval ticker, completion transitions, automatic long break trigger after cycle limit, and bidirectional IPC sync with main process.
+  - `src/renderer/features/pomodoro/PomodoroView.tsx` + `PomodoroView.module.css`:
+    - Circular SVG progress ring with smooth countdown stroke animations.
+    - Linked task display and quick selector; `@dnd-kit` droppable area (`useDroppable`) and HTML5 drag & drop support to link tasks onto the timer.
+    - Timer controls: Start, Pause, Resume, Skip, and Reset.
+    - Cycle dots showing progress toward long break.
+    - Sound alert picker with built-in synthesized audio tones (`chime`, `bell`, `digital`, `calm`, `none`) and preview tester.
+    - Full-screen distraction-free Focus Mode toggle and mini window launcher.
+    - Today's focus statistics cards (completed intervals, total focus time).
+  - `src/renderer/utils/audio.ts`: Offline Web Audio API tone synthesizer generating clean harmonic chimes, bells, and gentle alert tones without requiring external audio assets.
+  - `src/main/window/timer-window.ts`: Frameless, always-on-top, draggable floating mini timer window (`220x76`) showing `🍅`, countdown time, and pause/skip/reset controls, accessible via `#mini-timer` window route.
+  - `src/renderer/features/pomodoro/MiniTimerView.tsx` + `MiniTimerView.module.css`: Dedicated lightweight view rendered in the floating timer window.
+  - `src/main/tray/tray.ts`: Dynamic tray integration updating tooltip and icon with session countdown (`🍅 18:45`), dynamic tray context menu items (Pause, Resume, Skip, Reset), and SVG circular progress ring icon generation.
+  - `src/main/services/pomodoro/PomodoroService.ts`: Central orchestration service managing session persistence in SQLite `pomodoro_sessions`, automatic task `pomodoro_count` incrementation on completion, Do Not Disturb focus notification alerts, and tray/window synchronization.
+  - `src/main/ipc/pomodoro-handlers.ts`: Full IPC handlers for start, stop, today stats, session history, sync state, show/hide mini window, and remote actions forwarding.
+  - Unit and integration test suite `tests/services/pomodoro.test.ts` (23 test files, 130 tests passing).
+- **What changed architecturally:**
+  - Added Pomodoro IPC channels (`POMODORO.START`, `STOP`, `GET_TODAY_STATS`, `GET_SESSIONS`, `SYNC_STATE`, `SHOW_MINI_WINDOW`, `HIDE_MINI_WINDOW`, `ACTION`) and `TASKS.INCREMENT_POMODORO`.
+  - Configured Vite `manualChunks` to bundle Pomodoro view into an independent lazy-loaded chunk (`dist/assets/pomodoro-*.js`).
+  - Added `#mini-timer` routing branch in `App.tsx` matching the architecture of `#omnibar`.
+  - Bi-directional IPC sync between renderer timer store and main process Tray + Mini Window.
+
+---
+
 ### [2026-09-14] — Phase 11 complete: Recurrence fully wired, reminder scheduling with snooze, calendar integration
 - **What was built:**
   - `src/shared/utils/recurrence.ts`: Pure recurrence utilities (`isValidRRule`, `nextOccurrence`, `humanReadableRRule`, `expandOccurrences`, `buildCustomRRule`, `calculateNextOccurrence`) shared cleanly across main and renderer without layer boundary violations.

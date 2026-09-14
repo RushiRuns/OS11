@@ -52,6 +52,7 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:remove-from-my-day` — Remove task from My Day.
 - `tasks:reorder` — Update `sort_order` using fractional indexing.
 - `tasks:batch-update` — Perform atomic update on multiple task IDs.
+- `tasks:increment-pomodoro` — Increment the pomodoro count of a task upon completed focus interval.
 
 ### LISTS
 Custom lists and smart list settings.
@@ -147,6 +148,10 @@ Focus timer sessions and tracking.
 - `pomodoro:stop` — Complete or cancel session.
 - `pomodoro:get-today-stats` — Get total completed focus intervals and duration today.
 - `pomodoro:get-sessions` — Retrieve historical focus log.
+- `pomodoro:sync-state` — Synchronize active session state and countdown with tray and mini window.
+- `pomodoro:show-mini-window` — Display floating mini timer window.
+- `pomodoro:hide-mini-window` — Hide floating mini timer window.
+- `pomodoro:action` — Forward remote timer control actions (pause, resume, skip, reset) from mini window to renderer.
 
 ### GOALS
 High-level objectives linked to projects and tasks.

@@ -80,6 +80,15 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
     }
   });
 
+  ipcMain.handle(IPC.TASKS.INCREMENT_POMODORO, async (_event, id: string) => {
+    try {
+      const data = taskService.incrementPomodoro(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(IPC.TASKS.STAR, async (_event, id: string) => {
     try {
       const data = taskService.star(id);

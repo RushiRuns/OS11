@@ -1,0 +1,75 @@
+.container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-3);
+  background-color: var(--surface-raised, #1e293b);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-xl, 0 10px 25px rgba(0, 0, 0, 0.5));
+  backdrop-filter: blur(12px);
+  color: var(--text-primary, #ffffff);
+  font-family: var(--font-sans);
+  user-select: none;
+  -webkit-app-region: drag;
+  overflow: hidden;
+}
+
+.leftInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tomato {
+  font-size: 20px;
+}
+
+.timeWrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeText {
+  font-size: var(--text-lg, 18px);
+  font-weight: var(--weight-bold, 700);
+  letter-spacing: var(--tracking-tight, -0.02em);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.typeLabel {
+  font-size: 10px;
+  color: var(--text-secondary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.actionBtn {
+  background-color: var(--surface-base, #0f172a);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #ffffff);
+  border-radius: var(--radius-sm, 6px);
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.actionBtn:hover {
+  background-color: var(--surface-hover, rgba(255, 255, 255, 0.08));
+  border-color: var(--accent-primary, #3b82f6);
+}

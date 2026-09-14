@@ -1158,7 +1158,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Zustand Pomodoro Store
 
-- [ ] Create `src/renderer/stores/pomodoroStore.ts`
+- [x] Create `src/renderer/stores/pomodoroStore.ts`
   - `activeSession: { taskId | null, type, durationSeconds, elapsedSeconds, isPaused } | null`
   - `sessionCount: number` — sessions in current cycle (resets after long break)
   - `settings: { workMinutes, breakMinutes, longBreakMinutes, sessionsBeforeLongBreak, autoStart }`
@@ -1166,7 +1166,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Pomodoro View (Lazy Chunk)
 
-- [ ] Create `src/renderer/features/pomodoro/PomodoroView.tsx` + `.module.css`
+- [x] Create `src/renderer/features/pomodoro/PomodoroView.tsx` + `.module.css`
   - Circular progress ring (SVG or CSS `conic-gradient`)
   - Linked task displayed below timer — "Focus: [task title]"
   - `@dnd-kit` drop target: drag a task onto the timer widget to link it
@@ -1177,7 +1177,7 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Mini Floating Timer Window
 
-- [ ] Create `src/main/window/timer-window.ts`
+- [x] Create `src/main/window/timer-window.ts`
   - Small, always-on-top, draggable `BrowserWindow` — shown when a session is active, hidden otherwise
   - Displays: 🍅 + time remaining; Pause / Skip buttons
   - Closes (hides) when session ends or is reset
@@ -1185,22 +1185,22 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Tray Integration During Session
 
-- [ ] Tray icon text updated to show countdown: "🍅 18:45" while session is active
-- [ ] Tray context menu gains: Pause / Resume / Skip during active session
-- [ ] Progress ring animation on tray icon (SVG generated and sent via IPC from main)
+- [x] Tray icon text updated to show countdown: "🍅 18:45" while session is active
+- [x] Tray context menu gains: Pause / Resume / Skip during active session
+- [x] Progress ring animation on tray icon (SVG generated and sent via IPC from main)
 
 ### Session Tracking
 
-- [ ] Each completed Pomodoro creates a `pomodoro_sessions` record (Phase 2 repo already written)
-- [ ] `tasks.pomodoro_count` incremented after each completed session
-- [ ] `tasks.pomodoro_count` shown on task card as 🍅 ×N only when > 0
-- [ ] Long break auto-triggered after `sessionsBeforeLongBreak` sessions (default: 4)
-- [ ] Distraction Blocker (optional): trigger OS "Do Not Disturb" during work sessions via Electron system API
+- [x] Each completed Pomodoro creates a `pomodoro_sessions` record (Phase 2 repo already written)
+- [x] `tasks.pomodoro_count` incremented after each completed session
+- [x] `tasks.pomodoro_count` shown on task card as 🍅 ×N only when > 0
+- [x] Long break auto-triggered after `sessionsBeforeLongBreak` sessions (default: 4)
+- [x] Distraction Blocker (optional): trigger OS "Do Not Disturb" during work sessions via Electron system API
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 12 complete: Pomodoro timer, mini window, tray countdown, session tracking, distraction blocker."
-- [ ] Commit: `"Phase 12 complete: Pomodoro"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 12 complete: Pomodoro timer, mini window, tray countdown, session tracking, distraction blocker."
+- [x] Commit: `"Phase 12 complete: Pomodoro"`
 
 ---
 

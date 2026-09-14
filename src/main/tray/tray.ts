@@ -5,12 +5,30 @@ import { showOmnibarWindow } from '../window/omnibar-window.js';
 let tray: Tray | null = null;
 let currentTaskCount = 0;
 let currentPomodoroTime: string | null = null;
+let currentPomodoroPaused = false;
+let currentPomodoroProgress = 1;
+let pomodoroActionCallback: ((action: 'pause' | 'resume' | 'skip' | 'reset') => void) | null = null;
 
-export function generateTraySvg(count: number, pomodoro?: string | null): string {
+export function setTrayPomodoroActionCallback(
+  callback: (action: 'pause' | 'resume' | 'skip' | 'reset') => void
+): void {
+  pomodoroActionCallback = callback;
+}
+
+export function generateTraySvg(
+  count: number,
+  pomodoro?: string | null,
+  progress?: number
+): string {
   if (pomodoro) {
+    const pct = Math.max(0, Math.min(1, progress ?? 1));
+    const circumference = 81.68;
+    const dash = (pct * circumference).toFixed(1);
+
     return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="14" fill="#ef4444"/>
-      <text x="16" y="21" font-size="12" font-weight="bold" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">${pomodoro}</text>
+      <circle cx="16" cy="16" r="14" fill="#1e293b"/>
+      <circle cx="16" cy="16" r="13" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="${dash} ${circumference}" transform="rotate(-90 16 16)"/>
+      <text x="16" y="20" font-size="10" font-weight="bold" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">${pomodoro}</text>
     </svg>`;
   }
 
@@ -30,8 +48,12 @@ export function generateTraySvg(count: number, pomodoro?: string | null): string
   </svg>`;
 }
 
-export function createTrayIcon(count: number, pomodoro?: string | null): Electron.NativeImage {
-  const svg = generateTraySvg(count, pomodoro);
+export function createTrayIcon(
+  count: number,
+  pomodoro?: string | null,
+  progress?: number
+): Electron.NativeImage {
+  const svg = generateTraySvg(count, pomodoro, progress);
   const base64 = Buffer.from(svg).toString('base64');
   const img = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${base64}`);
   return img.resize({ width: 16, height: 16 });
@@ -42,11 +64,7 @@ export function buildTrayContextMenuTemplate(): Electron.MenuItemConstructorOpti
     ? `Today's Tasks (${currentTaskCount} pending)`
     : "Today's Tasks (All clear ✓)";
 
-  const pomodoroLabel = currentPomodoroTime
-    ? `Pomodoro: 🍅 ${currentPomodoroTime}`
-    : 'Pomodoro: Idle';
-
-  return [
+  const items: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'Open OS11',
       click: () => showMainWindow(),
@@ -60,10 +78,36 @@ export function buildTrayContextMenuTemplate(): Electron.MenuItemConstructorOpti
       label: taskSummary,
       click: () => showMainWindow(),
     },
-    {
-      label: pomodoroLabel,
+  ];
+
+  if (currentPomodoroTime) {
+    items.push(
+      { type: 'separator' },
+      {
+        label: `Pomodoro: 🍅 ${currentPomodoroTime}`,
+        enabled: false,
+      },
+      {
+        label: currentPomodoroPaused ? '▶ Resume Pomodoro' : '⏸ Pause Pomodoro',
+        click: () => pomodoroActionCallback?.(currentPomodoroPaused ? 'resume' : 'pause'),
+      },
+      {
+        label: '⏭ Skip Session',
+        click: () => pomodoroActionCallback?.('skip'),
+      },
+      {
+        label: '⏹ Reset Timer',
+        click: () => pomodoroActionCallback?.('reset'),
+      }
+    );
+  } else {
+    items.push({
+      label: 'Pomodoro: Idle',
       enabled: false,
-    },
+    });
+  }
+
+  items.push(
     { type: 'separator' },
     {
       label: 'Quit OS11',
@@ -72,8 +116,10 @@ export function buildTrayContextMenuTemplate(): Electron.MenuItemConstructorOpti
           app.quit();
         }
       },
-    },
-  ];
+    }
+  );
+
+  return items;
 }
 
 export function buildTrayContextMenu(): Menu | null {
@@ -93,7 +139,7 @@ export function initTray(): Tray | null {
     return null;
   }
 
-  const icon = createTrayIcon(currentTaskCount, currentPomodoroTime);
+  const icon = createTrayIcon(currentTaskCount, currentPomodoroTime, currentPomodoroProgress);
   tray = new Tray(icon);
   tray.setToolTip('OS11 — Productivity OS');
   const menu = buildTrayContextMenu();
@@ -112,12 +158,17 @@ export function initTray(): Tray | null {
   return tray;
 }
 
-export function updateTrayBadge(taskCount: number, pomodoroTime?: string | null): void {
+export function updateTrayBadge(
+  taskCount: number,
+  pomodoroTime?: string | null,
+  progress?: number
+): void {
   currentTaskCount = taskCount;
   currentPomodoroTime = pomodoroTime ?? null;
+  if (progress !== undefined) currentPomodoroProgress = progress;
 
   if (tray) {
-    const icon = createTrayIcon(currentTaskCount, currentPomodoroTime);
+    const icon = createTrayIcon(currentTaskCount, currentPomodoroTime, currentPomodoroProgress);
     tray.setImage(icon);
 
     const tooltip = currentPomodoroTime
@@ -131,6 +182,17 @@ export function updateTrayBadge(taskCount: number, pomodoroTime?: string | null)
   }
 }
 
+export function updateTrayPomodoroState(
+  timeText: string | null,
+  isPaused: boolean,
+  progress?: number
+): void {
+  currentPomodoroTime = timeText;
+  currentPomodoroPaused = isPaused;
+  if (progress !== undefined) currentPomodoroProgress = progress;
+  updateTrayBadge(currentTaskCount, timeText, progress);
+}
+
 export function getTray(): Tray | null {
   return tray;
 }
@@ -141,3 +203,5 @@ export function destroyTray(): void {
     tray = null;
   }
 }
+
+export default initTray;
