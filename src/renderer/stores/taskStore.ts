@@ -18,6 +18,7 @@ export interface TaskStoreState {
   createTask: (payload: CreateTaskPayload) => Promise<Task>;
   updateTask: (payload: UpdateTaskPayload) => Promise<Task>;
   toggleComplete: (id: string) => Promise<Task>;
+  completeTask: (id: string, options?: { skipRecurrence?: boolean }) => Promise<Task>;
   toggleStar: (id: string) => Promise<Task>;
   deleteTask: (id: string) => Promise<boolean>;
   restoreTask: (id: string) => Promise<Task>;
@@ -186,6 +187,42 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       set((state) => ({
         tasksById: { ...state.tasksById, [id]: updated },
       }));
+      if (existing.recurrence_rule && nextCompleted === 1) {
+        get().loadTasks().catch(() => {});
+      }
+      return updated;
+    } catch (err) {
+      get().rollbackUpdate(id, previousSnapshot);
+      throw err;
+    }
+  },
+
+  completeTask: async (id: string, options?: { skipRecurrence?: boolean }): Promise<Task> => {
+    const existing = get().tasksById[id];
+    if (!existing) {
+      throw new Error(`Task ${id} not found`);
+    }
+
+    const previousSnapshot: Task = { ...existing };
+    const optimistic: Task = {
+      ...existing,
+      is_completed: 1,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      tasksById: { ...state.tasksById, [id]: optimistic },
+    }));
+
+    try {
+      const updated = await taskServiceAdapter.complete(id, options);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: updated },
+      }));
+      if (existing.recurrence_rule && !options?.skipRecurrence) {
+        get().loadTasks().catch(() => {});
+      }
       return updated;
     } catch (err) {
       get().rollbackUpdate(id, previousSnapshot);

@@ -58,9 +58,22 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
     }
   });
 
-  ipcMain.handle(IPC.TASKS.TOGGLE_COMPLETE, async (_event, id: string) => {
+  ipcMain.handle(IPC.TASKS.TOGGLE_COMPLETE, async (_event, payload: string | { id: string; skipRecurrence?: boolean }) => {
     try {
-      const data = taskService.toggleComplete(id);
+      const id = typeof payload === 'string' ? payload : payload.id;
+      const skipRecurrence = typeof payload === 'object' ? payload.skipRecurrence : undefined;
+      const data = taskService.toggleComplete(id, { skipRecurrence });
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.COMPLETE, async (_event, payload: string | { id: string; skipRecurrence?: boolean }) => {
+    try {
+      const id = typeof payload === 'string' ? payload : payload.id;
+      const skipRecurrence = typeof payload === 'object' ? payload.skipRecurrence : undefined;
+      const data = taskService.complete(id, { skipRecurrence });
       return { ok: true, data };
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };

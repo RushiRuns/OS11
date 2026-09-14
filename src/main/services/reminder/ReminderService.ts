@@ -99,6 +99,10 @@ export class ReminderService {
     this.processOverdueAtStartup();
   }
 
+  public getByTaskId(taskId: string): Reminder[] {
+    return this.repository.getByTaskId(taskId);
+  }
+
   public snooze(id: string, until: string): void {
     if (this.activeTimers.has(id)) {
       clearTimeout(this.activeTimers.get(id)!);
@@ -112,12 +116,36 @@ export class ReminderService {
     }
   }
 
+  public snoozePreset(id: string, preset: '15m' | '1h' | 'tomorrow_8am'): void {
+    let untilDate: Date;
+    const now = Date.now();
+    if (preset === '15m') {
+      untilDate = new Date(now + 15 * 60 * 1000);
+    } else if (preset === '1h') {
+      untilDate = new Date(now + 60 * 60 * 1000);
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(8, 0, 0, 0);
+      untilDate = d;
+    }
+    this.snooze(id, untilDate.toISOString());
+  }
+
   public cancel(id: string): void {
     if (this.activeTimers.has(id)) {
       clearTimeout(this.activeTimers.get(id)!);
       this.activeTimers.delete(id);
     }
     this.repository.markTriggered(id);
+  }
+
+  public delete(id: string): void {
+    if (this.activeTimers.has(id)) {
+      clearTimeout(this.activeTimers.get(id)!);
+      this.activeTimers.delete(id);
+    }
+    this.repository.delete(id);
   }
 
   public deleteByTaskId(taskId: string): void {

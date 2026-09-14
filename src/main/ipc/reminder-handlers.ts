@@ -39,6 +39,24 @@ export function registerReminderHandlers(service = new ReminderService()): void 
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(IPC.REMINDERS.GET_BY_TASK, async (_event, taskId: string) => {
+    try {
+      const data = service.getByTaskId(taskId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.REMINDERS.DELETE, async (_event, id: string) => {
+    try {
+      service.delete(id);
+      return { ok: true, data: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
 }
 
 export default registerReminderHandlers;

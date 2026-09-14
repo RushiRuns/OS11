@@ -16,4 +16,5 @@ export type ModuleName =
   | 'animated_backgrounds'
   | 'habit_tracker'
   | 'collaboration'
-  | 'companion_sync';
+  | 'companion_sync'
+  | 'calendar_integration';

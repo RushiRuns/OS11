@@ -76,6 +76,9 @@
 | `ProjectTimelineView` | `src/renderer/features/projects/ProjectTimelineView.tsx` | No | No (CSS transitions) | Gantt timeline view with zoom levels, dependency curves, diamond milestones, and drag reschedule |
 | `ProjectCalendarView` | `src/renderer/features/projects/ProjectCalendarView.tsx` | No | No (CSS transitions) | Monthly calendar grid plotting tasks by due date with drag reschedule |
 | `ProjectTableView` | `src/renderer/features/projects/ProjectTableView.tsx` | No | No (CSS transitions) | Spreadsheet table view with inline editing, resizable columns, column show/hide, and sorting |
+| `RecurrencePicker` | `src/renderer/features/tasks/RecurrencePicker.tsx` | No | No (CSS transitions) | Recurrence rule modal with presets, custom interval/frequency builder, natural language preview, after-completion toggle, and skip occurrence |
+| `ReminderEditor` | `src/renderer/features/tasks/ReminderEditor.tsx` | No | No (CSS transitions) | Multi-reminder editor in DetailPanel with presets (at due, 1h before, 1d before), custom picker, and delete controls |
+| `Agenda` | `src/renderer/features/agenda/Agenda.tsx` | No | No (CSS transitions) | Chronological hourly timeline plotting scheduled tasks and external calendar events with two-way sync |
 
 ### Permitted Framer Motion Sites (Strict ADR-0009 Rule)
 1. **Checkbox completion:** `scale(1) → scale(1.2) → scale(1)` in 180ms via `--ease-spring`.
@@ -122,6 +125,9 @@
 | `clamp` | `src/shared/utils/index.ts` | Clamps number between min and max bounds |
 | `isValidIsoDate` | `src/shared/utils/index.ts` | Checks if string is valid ISO timestamp |
 | `between` / `atStart` / `atEnd` | `src/shared/utils/fractional-index.ts` | Fractional index math for arbitrary list reordering |
+| `isValidRRule` / `humanReadableRRule` | `src/shared/utils/recurrence.ts` | RFC 5545 validation and natural language translation for recurring schedules |
+| `buildCustomRRule` | `src/shared/utils/recurrence.ts` | Builds custom recurrence rules from frequency, interval, and weekday array |
+| `calculateNextOccurrence` | `src/shared/utils/recurrence.ts` | Calculates next occurrence for fixed (due_date) vs after-completion recurrence basis |
 
 ---
 
@@ -138,7 +144,7 @@
 | `ProjectRepository` | `src/main/repositories/ProjectRepository.ts` | `getAll`, `getById`, `create`, `update`, `archive`, `delete` |
 | `SectionRepository` | `src/main/repositories/SectionRepository.ts` | `getByProjectId`, `create`, `update`, `delete`, `reorder` |
 | `TagRepository` | `src/main/repositories/TagRepository.ts` | `getAll`, `create`, `update`, `delete`, `getTagsForTask`, `addTagToTask`, `removeTagFromTask`, `getTasksForTag` |
-| `ReminderRepository` | `src/main/repositories/ReminderRepository.ts` | `getUpcomingAndOverdue`, `create`, `markTriggered`, `snooze`, `deleteByTaskId`, `delete` |
+| `ReminderRepository` | `src/main/repositories/ReminderRepository.ts` | `getUpcomingAndOverdue`, `getByTaskId`, `create`, `markTriggered`, `snooze`, `deleteByTaskId`, `delete` |
 | `AttachmentRepository` | `src/main/repositories/AttachmentRepository.ts` | `getByTaskId`, `getById`, `create`, `delete` |
 | `PomodoroRepository` | `src/main/repositories/PomodoroRepository.ts` | `create`, `complete`, `getByTaskId`, `getStats` |
 | `GoalRepository` | `src/main/repositories/GoalRepository.ts` | `getAll`, `create`, `update`, `delete`, `addLink`, `removeLink`, `getLinks` |
@@ -160,8 +166,9 @@
 | `ListService` | `src/main/services/list/ListService.ts` | List CRUD, smart list protection (`is_smart === 1` cannot be deleted), atomic batch reorder |
 | `ProjectService` | `src/main/services/project/ProjectService.ts` | Project CRUD, archive status transition |
 | `TagService` | `src/main/services/tag/TagService.ts` | Tag CRUD, task-tag associations |
-| `ReminderService` | `src/main/services/reminder/ReminderService.ts` | Node.js `setTimeout` scheduler, `processOverdueAtStartup()`, `rescheduleAfterSleep()`, snooze, cancel |
-| `NotificationService` | `src/main/services/notification/NotificationService.ts` | Native desktop `Notification` dispatch with actionable buttons, persistent `notification_history` |
+| `ReminderService` | `src/main/services/reminder/ReminderService.ts` | Node.js `setTimeout` scheduler, `processOverdueAtStartup()`, `rescheduleAfterSleep()`, `snooze`, `snoozePreset` (15m, 1h, tomorrow 8am), `getByTaskId`, `delete`, `cancel` |
+| `NotificationService` | `src/main/services/notification/NotificationService.ts` | Native desktop `Notification` dispatch with actionable buttons (Complete, Snooze 15m, Snooze 1h, Tomorrow 8am), persistent `notification_history` |
+| `CalendarService` | `src/main/services/calendar/CalendarService.ts` | Multi-provider calendar sync (Google OAuth2 local loopback, Apple CalDAV, Outlook Microsoft Graph), two-way sync with tasks (`syncTaskToCalendar`) |
 | `SettingsService` | `src/main/services/settings/SettingsService.ts` | Preference key-value store, `applyTheme`, `applyAccentColor`, `applyLoginItem` |
 | `WorkerManager` | `src/main/services/worker-manager.ts` | Manages Node `worker_threads` instance with correlation IDs, timeouts, and seamless main-thread fallback |
 

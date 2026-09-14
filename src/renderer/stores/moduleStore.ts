@@ -26,6 +26,7 @@ const DEFAULT_MODULES: Record<string, boolean> = {
   habit_tracker: false,
   collaboration: false,
   companion_sync: false,
+  calendar_integration: false,
 };
 
 export const useModuleStore = create<ModuleState>((set, get) => ({

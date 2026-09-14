@@ -1111,46 +1111,46 @@ One service per domain. Validation happens in domain functions called from here.
 
 ### Recurrence Engine (Fully Wired)
 
-- [ ] `RecurrencePicker.tsx` component (referenced in Phase 2 domain, now built):
+- [x] `RecurrencePicker.tsx` component (referenced in Phase 2 domain, now built):
   - Pre-sets: Daily, Weekdays, Weekly, Monthly, Yearly
   - Custom rule builder: "every 2 weeks on Tuesday and Thursday"
   - Natural language preview updates in real time via `humanReadableRRule()`
   - "After completion" toggle: `recurrence_basis = 'after_completion'`
   - Skip occurrence: complete without generating next
-- [ ] `TaskService.complete()` generates next occurrence correctly in all scenarios:
+- [x] `TaskService.complete()` generates next occurrence correctly in all scenarios:
   - Fixed recurrence: next date = rule expansion from `due_date`
   - After-completion recurrence: next date = today + interval
   - Verifies: new task record gets all parent fields except `is_completed`, `completed_at`, `my_day_date`, `pomodoro_count`
 
 ### Reminder System (Fully Wired)
 
-- [ ] `ReminderService.processOverdueAtStartup()` fires on every app open:
+- [x] `ReminderService.processOverdueAtStartup()` fires on every app open:
   - Queries `reminders WHERE is_triggered = 0 AND remind_at <= now`
   - Fires OS notification for each immediately, marks triggered
-- [ ] `powerMonitor.on('resume')` calls `ReminderService.rescheduleAfterSleep()` — re-sets all pending `setTimeout` timers
-- [ ] Multiple reminders per task: "1 day before + 1 hour before + at due time"
-- [ ] Snooze from OS notification (actionable buttons):
+- [x] `powerMonitor.on('resume')` calls `ReminderService.rescheduleAfterSleep()` — re-sets all pending `setTimeout` timers
+- [x] Multiple reminders per task: "1 day before + 1 hour before + at due time"
+- [x] Snooze from OS notification (actionable buttons):
   - "Snooze 15min" → `ReminderService.snooze(id, now + 15min)`
   - "Snooze 1hr" → `ReminderService.snooze(id, now + 1hr)`
   - "Snooze tomorrow morning" → `ReminderService.snooze(id, tomorrow 8am)`
-- [ ] Create `src/renderer/features/tasks/ReminderEditor.tsx` + `.module.css`
+- [x] Create `src/renderer/features/tasks/ReminderEditor.tsx` + `.module.css`
   - In detail panel: add multiple reminders with date + time
   - Shows list of upcoming reminders for the task with delete controls
 
 ### Calendar Integration (Optional Module)
 
-- [ ] Create `src/main/services/calendar/CalendarService.ts` — gated by `moduleStore.isEnabled('calendar_integration')`
+- [x] Create `src/main/services/calendar/CalendarService.ts` — gated by `moduleStore.isEnabled('calendar_integration')`
   - Google Calendar: OAuth2 local-loopback redirect (no cloud SDK — raw HTTP to Google APIs)
   - Apple Calendar: CalDAV protocol
   - Outlook: Microsoft Graph API via local OAuth2
   - Read calendar events and show in Agenda view alongside tasks
   - Optional two-way sync: create calendar event from task's `due_date` + `due_time`
-- [ ] Module disabled by default; enabled in Settings → Modules → Calendar Integration
+- [x] Module disabled by default; enabled in Settings → Modules → Calendar Integration
 
 ### Governance Update
 
-- [ ] CHANGELOG_INTERNAL.md: "Phase 11 complete: Recurrence fully wired, reminder scheduling with snooze, calendar integration."
-- [ ] Commit: `"Phase 11 complete: Scheduling, recurrence, reminders"`
+- [x] CHANGELOG_INTERNAL.md: "Phase 11 complete: Recurrence fully wired, reminder scheduling with snooze, calendar integration."
+- [x] Commit: `"Phase 11 complete: Scheduling, recurrence, reminders"`
 
 ---
 

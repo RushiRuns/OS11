@@ -4,13 +4,21 @@ import type { NotificationHistoryItem } from '@shared/types/index.js';
 
 export class NotificationService {
   private repository: NotificationRepository;
-  private onTaskActionCallback?: (action: 'complete' | 'snooze', taskId: string) => void;
+  private onTaskActionCallback?: (
+    action: 'complete' | 'snooze' | 'snooze_15m' | 'snooze_1h' | 'snooze_tomorrow',
+    taskId: string
+  ) => void;
 
   constructor(repository?: NotificationRepository) {
     this.repository = repository ?? new NotificationRepository();
   }
 
-  public setActionCallback(callback: (action: 'complete' | 'snooze', taskId: string) => void): void {
+  public setActionCallback(
+    callback: (
+      action: 'complete' | 'snooze' | 'snooze_15m' | 'snooze_1h' | 'snooze_tomorrow',
+      taskId: string
+    ) => void
+  ): void {
     this.onTaskActionCallback = callback;
   }
 
@@ -38,6 +46,8 @@ export class NotificationService {
             ? [
                 { type: 'button', text: 'Complete ✓' },
                 { type: 'button', text: 'Snooze 15m' },
+                { type: 'button', text: 'Snooze 1h' },
+                { type: 'button', text: 'Tomorrow 8am' },
               ]
             : undefined,
         });
@@ -47,7 +57,11 @@ export class NotificationService {
             if (index === 0) {
               this.onTaskActionCallback?.('complete', taskId);
             } else if (index === 1) {
-              this.onTaskActionCallback?.('snooze', taskId);
+              this.onTaskActionCallback?.('snooze_15m', taskId);
+            } else if (index === 2) {
+              this.onTaskActionCallback?.('snooze_1h', taskId);
+            } else if (index === 3) {
+              this.onTaskActionCallback?.('snooze_tomorrow', taskId);
             }
           });
         }

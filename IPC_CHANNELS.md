@@ -37,6 +37,7 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:delete` — Move task to trash.
 - `tasks:restore` — Restore task from trash.
 - `tasks:toggle-complete` — Toggle task completion status and update timestamps.
+- `tasks:complete` — Mark task complete with optional { skipRecurrence: boolean } and recurrence generation.
 - `tasks:star` — Mark task as starred/important.
 - `tasks:unstar` — Remove starred mark from task.
 - `tasks:duplicate` — Duplicate task and append " (Copy)".
@@ -118,9 +119,19 @@ System-wide hierarchical tags.
 ### REMINDERS
 Timed alerts and scheduled alarms.
 - `reminders:get-all` — Fetch pending reminders.
+- `reminders:get-by-task` — Fetch all scheduled reminders for a specific task.
 - `reminders:set` — Schedule or update a reminder for a task.
 - `reminders:dismiss` — Dismiss an active reminder alert.
-- `reminders:snooze` — Postpone a reminder by a duration.
+- `reminders:snooze` — Postpone a reminder by a duration or preset.
+- `reminders:delete` — Delete a scheduled reminder and clear active timer.
+
+### CALENDAR
+External calendar integration (Google, Apple, Outlook) with two-way sync.
+- `calendar:get-status` — Retrieve module status, connected providers, and last sync timestamp.
+- `calendar:get-events` — Query external calendar events within a date range.
+- `calendar:connect` — Authenticate and connect provider via local loopback OAuth2 or CalDAV.
+- `calendar:disconnect` — Disconnect provider and clear external event cache.
+- `calendar:sync-task` — Sync scheduled task (`due_date`, `due_time`, `estimated_minutes`) to external calendar.
 
 ### ATTACHMENTS
 Local task attachments stored in the app data directory.

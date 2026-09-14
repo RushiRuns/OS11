@@ -27,6 +27,10 @@ export const taskServiceAdapter = {
     return invoke<Task>(IPC.TASKS.TOGGLE_COMPLETE, id);
   },
 
+  complete(id: string, options?: { skipRecurrence?: boolean }): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.COMPLETE, { id, skipRecurrence: options?.skipRecurrence });
+  },
+
   star(id: string): Promise<Task> {
     return invoke<Task>(IPC.TASKS.STAR, id);
   },

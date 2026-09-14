@@ -20,3 +20,4 @@ export * from './LocalIdentity.js';
 export * from './IpcResult.js';
 export * from './nlp.js';
 export * from './search.js';
+export * from './CalendarEvent.js';

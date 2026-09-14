@@ -4,7 +4,7 @@ import { ReminderRepository } from '../../repositories/ReminderRepository.js';
 import { SettingsRepository } from '../../repositories/SettingsRepository.js';
 import { TagRepository } from '../../repositories/TagRepository.js';
 import { validateCreate, validateUpdate, ValidationError } from '../../domain/task-validation.js';
-import { nextOccurrence } from '../../domain/recurrence.js';
+import { calculateNextOccurrence } from '../../../shared/utils/recurrence.js';
 import { wouldCreateCycle } from '../../domain/dependency-check.js';
 import { workerManager } from '../worker-manager.js';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/index.js';
@@ -148,16 +148,21 @@ export class TaskService {
     return updated;
   }
 
-  public complete(id: string): Task {
+  public complete(id: string, options?: { skipRecurrence?: boolean }): Task {
     const existing = this.getById(id);
     const now = new Date().toISOString();
 
     this.taskRepo.complete(id, now);
     const completedTask = this.getById(id);
 
-    // If task has recurrence rule, create next instance automatically
-    if (existing.recurrence_rule) {
-      const nextDate = nextOccurrence(existing.recurrence_rule, new Date());
+    // If task has recurrence rule and skipRecurrence is not requested, create next instance automatically
+    if (existing.recurrence_rule && !options?.skipRecurrence) {
+      const nextDate = calculateNextOccurrence(
+        existing.recurrence_rule,
+        existing.recurrence_basis,
+        existing.due_date,
+        new Date()
+      );
       if (nextDate) {
         const nextDateStr = nextDate.toISOString().split('T')[0];
         this.create({
@@ -166,6 +171,7 @@ export class TaskService {
           list_id: existing.list_id,
           project_id: existing.project_id,
           section_id: existing.section_id,
+          parent_task_id: existing.parent_task_id,
           due_date: nextDateStr,
           due_time: existing.due_time,
           all_day: existing.all_day === 1,
@@ -186,9 +192,9 @@ export class TaskService {
     return this.getById(id);
   }
 
-  public toggleComplete(id: string): Task {
+  public toggleComplete(id: string, options?: { skipRecurrence?: boolean }): Task {
     const existing = this.getById(id);
-    return existing.is_completed === 1 ? this.uncomplete(id) : this.complete(id);
+    return existing.is_completed === 1 ? this.uncomplete(id) : this.complete(id, options);
   }
 
   public star(id: string): Task {

@@ -32,6 +32,7 @@ export const IPC = {
     DELETE: 'tasks:delete',
     RESTORE: 'tasks:restore',
     TOGGLE_COMPLETE: 'tasks:toggle-complete',
+    COMPLETE: 'tasks:complete',
     STAR: 'tasks:star',
     UNSTAR: 'tasks:unstar',
     DUPLICATE: 'tasks:duplicate',
@@ -105,9 +106,18 @@ export const IPC = {
   },
   REMINDERS: {
     GET_ALL: 'reminders:get-all',
+    GET_BY_TASK: 'reminders:get-by-task',
     SET: 'reminders:set',
     DISMISS: 'reminders:dismiss',
     SNOOZE: 'reminders:snooze',
+    DELETE: 'reminders:delete',
+  },
+  CALENDAR: {
+    GET_EVENTS: 'calendar:get-events',
+    SYNC_TASK: 'calendar:sync-task',
+    GET_STATUS: 'calendar:get-status',
+    CONNECT: 'calendar:connect',
+    DISCONNECT: 'calendar:disconnect',
   },
   ATTACHMENTS: {
     GET_ALL: 'attachments:get-all',

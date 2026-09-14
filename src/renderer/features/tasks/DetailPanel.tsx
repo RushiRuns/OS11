@@ -7,8 +7,11 @@ import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
+import { RecurrencePicker } from './RecurrencePicker.js';
+import { ReminderEditor } from './ReminderEditor.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
+import { humanReadableRRule } from '../../../shared/utils/recurrence.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './DetailPanel.module.css';
 
@@ -18,12 +21,13 @@ export interface DetailPanelProps {
 }
 
 export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactElement {
-  const { updateTask, toggleComplete, createTask } = useTaskStore();
+  const { updateTask, toggleComplete, completeTask, createTask } = useTaskStore();
   const shouldReduceMotion = useReducedMotion();
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
+  const [isRecurrencePickerOpen, setIsRecurrencePickerOpen] = useState(false);
 
   const subtasks = useSubtasks(task?.id ?? '');
   const taskTags = useTagStore((state) => (task ? state.getTagsForTask(task.id) : []));
@@ -147,20 +151,54 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
 
         {/* Quick Metadata Controls */}
         <div className={styles.metaGrid}>
-          {/* Due Date */}
+          {/* Due Date & Time */}
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Due Date</span>
-            <input
-              type="date"
-              className={styles.metaInput}
-              value={task.due_date ?? ''}
-              onChange={(e) =>
-                updateTask({
-                  id: task.id,
-                  due_date: e.target.value || null,
-                })
-              }
-            />
+            <div style={{ display: 'flex', gap: '6px', flex: 1 }}>
+              <input
+                type="date"
+                className={styles.metaInput}
+                value={task.due_date ?? ''}
+                onChange={(e) =>
+                  updateTask({
+                    id: task.id,
+                    due_date: e.target.value || null,
+                  })
+                }
+              />
+              <input
+                type="time"
+                className={styles.metaInput}
+                style={{ maxWidth: '110px' }}
+                value={task.due_time ?? ''}
+                onChange={(e) =>
+                  updateTask({
+                    id: task.id,
+                    due_time: e.target.value || null,
+                  })
+                }
+                title="Due time"
+                aria-label="Due time"
+              />
+            </div>
+          </div>
+
+          {/* Repeat / Recurrence */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Repeat</span>
+            <button
+              type="button"
+              className={`${styles.metaBtn} ${task.recurrence_rule ? styles.metaBtnActive : ''}`}
+              onClick={() => setIsRecurrencePickerOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textAlign: 'left' }}
+            >
+              <span>🔁</span>
+              <span>
+                {task.recurrence_rule
+                  ? humanReadableRRule(task.recurrence_rule)
+                  : 'Does not repeat'}
+              </span>
+            </button>
           </div>
 
           {/* Priority */}
@@ -415,6 +453,16 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           </div>
         </div>
 
+        {/* Reminders Section (Phase 11) */}
+        <div className={styles.sectionBlock}>
+          <span className={styles.sectionHeader}>Reminders</span>
+          <ReminderEditor
+            taskId={task.id}
+            dueDate={task.due_date}
+            dueTime={task.due_time}
+          />
+        </div>
+
         {/* Rich Notes Section (TipTap) */}
         <div className={styles.sectionBlock}>
           <span className={styles.sectionHeader}>Notes</span>
@@ -429,6 +477,25 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           taskId={task.id}
           selectedTagIds={taskTags.map((t) => t.id)}
           onClose={() => setIsTagPickerOpen(false)}
+        />
+      )}
+
+      {isRecurrencePickerOpen && task && (
+        <RecurrencePicker
+          isOpen={isRecurrencePickerOpen}
+          onClose={() => setIsRecurrencePickerOpen(false)}
+          currentRule={task.recurrence_rule}
+          currentBasis={task.recurrence_basis}
+          onSave={(rule, basis) => {
+            updateTask({
+              id: task.id,
+              recurrence_rule: rule,
+              recurrence_basis: basis,
+            });
+          }}
+          onSkipOccurrence={() => {
+            completeTask(task.id, { skipRecurrence: true });
+          }}
         />
       )}
     </motion.aside>

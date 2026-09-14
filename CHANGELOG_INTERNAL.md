@@ -3,6 +3,30 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 11 complete: Recurrence fully wired, reminder scheduling with snooze, calendar integration
+- **What was built:**
+  - `src/shared/utils/recurrence.ts`: Pure recurrence utilities (`isValidRRule`, `nextOccurrence`, `humanReadableRRule`, `expandOccurrences`, `buildCustomRRule`, `calculateNextOccurrence`) shared cleanly across main and renderer without layer boundary violations.
+  - `RecurrencePicker.tsx` + `.module.css`: Full recurrence modal with presets (Daily, Weekdays, Weekly, Monthly, Yearly), custom interval + frequency + weekday selector builder, real-time natural language rule preview via `humanReadableRRule()`, "After completion" toggle (`recurrence_basis = 'after_completion'`), and "Skip occurrence" action.
+  - `TaskService.complete()`: Enhanced to handle both fixed recurrence (expansion from `due_date`) and after-completion recurrence (calculated from completion date + interval). Copies all parent properties while resetting `is_completed = 0`, `completed_at = null`, `my_day_date = null`, and `pomodoro_count = 0`. Supports `skipRecurrence` option to complete without next instance generation.
+  - `ReminderEditor.tsx` + `.module.css`: Multi-reminder management in `DetailPanel.tsx` with quick presets ("At due time", "1 hour before", "1 day before"), custom date and time picker, and list of upcoming scheduled reminders with delete controls.
+  - `ReminderService`: Added `getByTaskId`, `delete`, and `snoozePreset` with actionable snooze presets (15m, 1h, tomorrow 8:00 AM). `NotificationService` updated with actionable OS notification buttons for Complete and Snooze.
+  - `CalendarService.ts` & `calendar-handlers.ts`: Optional calendar integration module gated by `moduleStore.isEnabled('calendar_integration')`:
+    - Google Calendar: OAuth2 local loopback redirect protocol and raw REST API endpoint handler.
+    - Apple Calendar: CalDAV protocol handler.
+    - Outlook: Microsoft Graph API via local OAuth2 redirect.
+    - Two-way sync: `syncTaskToCalendar()` generates external calendar event from task's `due_date` + `due_time` + `estimated_minutes`.
+  - `Agenda.tsx` + `.module.css`: Daily chronological hourly timeline view displaying scheduled tasks alongside external calendar events, day navigation, and "Sync to Calendar" action.
+  - `Settings.tsx`: Added Calendar Integration module card with toggle and provider connection cards (Google, Apple, Outlook).
+  - Unit and integration test suite `tests/services/recurrence-and-reminders.test.ts` (22 test files, 123 tests passing).
+- **What changed architecturally:**
+  - Pure recurrence engine extracted to `src/shared/utils/recurrence.ts` so renderer UI components can calculate previews without IPC hops or main process dependencies.
+  - Re-exported from `src/main/domain/recurrence.ts` for backward compatibility with existing domain tests.
+  - IPC contract expanded with `TASKS.COMPLETE`, `REMINDERS.GET_BY_TASK`, `REMINDERS.DELETE`, and `CALENDAR.*` channel group.
+  - `calendar_integration` added to `ModuleName` union and `moduleStore` defaults (`false` by default).
+  - `Agenda` component split into its own lazy chunk (`dist/assets/agenda-*.js` and CSS).
+
+---
+
 ### [2026-09-14] — Phase 10 complete: Full project management — 5 views, dependencies, milestones, templates, export
 - **What was built:**
   - `projectStore.ts`: Normalized Zustand store (`projectsById: Record<string, Project>`, `sectionsById: Record<string, Section>`, `milestonesById: Record<string, Milestone>`, `dependenciesByTaskId: Record<string, string[]>`) with optimistic updates, project archiving, section reordering, milestone lifecycle management, dependency tracking, and template import.
