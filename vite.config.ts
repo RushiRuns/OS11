@@ -27,7 +27,6 @@ export default defineConfig({
         },
       },
       {
-        entry: 'src/main/window/preload.ts',
         onstart(options) {
           options.reload();
         },
@@ -39,9 +38,12 @@ export default defineConfig({
           },
           build: {
             outDir: 'dist-electron',
+            lib: {
+              entry: 'src/main/window/preload.ts',
+              formats: ['cjs'],
+            },
             rollupOptions: {
               output: {
-                format: 'cjs',
                 entryFileNames: '[name].js',
               },
             },

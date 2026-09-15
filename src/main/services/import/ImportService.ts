@@ -248,10 +248,22 @@ export class ImportService {
     // 6. Settings (if present)
     if (data.settings && typeof data.settings === 'object') {
       const setStmt = this.db.prepare(`
-        INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)
+        INSERT INTO settings (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
       `);
       for (const [k, v] of Object.entries(data.settings)) {
         setStmt.run(k, JSON.stringify(v));
+      }
+    }
+
+    // 7. Task Tags (if present)
+    if (Array.isArray(data.taskTags)) {
+      const taskTagStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)
+      `);
+      for (const tt of data.taskTags) {
+        taskTagStmt.run(tt.task_id, tt.tag_id);
       }
     }
 

@@ -9,6 +9,7 @@ import { validateCreate, validateUpdate, ValidationError } from '../../domain/ta
 import { calculateNextOccurrence } from '../../../shared/utils/recurrence.js';
 import { wouldCreateCycle } from '../../domain/dependency-check.js';
 import { workerManager } from '../worker-manager.js';
+import { AttachmentService } from '../attachment/AttachmentService.js';
 import type { Task, CreateTaskPayload, UpdateTaskPayload, TaskHistoryRecord } from '@shared/types/index.js';
 import DOMPurify from 'dompurify';
 
@@ -37,6 +38,7 @@ export class TaskService {
   private settingsRepo: SettingsRepository;
   private tagRepo: TagRepository;
   private historyRepo: TaskHistoryRepository;
+  private attachmentService?: AttachmentService;
 
   constructor(
     taskRepo?: TaskRepository,
@@ -44,7 +46,8 @@ export class TaskService {
     reminderRepo?: ReminderRepository,
     settingsRepo?: SettingsRepository,
     tagRepo?: TagRepository,
-    historyRepo?: TaskHistoryRepository
+    historyRepo?: TaskHistoryRepository,
+    attachmentService?: AttachmentService
   ) {
     this.taskRepo = taskRepo ?? new TaskRepository();
     this.identityRepo = identityRepo ?? new IdentityRepository();
@@ -53,6 +56,7 @@ export class TaskService {
     this.tagRepo = tagRepo ?? new TagRepository();
     const customDb = (this.taskRepo as unknown as { customDb?: Database.Database }).customDb;
     this.historyRepo = historyRepo ?? new TaskHistoryRepository(customDb);
+    this.attachmentService = attachmentService;
   }
 
   public getAll(): Task[] {
@@ -256,6 +260,13 @@ export class TaskService {
   }
 
   public delete(id: string): boolean {
+    if (this.attachmentService) {
+      try {
+        this.attachmentService.deleteByTaskId(id);
+      } catch {
+        // Best-effort attachment file cleanup
+      }
+    }
     this.taskRepo.permanentDelete(id);
     return true;
   }

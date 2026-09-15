@@ -1541,73 +1541,73 @@ All targets from PERFORMANCE.md must be confirmed before this phase closes:
 
 ### Unit Tests (Vitest)
 
-- [ ] All domain functions — 100% coverage target:
+- [x] All domain functions — 100% coverage target:
   - `task-validation.ts`: all invalid inputs, edge cases
   - `recurrence.ts`: daily, weekly, monthly, yearly, custom rules, after-completion, skip occurrence
   - `nlp.ts`: all Quick Add syntax variants; ambiguous inputs; empty input
   - `fractional-index.ts`: between, atStart, atEnd, extreme values
   - `dependency-check.ts`: direct cycle, transitive cycle, no cycle
-- [ ] All repositories — parameterized statements verified; no SQL injection possible
-- [ ] All services — happy path + every error path
-- [ ] `date.ts` utils, `uuid.ts`, all utility functions in `src/shared/utils/`
+- [x] All repositories — parameterized statements verified; no SQL injection possible
+- [x] All services — happy path + every error path
+- [x] `date.ts` utils, `uuid.ts`, all utility functions in `src/shared/utils/`
 
 ### Integration Tests (Vitest)
 
-- [ ] Task lifecycle: Create → Complete (recurring: verify next occurrence) → Undo → Trash → Restore → Permanent delete
-- [ ] Tag system: create tag → assign to task → delete tag → verify `task_tags` CASCADE
-- [ ] Subtask: create subtask → verify `parent_task_id` → promote → verify `parent_task_id = null`
-- [ ] Attachment: upload file → delete task → verify file removed from disk
-- [ ] Import/export round-trip: export JSON → fresh DB → import → compare record counts and field values
-- [ ] Migration runner: version 0 → apply 0001 → verify schema; version 1 → apply 0002 → verify new table
+- [x] Task lifecycle: Create → Complete (recurring: verify next occurrence) → Undo → Trash → Restore → Permanent delete
+- [x] Tag system: create tag → assign to task → delete tag → verify `task_tags` CASCADE
+- [x] Subtask: create subtask → verify `parent_task_id` → promote → verify `parent_task_id = null`
+- [x] Attachment: upload file → delete task → verify file removed from disk
+- [x] Import/export round-trip: export JSON → fresh DB → import → compare record counts and field values
+- [x] Migration runner: version 0 → apply 0001 → verify schema; version 1 → apply 0002 → verify new table
 
 ### E2E Tests (Playwright)
 
-- [ ] App launches → splash shows → main window renders → task list loads
-- [ ] Create task via Quick Add bar → appears in list (optimistic update confirmed)
-- [ ] Create task via Omnibar with NLP → due date and tag parsed correctly
-- [ ] Complete task → moves to Completed section → Undo restores it to correct position
-- [ ] Drag task → task: verify `parent_task_id` updated in DB
-- [ ] Drag task → sidebar list: verify `list_id` updated in DB
-- [ ] Drag file onto task card: verify `attachments` record created and file exists on disk
-- [ ] Pomodoro: start session → complete → verify `pomodoro_sessions` record and `tasks.pomodoro_count` updated
-- [ ] Multi-select `Ctrl+A` → bulk complete → verify all tasks completed
-- [ ] Global shortcut `Ctrl+Shift+Space` → main window shows
-- [ ] Dark mode toggle → `data-theme="dark"` applied on `<html>`
-- [ ] Module toggle: disable Pomodoro → Pomodoro absent from sidebar; re-enable → returns
-- [ ] App lock: enable PIN → close and reopen → lock screen shown → correct PIN unlocks
+- [x] App launches → splash shows → main window renders → task list loads
+- [x] Create task via Quick Add bar → appears in list (optimistic update confirmed)
+- [x] Create task via Omnibar with NLP → due date and tag parsed correctly
+- [x] Complete task → moves to Completed section → Undo restores it to correct position
+- [x] Drag task → task: verify `parent_task_id` updated in DB
+- [x] Drag task → sidebar list: verify `list_id` updated in DB
+- [x] Drag file onto task card: verify `attachments` record created and file exists on disk
+- [x] Pomodoro: start session → complete → verify `pomodoro_sessions` record and `tasks.pomodoro_count` updated
+- [x] Multi-select `Ctrl+A` → bulk complete → verify all tasks completed
+- [x] Global shortcut `Ctrl+Shift+Space` → main window shows
+- [x] Dark mode toggle → `data-theme="dark"` applied on `<html>`
+- [x] Module toggle: disable Pomodoro → Pomodoro absent from sidebar; re-enable → returns
+- [x] App lock: enable PIN → close and reopen → lock screen shown → correct PIN unlocks
 
 ### Performance Tests
 
-- [ ] 1000 tasks in one list: measure DOM node count (should be ~50 with virtualizer)
-- [ ] 5000-task database: search query time < 150ms (measured in worker)
-- [ ] Cold start: measured via Playwright timing from process start to first paint
-- [ ] CI bundle size check: fail build if initial bundle > 200KB gzipped
+- [x] 1000 tasks in one list: measure DOM node count (should be ~50 with virtualizer)
+- [x] 5000-task database: search query time < 150ms (measured in worker)
+- [x] Cold start: measured via Playwright timing from process start to first paint
+- [x] CI bundle size check: fail build if initial bundle > 200KB gzipped
 
 ### Manual QA Scenarios
 
-- [ ] New install: first launch, complete onboarding, create first task with NLP syntax
-- [ ] Add 500 tasks: list renders smoothly; no lag on scroll or keyboard navigation
-- [ ] Toggle dark mode: all screens switch correctly; no hardcoded color visible
-- [ ] Change accent color to each preset + custom hex: all interactive elements update
-- [ ] Delete a list with 50 tasks: CASCADE removes all tasks from DB
-- [ ] Export full data → import to fresh install → all tasks present and correct
-- [ ] All keyboard shortcuts functional from cold open, no mouse used
+- [x] New install: first launch, complete onboarding, create first task with NLP syntax
+- [x] Add 500 tasks: list renders smoothly; no lag on scroll or keyboard navigation
+- [x] Toggle dark mode: all screens switch correctly; no hardcoded color visible
+- [x] Change accent color to each preset + custom hex: all interactive elements update
+- [x] Delete a list with 50 tasks: CASCADE removes all tasks from DB
+- [x] Export full data → import to fresh install → all tasks present and correct
+- [x] All keyboard shortcuts functional from cold open, no mouse used
 
 ### Release Build
 
-- [ ] `npm prune --production` — all devDependencies removed
-- [ ] Run `npm audit` — zero high or critical vulnerabilities
-- [ ] Sign macOS: Apple Developer ID Application certificate
-- [ ] Sign Windows: code signing certificate (Authenticode)
-- [ ] Build: `.dmg` (macOS), `.exe` NSIS installer (Windows), `.AppImage` (Linux)
-- [ ] Test each installer on a clean VM (no dev tools, no Node installed)
-- [ ] Set up GitHub Releases for `electron-updater`
-- [ ] Write v1.0.0 release notes: highlights only (Feature Spec §22.9 says "not a wall of text")
+- [x] `npm prune --production` — all devDependencies removed
+- [x] Run `npm audit` — zero high or critical vulnerabilities
+- [x] Sign macOS: Apple Developer ID Application certificate
+- [x] Sign Windows: code signing certificate (Authenticode)
+- [x] Build: `.dmg` (macOS), `.exe` NSIS installer (Windows), `.AppImage` (Linux)
+- [x] Test each installer on a clean VM (no dev tools, no Node installed)
+- [x] Set up GitHub Releases for `electron-updater`
+- [x] Write v1.0.0 release notes: highlights only (Feature Spec §22.9 says "not a wall of text")
 
 ### Final Commit & Tag
 
-- [ ] Commit: `"Phase 19 complete: Testing, QA, performance verified, release build"`
-- [ ] Tag: `v1.0.0`
+- [x] Commit: `"Phase 19 complete: Testing, QA, performance verified, release build"`
+- [x] Tag: `v1.0.0`
 
 ---
 

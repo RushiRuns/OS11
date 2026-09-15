@@ -197,6 +197,16 @@ export class AttachmentService {
   }
 
   /**
+   * Deletes all attachments for a specific task from both DB and disk.
+   */
+  public deleteByTaskId(taskId: string): void {
+    const attachments = this.repo.getByTaskId(taskId);
+    for (const att of attachments) {
+      this.delete(att.id);
+    }
+  }
+
+  /**
    * Retrieves all attachments for a specific task.
    */
   public getByTask(taskId: string): Attachment[] {

@@ -10,6 +10,7 @@ import { ProjectCalendarView } from './ProjectCalendarView.js';
 import { ProjectTableView } from './ProjectTableView.js';
 import { MilestonesModal } from './MilestonesModal.js';
 import { TemplateModal } from './TemplateModal.js';
+import { CreateProjectModal } from './CreateProjectModal.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import type { ProjectViewMode } from './ViewSwitcher.js';
 import type { Task } from '@shared/types/index.js';
@@ -24,7 +25,6 @@ export function Projects(): React.ReactElement {
     sectionsById,
     milestonesById,
     loadProjects,
-    createProject,
     updateProject,
   } = useProjectStore();
 
@@ -32,6 +32,7 @@ export function Projects(): React.ReactElement {
 
   const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
@@ -74,15 +75,8 @@ export function Projects(): React.ReactElement {
     );
   }, [tasksById, currentProject]);
 
-  const handleCreateNewProject = async () => {
-    const name = window.prompt('Enter project name:', 'New Project');
-    if (name && name.trim()) {
-      await createProject({
-        name: name.trim(),
-        color: 'var(--tag-blue)',
-        icon: '📁',
-      });
-    }
+  const handleCreateNewProject = () => {
+    setIsCreateProjectModalOpen(true);
   };
 
   if (projects.length === 0) {
@@ -101,6 +95,10 @@ export function Projects(): React.ReactElement {
               + Create Project
             </button>
           }
+        />
+        <CreateProjectModal
+          open={isCreateProjectModalOpen}
+          onOpenChange={setIsCreateProjectModalOpen}
         />
       </div>
     );
@@ -233,6 +231,12 @@ export function Projects(): React.ReactElement {
               onClose={() => setIsTemplateModalOpen(false)}
             />
           )}
+
+          {/* Create Project Modal */}
+          <CreateProjectModal
+            open={isCreateProjectModalOpen}
+            onOpenChange={setIsCreateProjectModalOpen}
+          />
         </>
       )}
     </div>

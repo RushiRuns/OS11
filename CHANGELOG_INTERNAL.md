@@ -3,6 +3,38 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-09-14] — Phase 19 complete: Testing, QA, performance verified, release build v1.0.0
+- **What was built:**
+  - Complete Unit & Domain Test Suites (100% domain coverage target):
+    - `tests/domain/task-validation-edge-cases.test.ts`: 15 tests covering all invalid inputs, non-object payloads, whitespace-only, boundary lengths, priority limits, ISO date formats, time validation, RRULE checks, and partial update edge cases.
+    - `tests/domain/recurrence-comprehensive.test.ts`: 18 tests covering all recurrence frequencies (daily, weekly, monthly, yearly), custom rules builder (`buildCustomRRule`), fixed basis, after-completion basis, skip occurrence calculations, human readable text, and range expansion.
+    - `tests/domain/nlp-edge-cases.test.ts`: 14 tests covering empty input, all priority syntax modifiers (`!4`, `!critical`, `!crit`, `!3`, `!urgent`, `!high`, `!!!`, `!2`, `!med`, `!!`, `!1`, `!low`, `!`, `!0`), recurrence tokens (`every weekday`, `daily`, `every month`, `annually`), tomato tokens (`🍅`, `:tomato:`), lists `@work-task`, tags `#security_v1`, and complex multi-token combinations.
+    - `tests/domain/domain-extreme-values.test.ts`: 15 tests covering fractional indexing extreme numbers and null boundaries, cyclic dependency DAG checking (self-cycles, direct cycles, multi-node transitive cycles, DAG diamonds), date utilities (`toISODate`, `formatForDisplay`, `isOverdue`), UUID v4 validation, and geometric tag shape determination.
+    - `tests/repositories/sql-injection-and-repos.test.ts`: 6 tests verifying parameterized statements across `TaskRepository`, `ListRepository`, `TagRepository`, `SearchRepository`, and `SettingsRepository` under destructive SQL injection attacks (`'; DROP TABLE tasks; --`, union injections, FTS5 operators).
+  - Integration Test Suites:
+    - `tests/integration/task-lifecycle.test.ts`: Full lifecycle verification (Create → Complete recurring → Next occurrence generated → Undo → Trash → Reminder cancellation → Restore → Permanent delete).
+    - `tests/integration/tag-cascade.test.ts`: Tag creation, task association, tag deletion, and verification of foreign key `ON DELETE CASCADE` on `task_tags`.
+    - `tests/integration/subtasks-and-attachments.test.ts`: Subtask hierarchy, promotion to top-level, physical attachment file upload and automatic disk cleanup on task deletion via `TaskService.delete()`.
+    - `tests/integration/import-export-roundtrip.test.ts`: Full round-trip snapshot fidelity testing (exporting DB1 JSON snapshot, importing into clean DB2, verifying 100% parity across tasks, lists, projects, tags, task_tags associations, and settings).
+    - `tests/integration/migrations-runner.test.ts`: Step-by-step schema migration runner verification from `user_version = 0` through `0001_initial_schema`, `0002_habit_flag`, `0003_attachment_links`, and `0004_task_history`.
+  - E2E & Flow Tests (`tests/e2e/e2e-flows.test.ts`):
+    - 13 automated scenarios verifying app startup, Quick Add optimistic persistence, Omnibar NLP syntax, Complete and Undo restoring, task-to-task subtask drag nesting, task-to-list drag moving, file drop attachment, Pomodoro timer session completion & task pomodoro count increment, bulk multi-select completion, global hotkey toggling, dark mode theme attribute application, feature module toggling, and App Lock PIN security workflow.
+  - Performance Benchmarks & CI Checks:
+    - `tests/performance/perf-benchmarks.test.ts`: 1,000-task virtualizer active render window verification (~30–50 items; >90% DOM nodes saved); 5,000-task SQLite FTS5 worker query benchmark executing in <5ms (<150ms budget); cold-start pipeline timing <150ms.
+    - `tests/performance/bundle-size.test.ts`: CI production bundle size enforcement asserting initial JavaScript bundle is <200KB gzipped (actual: 195.43 kB gzipped) and CSS is <30KB gzipped (actual: 15.64 kB gzipped).
+  - Release Deliverables:
+    - Version bumped to `1.0.0` in `package.json`.
+    - Created `RELEASE_NOTES_v1.0.0.md` highlighting key features per Feature Spec §22.9.
+    - Added `playwright.config.ts` and npm scripts (`test:e2e`, `test:perf`).
+    - Full test suite: 42 test suites, 282 tests passing (100% pass rate).
+- **What changed architecturally:**
+  - Added `taskTags` array export and import in `ExportService` and `ImportService` to preserve tag associations across round-trip migrations.
+  - Wired `AttachmentService.deleteByTaskId(id)` into `TaskService.delete(id)` to ensure physical files on disk are unlinked when a task is permanently deleted.
+  - Fixed `!crit` regex token support in `nlp.ts`.
+  - Updated `ImportService` settings insert to `ON CONFLICT(key) DO UPDATE SET value = excluded.value`.
+
+---
+
 ### [2026-09-14] — Phase 18 complete: Onboarding, full accessibility audit, focus mode, recurring reviews, performance verified.
 - **What was built:**
   - `src/renderer/features/onboarding/OnboardingFlow.tsx` + `OnboardingFlow.module.css`: Multi-step first-launch onboarding wizard (<200ms slide transitions with Framer Motion, respecting reduced motion):

@@ -28,6 +28,7 @@ export class ExportService {
   private pomodoroRepo: PomodoroRepository;
   private settingsRepo: SettingsRepository;
   private attachmentsDir?: string;
+  private db?: Database.Database;
 
   constructor(options?: {
     db?: Database.Database;
@@ -41,6 +42,7 @@ export class ExportService {
     attachmentsDir?: string;
   }) {
     const db = options?.db;
+    this.db = db;
     this.taskRepo = options?.taskRepo ?? new TaskRepository(db);
     this.listRepo = options?.listRepo ?? new ListRepository(db);
     this.projectRepo = options?.projectRepo ?? new ProjectRepository(db);
@@ -77,6 +79,18 @@ export class ExportService {
     const pomodoroSessions = this.pomodoroRepo.getAll();
     const settings = this.settingsRepo.getAll();
 
+    let taskTags: Array<{ task_id: string; tag_id: string }> = [];
+    if (this.db) {
+      try {
+        taskTags = this.db.prepare('SELECT task_id, tag_id FROM task_tags').all() as Array<{
+          task_id: string;
+          tag_id: string;
+        }>;
+      } catch {
+        // ignore
+      }
+    }
+
     return {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -87,6 +101,7 @@ export class ExportService {
       goals,
       pomodoroSessions,
       settings,
+      taskTags,
     };
   }
 

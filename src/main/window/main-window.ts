@@ -24,6 +24,7 @@ export function createMainWindow(): BrowserWindow {
     height: APP_DEFAULTS.WINDOW_HEIGHT,
     minWidth: APP_DEFAULTS.MIN_WIDTH,
     minHeight: APP_DEFAULTS.MIN_HEIGHT,
+    center: true,
     show: false, // Never show on create (PERFORMANCE.md §1)
     frame: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : undefined,
@@ -74,6 +75,9 @@ export function showMainWindow(): void {
     }
     mainWindow.show();
     mainWindow.focus();
+    if (typeof mainWindow.moveTop === 'function') {
+      mainWindow.moveTop();
+    }
   }
 }
 

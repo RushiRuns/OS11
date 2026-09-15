@@ -31,7 +31,7 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
 
   // 2. Priority detection (!0-4, !low, !med, !high, !urgent, !crit, !critical, or !, !!, !!!)
   let priority = 0;
-  const priorityRegex = /(?:^|\s)(!{1,3}|!(?:critical|urgent|high|med|medium|low|none|[0-4]))(?=\s|$)/i;
+  const priorityRegex = /(?:^|\s)(!{1,3}|!(?:critical|crit|urgent|high|med|medium|low|none|[0-4]))(?=\s|$)/i;
   const priorityMatch = workingText.match(priorityRegex);
   if (priorityMatch) {
     const val = priorityMatch[1].toLowerCase();

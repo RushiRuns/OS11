@@ -126,6 +126,8 @@
 | `nextOccurrence` | `src/main/domain/recurrence.ts` | Calculates next Date after reference date using `rrule` |
 | `humanReadableRRule` | `src/main/domain/recurrence.ts` | Converts RRULE string to human-friendly text (e.g., "every day") |
 | `expandOccurrences` | `src/main/domain/recurrence.ts` | Expands all occurrences between two dates for calendar/agenda |
+| `buildCustomRRule` | `src/main/domain/recurrence.ts` | Builds custom RRULE string from frequency, interval, and days of week |
+| `calculateNextOccurrence` | `src/main/domain/recurrence.ts` | Calculates next occurrence for fixed vs after-completion basis |
 | `parseQuickAdd` | `src/main/domain/nlp.ts` | Chrono + regex NLP parser: extracts clean title, `#tag`, `@list`, `!priority`, `🍅`, and natural date/time |
 | `between` / `atStart` / `atEnd` | `src/main/domain/fractional-index.ts` | Fractional indexing math for reordering items |
 | `wouldCreateCycle` | `src/main/domain/dependency-check.ts` | Graph cycle detection preventing cyclic task dependencies |

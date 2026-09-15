@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import path from 'node:path';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
 import { SearchRepository, type SearchResult } from '../repositories/SearchRepository.js';
 
@@ -44,7 +45,14 @@ export class WorkerManager {
 
     try {
       // Look for compiled worker file or ts file depending on runtime
-      const distWorkerPath = path.resolve(__dirname, 'worker-main.js');
+      let currentDir = '';
+      try {
+        currentDir = path.dirname(fileURLToPath(import.meta.url));
+      } catch {
+        currentDir = process.cwd();
+      }
+
+      const distWorkerPath = path.resolve(currentDir, 'worker-main.js');
       const rootDistWorkerPath = path.resolve(process.cwd(), 'dist-electron', 'worker-main.js');
 
       let targetPath: string | null = null;

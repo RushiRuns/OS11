@@ -35,6 +35,16 @@ export function ProjectListView({
   const [inlineTitles, setInlineTitles] = useState<Record<string, string>>({});
   const [isAddingSection, setIsAddingSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState<string>('');
+
+  const handleSaveSectionName = async (sectionId: string) => {
+    const trimmed = editingSectionName.trim();
+    if (trimmed) {
+      await updateSection(sectionId, { name: trimmed });
+    }
+    setEditingSectionId(null);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -148,7 +158,27 @@ export function ProjectListView({
                     >
                       ▼
                     </span>
-                    <span className={styles.sectionTitle}>{sec.name}</span>
+                    {editingSectionId === sec.id ? (
+                      <input
+                        type="text"
+                        className={styles.inlineRenameInput}
+                        value={editingSectionName}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditingSectionName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveSectionName(sec.id);
+                          } else if (e.key === 'Escape') {
+                            setEditingSectionId(null);
+                          }
+                        }}
+                        onBlur={() => handleSaveSectionName(sec.id)}
+                      />
+                    ) : (
+                      <span className={styles.sectionTitle}>{sec.name}</span>
+                    )}
                     <span className={styles.taskCountBadge}>
                       {completedCount}/{secTasks.length}
                     </span>
@@ -159,10 +189,8 @@ export function ProjectListView({
                       type="button"
                       className={styles.sectionActionBtn}
                       onClick={() => {
-                        const newName = window.prompt('Rename section:', sec.name);
-                        if (newName && newName.trim()) {
-                          updateSection(sec.id, { name: newName.trim() });
-                        }
+                        setEditingSectionId(sec.id);
+                        setEditingSectionName(sec.name);
                       }}
                       title="Rename section"
                     >

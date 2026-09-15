@@ -15,6 +15,7 @@ export interface OS11ExportData {
   goals: Goal[];
   pomodoroSessions: PomodoroSession[];
   settings: Record<string, unknown>;
+  taskTags?: Array<{ task_id: string; tag_id: string }>;
 }
 
 export type ExportFormat = 'json' | 'csv' | 'markdown' | 'attachments_zip' | 'print_pdf';

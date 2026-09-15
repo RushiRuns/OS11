@@ -23,7 +23,7 @@ export async function bootstrapMainProcess(): Promise<void> {
     const isHiddenLaunch =
       process.argv.includes('--hidden') ||
       process.argv.includes('--minimized') ||
-      (app.getLoginItemSettings && app.getLoginItemSettings().wasOpenedAtLogin);
+      (app.isPackaged && app.getLoginItemSettings && app.getLoginItemSettings().wasOpenedAtLogin);
 
     // 2. Show splash screen on cold start if not starting hidden
     if (!isHiddenLaunch) {
