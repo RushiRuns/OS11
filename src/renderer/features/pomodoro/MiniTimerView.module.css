@@ -55,10 +55,10 @@
 }
 
 .actionBtn {
-  background-color: var(--surface-base, #0f172a);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  color: var(--text-primary, #ffffff);
-  border-radius: var(--radius-sm, 6px);
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
   width: 30px;
   height: 30px;
   font-size: 12px;

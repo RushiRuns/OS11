@@ -334,9 +334,9 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                     fontSize: '11px',
                     padding: '2px 6px',
                     borderRadius: '9999px',
-                    backgroundColor: 'var(--bg-surface-hover, rgba(255, 255, 255, 0.08))',
-                    border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))',
-                    color: 'var(--text-secondary, #cbd5e1)',
+                    backgroundColor: 'var(--surface-hover)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-secondary)',
                   }}
                 >
                   <span

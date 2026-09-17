@@ -34,8 +34,6 @@ export function CreateListModal({
   const [icon, setIcon] = useState('📁');
   const [color, setColor] = useState<string | null>(PRESET_COLORS[0]);
   const [groupId, setGroupId] = useState<string>('');
-  const [backgroundType, setBackgroundType] = useState<'none' | 'solid' | 'gradient'>('none');
-  const [backgroundValue, setBackgroundValue] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,15 +43,11 @@ export function CreateListModal({
       setIcon(listToEdit.icon ?? '📁');
       setColor(listToEdit.color ?? PRESET_COLORS[0]);
       setGroupId(listToEdit.group_id ?? '');
-      setBackgroundType((listToEdit.background_type as 'none' | 'solid' | 'gradient') ?? 'none');
-      setBackgroundValue(listToEdit.background_value ?? '');
     } else {
       setName('');
       setIcon('📁');
       setColor(PRESET_COLORS[0]);
       setGroupId('');
-      setBackgroundType('none');
-      setBackgroundValue('');
     }
   }, [listToEdit, open]);
 
@@ -69,8 +63,6 @@ export function CreateListModal({
           icon,
           color,
           group_id: groupId ? groupId : null,
-          background_type: backgroundType,
-          background_value: backgroundValue || null,
         });
         onSaved?.(updated);
       } else {
@@ -79,8 +71,6 @@ export function CreateListModal({
           icon,
           color,
           group_id: groupId ? groupId : null,
-          background_type: backgroundType,
-          background_value: backgroundValue || null,
         });
         onSaved?.(created);
       }
@@ -97,7 +87,7 @@ export function CreateListModal({
       open={open}
       onOpenChange={onOpenChange}
       title={listToEdit ? 'Edit List' : 'New List'}
-      description="Organize your tasks with custom icons, colors, and backgrounds."
+      description="Organize your tasks with custom icons, colors, and folders."
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         {/* Name & Icon Row */}
@@ -173,40 +163,6 @@ export function CreateListModal({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Background Theming */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Background Theme</label>
-          <select
-            className={styles.selectInput}
-            value={backgroundType}
-            onChange={(e) => setBackgroundType(e.target.value as 'none' | 'solid' | 'gradient')}
-          >
-            <option value="none">Default (None)</option>
-            <option value="solid">Solid Tint</option>
-            <option value="gradient">Soft Gradient</option>
-          </select>
-
-          {backgroundType === 'solid' && (
-            <input
-              type="text"
-              className={styles.textInput}
-              placeholder="Hex or CSS color, e.g. #f4f6f8"
-              value={backgroundValue}
-              onChange={(e) => setBackgroundValue(e.target.value)}
-            />
-          )}
-
-          {backgroundType === 'gradient' && (
-            <input
-              type="text"
-              className={styles.textInput}
-              placeholder="e.g. linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-              value={backgroundValue}
-              onChange={(e) => setBackgroundValue(e.target.value)}
-            />
-          )}
         </div>
 
         {/* Action Buttons */}

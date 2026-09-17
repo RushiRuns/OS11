@@ -126,7 +126,7 @@ export function MonthlyReviewModal({ onClose }: MonthlyReviewModalProps): React.
               >
                 <h2 className={styles.stepTitle}>Archive Finished Projects</h2>
                 <p className={styles.stepSubtitle}>
-                  Clean up your workspace by archiving projects you've completed this month.
+                  Clean up your workspace by archiving projects you&apos;ve completed this month.
                 </p>
 
                 <div className={styles.itemsList} role="list" aria-label="Projects to archive">

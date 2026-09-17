@@ -168,8 +168,6 @@ export function Sidebar(): React.ReactElement {
         name: `${list.name} (Copy)`,
         icon: list.icon,
         color: list.color,
-        background_type: list.background_type,
-        background_value: list.background_value,
         group_id: list.group_id,
       });
 

@@ -13,7 +13,6 @@ export type ModuleName =
   | 'file_attachments'
   | 'nlp_parsing'
   | 'vim_keybindings'
-  | 'animated_backgrounds'
   | 'habit_tracker'
   | 'collaboration'
   | 'companion_sync'

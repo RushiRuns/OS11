@@ -9,7 +9,6 @@ import { SettingsService } from '../../src/main/services/settings/SettingsServic
 import { ThemeService } from '../../src/main/services/settings/ThemeService.js';
 import { AppLockService, constantTimeEqual } from '../../src/main/services/security/AppLockService.js';
 import { ModuleRepository } from '../../src/main/repositories/ModuleRepository.js';
-import { BackgroundService } from '../../src/main/services/settings/BackgroundService.js';
 import { TaskRepository } from '../../src/main/repositories/TaskRepository.js';
 import { ListRepository } from '../../src/main/repositories/ListRepository.js';
 
@@ -201,27 +200,6 @@ describe('Phase 16: Theming, Settings & Module System', () => {
       expect(moduleRepo.isEnabled('pomodoro')).toBe(true);
       expect(moduleRepo.isEnabled('agenda')).toBe(true);
       expect(moduleRepo.isEnabled('project_management')).toBe(false);
-    });
-  });
-
-  describe('BackgroundService', () => {
-    it('uploads, retrieves, and deletes custom wallpapers', () => {
-      const bgService = new BackgroundService();
-      // Test file
-      const dummyFile = path.join(tempDir, 'sample_wallpaper.jpg');
-      fs.writeFileSync(dummyFile, 'dummy image data');
-
-      const uploaded = bgService.upload(dummyFile);
-      expect(uploaded.id).toBeDefined();
-      expect(uploaded.name).toBe('sample_wallpaper.jpg');
-      expect(fs.existsSync(uploaded.path)).toBe(true);
-
-      const all = bgService.getAll();
-      expect(all.some((b) => b.id === uploaded.id)).toBe(true);
-
-      const deleted = bgService.delete(uploaded.id);
-      expect(deleted).toBe(true);
-      expect(fs.existsSync(uploaded.path)).toBe(false);
     });
   });
 });

@@ -3,8 +3,8 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-6) var(--space-2) var(--space-6);
-  background: var(--bg-surface, #0f172a);
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--surface-base);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .topRow {
@@ -14,10 +14,10 @@
 }
 
 .title {
-  font-size: var(--text-2xl, 24px);
+  font-size: var(--text-2xl);
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: var(--text-primary, #f8fafc);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -29,11 +29,11 @@
 
 .filterToggleBtn {
   background: transparent;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-md, 6px);
-  color: var(--text-secondary, #94a3b8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
   padding: 6px 10px;
-  font-size: var(--text-xs, 12px);
+  font-size: var(--text-xs);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -43,9 +43,9 @@
 
 .filterToggleBtn:hover,
 .filterToggleBtnActive {
-  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
-  color: var(--text-primary, #f8fafc);
-  border-color: var(--color-accent-blue, #3b82f6);
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--accent);
 }
 
 /* Expanded Filter Bar */
@@ -55,8 +55,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) 0;
-  font-size: var(--text-xs, 12px);
-  color: var(--text-secondary, #94a3b8);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   animation: slideDown 0.18s ease;
 }
 
@@ -78,12 +78,12 @@
 }
 
 .filterSelect {
-  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
-  color: var(--text-primary, #f8fafc);
-  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
   padding: 4px 8px;
-  font-size: var(--text-xs, 12px);
+  font-size: var(--text-xs);
   outline: none;
 }
 
@@ -93,4 +93,6 @@
   gap: 6px;
   cursor: pointer;
   user-select: none;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }

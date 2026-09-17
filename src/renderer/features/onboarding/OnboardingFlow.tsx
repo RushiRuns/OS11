@@ -39,7 +39,7 @@ const PRESET_OPTIONS: {
     id: 'custom',
     name: 'Custom / All Modules',
     icon: '🧩',
-    description: 'Unlock every capability including Data Portability, Advanced NLP, and Backgrounds.',
+    description: 'Unlock every capability including Data Portability, Advanced NLP, and Productivity Tools.',
   },
 ];
 
@@ -276,7 +276,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps): React.React
                         }
                       }}
                     >
-                      "Ship quarterly report Friday at 5pm !critical #work"
+                      &quot;Ship quarterly report Friday at 5pm !critical #work&quot;
                     </span>
                   </div>
 
@@ -310,7 +310,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps): React.React
                       className={styles.successAlert}
                     >
                       <span>🎉</span>
-                      <span>Task created with instant parsing! You're ready to roll.</span>
+                      <span>Task created with instant parsing! You&apos;re ready to roll.</span>
                     </motion.div>
                   )}
                 </div>
@@ -326,7 +326,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps): React.React
                 exit="exit"
                 transition={{ duration: 0.18 }}
               >
-                <h1 className={styles.stepTitle}>Here's your keyboard</h1>
+                <h1 className={styles.stepTitle}>Here&apos;s your keyboard</h1>
                 <p className={styles.stepDescription}>
                   OS11 is engineered to be 100% keyboard native. Everything you need is under your
                   fingertips.

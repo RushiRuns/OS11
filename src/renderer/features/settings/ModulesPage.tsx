@@ -23,7 +23,6 @@ const MODULES: ModuleDef[] = [
   { id: 'sound_effects', name: 'Synthesized Sound Effects', desc: 'Harmonic audio cues on task completion, task creation, and timer intervals', icon: '🔔' },
   { id: 'calendar_integration', name: 'Calendar Integration', desc: 'Sync external Google, Apple, and Outlook calendars via local loopback OAuth2', icon: '🌐' },
   { id: 'habit_tracker', name: 'Habit Heatmap Grid', desc: '52-week × 7-day contribution style habit consistency heatmap', icon: '🔥' },
-  { id: 'animated_backgrounds', name: 'Animated Wallpapers', desc: 'Ambient Aurora, particle drifts, and dynamic gradient animations', icon: '🌌' },
   { id: 'vim_keybindings', name: 'Vim Navigation Keys', desc: 'j/k line traversal, x complete, / quick search, and visual modal controls', icon: '⌨️' },
   // Phase 2 Modules
   { id: 'collaboration', name: 'Real-Time Collaboration', desc: 'Peer-to-peer shared project lists and live task updates', icon: '👥', phase2: true },

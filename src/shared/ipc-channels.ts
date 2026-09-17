@@ -179,10 +179,6 @@ export const IPC = {
     LOCK: 'security:lock',
     UNLOCK: 'security:unlock',
   },
-  BACKGROUNDS: {
-    UPLOAD: 'backgrounds:upload',
-    GET_ALL: 'backgrounds:get-all',
-  },
   SEARCH: {
     QUERY: 'search:query',
     REINDEX: 'search:reindex',

@@ -9,9 +9,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  background: var(--bg-surface, #1e293b);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md, 8px);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: var(--space-4);
 }
 
@@ -22,15 +22,15 @@
 }
 
 .sectionTitle {
-  font-size: var(--text-base, 16px);
-  font-weight: var(--weight-semibold, 600);
-  color: var(--text-primary, #f8fafc);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .sectionDesc {
-  font-size: var(--text-xs, 12px);
-  color: var(--text-secondary, #94a3b8);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -46,16 +46,16 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  background: var(--bg-surface-raised, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
-  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
 }
 
 .colorPickerBtn {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-default);
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
@@ -66,25 +66,25 @@
   min-width: 120px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm, 4px);
-  color: var(--text-primary, #f8fafc);
-  font-size: var(--text-sm, 13px);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
   padding: 2px 6px;
   outline: none;
 }
 
 .nameInput:hover,
 .nameInput:focus {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
-  border-color: var(--border-default, rgba(255, 255, 255, 0.15));
+  background: var(--surface-hover);
+  border-color: var(--border-default);
 }
 
 .parentSelect {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  color: var(--text-secondary, #cbd5e1);
-  font-size: var(--text-xs, 12px);
-  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
   outline: none;
   cursor: pointer;
@@ -92,34 +92,34 @@
 
 .actionBtn {
   background: transparent;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  color: var(--text-secondary, #94a3b8);
-  font-size: var(--text-xs, 12px);
-  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
   padding: 2px 8px;
   cursor: pointer;
   transition: all 0.12s ease;
 }
 
 .actionBtn:hover {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
-  color: var(--text-primary, #f8fafc);
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .deleteBtn {
   background: transparent;
   border: none;
-  color: var(--text-tertiary, #64748b);
+  color: var(--text-tertiary);
   font-size: 14px;
   cursor: pointer;
   padding: 4px;
   line-height: 1;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
 }
 
 .deleteBtn:hover {
-  color: var(--color-danger, #ef4444);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  background: var(--color-danger-muted);
 }
 
 .mergeSection {
@@ -128,9 +128,9 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   padding: var(--space-3);
-  background: var(--bg-surface-raised, rgba(0, 0, 0, 0.2));
-  border-radius: var(--radius-sm, 6px);
-  border: 1px dashed var(--border-subtle, rgba(255, 255, 255, 0.1));
+  background: var(--surface-base);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-default);
 }
 
 .ruleList {
@@ -145,10 +145,10 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2) var(--space-3);
-  background: var(--bg-surface-raised, rgba(255, 255, 255, 0.03));
-  border-radius: var(--radius-sm, 6px);
-  font-size: var(--text-xs, 12px);
-  color: var(--text-secondary, #cbd5e1);
+  background: var(--surface-base);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .ruleText {
@@ -166,22 +166,22 @@
 }
 
 .selectInput {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.15));
-  color: var(--text-primary, #f8fafc);
-  font-size: var(--text-xs, 12px);
-  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
   padding: 4px 8px;
   outline: none;
 }
 
 .addRuleBtn {
-  background: var(--color-accent, #3b82f6);
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--text-on-accent);
   border: none;
-  font-size: var(--text-xs, 12px);
-  font-weight: var(--weight-medium, 500);
-  border-radius: var(--radius-sm, 4px);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
   padding: 4px 10px;
   cursor: pointer;
 }

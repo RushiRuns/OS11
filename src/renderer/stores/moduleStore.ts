@@ -27,7 +27,6 @@ const DEFAULT_MODULES: Record<string, boolean> = {
   nlp_parsing: true,
   sound_effects: true,
   vim_keybindings: false,
-  animated_backgrounds: false,
   habit_tracker: false,
   collaboration: false,
   companion_sync: false,

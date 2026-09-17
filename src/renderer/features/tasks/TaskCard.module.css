@@ -4,10 +4,10 @@
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   min-height: var(--task-height-comfortable, 44px);
-  background: var(--bg-surface, #0f172a);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
   border-left: var(--priority-border-width, 2.5px) solid transparent;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
   position: relative;
@@ -15,30 +15,30 @@
 }
 
 .taskCard:hover {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.04));
-  border-color: var(--border-hover, rgba(255, 255, 255, 0.15));
+  background: var(--surface-hover);
+  border-color: var(--border-default);
 }
 
 .taskCardSelected {
-  background: var(--bg-surface-active, rgba(59, 130, 246, 0.12));
-  border-color: var(--color-accent-blue, #3b82f6);
+  background: var(--surface-selected);
+  border-color: var(--accent);
 }
 
 /* Priority Left Borders (FEEL UI: border color only, no badge or icon) */
 .priority1 {
-  border-left-color: var(--priority-low, #27AE60);
+  border-left-color: var(--priority-low);
 }
 
 .priority2 {
-  border-left-color: var(--priority-medium, #F39C12);
+  border-left-color: var(--priority-medium);
 }
 
 .priority3 {
-  border-left-color: var(--priority-high, #E74C3C);
+  border-left-color: var(--priority-high);
 }
 
 .priority4 {
-  border-left-color: var(--priority-critical, #C0392B);
+  border-left-color: var(--priority-critical);
 }
 
 .priorityCriticalPulse {
@@ -47,7 +47,7 @@
 
 @keyframes border-pulse {
   0%, 100% {
-    border-left-color: var(--priority-critical, #C0392B);
+    border-left-color: var(--priority-critical);
   }
   50% {
     border-left-color: rgba(192, 57, 43, 0.25);
@@ -75,8 +75,8 @@
 }
 
 .titleText {
-  font-size: var(--text-sm, 14px);
-  color: var(--text-primary, #f8fafc);
+  font-size: var(--text-base);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,18 +84,18 @@
 }
 
 .completedTitle {
-  color: var(--text-tertiary, #64748b);
+  color: var(--text-tertiary);
   text-decoration: line-through;
 }
 
 .titleInput {
   width: 100%;
-  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
-  border: 1px solid var(--color-accent-blue, #3b82f6);
-  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-base);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
-  font-size: var(--text-sm, 14px);
-  color: var(--text-primary, #f8fafc);
+  font-size: var(--text-base);
+  color: var(--text-primary);
   outline: none;
 }
 
@@ -108,25 +108,25 @@
 }
 
 .dueDateChip {
-  font-size: var(--text-xs, 12px);
+  font-size: var(--text-xs);
   padding: 1px 6px;
-  border-radius: var(--radius-sm, 4px);
-  background: var(--bg-secondary, rgba(255, 255, 255, 0.06));
-  color: var(--text-secondary, #94a3b8);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
 }
 
 .dueDateOverdue {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+  border-color: var(--border-danger);
 }
 
 .dueDateOverdueCritical {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--color-danger, #ef4444) !important;
-  border-color: var(--color-danger, #ef4444);
-  font-weight: var(--weight-medium, 500);
+  background: var(--color-danger-muted);
+  color: var(--color-danger) !important;
+  border-color: var(--color-danger);
+  font-weight: var(--weight-medium);
 }
 
 .tagDotPill {
@@ -134,31 +134,31 @@
   align-items: center;
   gap: 4px;
   padding: 1px 6px;
-  border-radius: var(--radius-full, 9999px);
-  font-size: 11px;
-  color: var(--text-secondary, #cbd5e1);
-  background: var(--bg-surface-raised, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: all 0.12s ease;
 }
 
 .tagDotPill:hover {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.12));
-  color: var(--text-primary, #ffffff);
+  background: var(--surface-active);
+  color: var(--text-primary);
 }
 
 .tagDot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--tag-purple, #a855f7);
+  background: var(--tag-purple);
   flex-shrink: 0;
 }
 
 .badgePill {
-  font-size: var(--text-xs, 12px);
-  color: var(--text-secondary, #94a3b8);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -179,10 +179,10 @@
 .iconButton {
   background: transparent;
   border: none;
-  color: var(--text-tertiary, #64748b);
+  color: var(--text-tertiary);
   cursor: pointer;
   padding: 4px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,16 +190,16 @@
 }
 
 .iconButton:hover {
-  color: var(--text-primary, #f8fafc);
-  background: var(--bg-secondary, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .starButtonActive {
-  color: #eab308;
+  color: var(--color-star);
 }
 
 .starButtonActive:hover {
-  color: #facc15;
+  color: var(--color-warning);
 }
 
 /* Multi-Select Checkbox (reveals on card hover or always when multi-select active) */

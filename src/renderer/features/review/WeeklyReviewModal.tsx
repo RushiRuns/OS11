@@ -118,7 +118,7 @@ export function WeeklyReviewModal({ onClose }: WeeklyReviewModalProps): React.Re
               >
                 <h2 className={styles.stepTitle}>Triage stale tasks</h2>
                 <p className={styles.stepSubtitle}>
-                  Tasks that haven't moved in over two weeks. Keep, reschedule, or clear them out.
+                  Tasks that haven&apos;t moved in over two weeks. Keep, reschedule, or clear them out.
                 </p>
 
                 <div className={styles.taskList} role="list" aria-label="Stale tasks">
@@ -161,7 +161,7 @@ export function WeeklyReviewModal({ onClose }: WeeklyReviewModalProps): React.Re
                 exit={shouldReduceMotion ? { opacity: 0 } : { x: -30, opacity: 0 }}
                 transition={{ duration: 0.18 }}
               >
-                <h2 className={styles.stepTitle}>Plan next week's priorities</h2>
+                <h2 className={styles.stepTitle}>Plan next week&apos;s priorities</h2>
                 <p className={styles.stepSubtitle}>
                   Set clear focus for upcoming tasks before your week begins.
                 </p>

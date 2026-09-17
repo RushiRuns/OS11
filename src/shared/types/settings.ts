@@ -6,14 +6,6 @@ export interface SystemInfo {
   platform: string;
 }
 
-export interface BackgroundImageInfo {
-  id: string;
-  name: string;
-  path: string;
-  url: string;
-  created_at: string;
-}
-
 export interface SettingsMap {
   theme: 'auto' | 'dark' | 'light' | 'system';
   accent_color: string;
@@ -33,11 +25,6 @@ export interface SettingsMap {
   app_lock_enabled: boolean;
   reduce_motion: boolean;
   task_card_style: 'default' | 'minimal' | 'detailed';
-  // Background engine
-  background_type: 'none' | 'solid' | 'gradient' | 'image';
-  background_value: string;
-  background_blur: number;
-  background_animation: 'none' | 'aurora' | 'particles' | 'gradient_drift';
   // Notifications
   quiet_hours_enabled: boolean;
   quiet_hours_start: string;
@@ -72,9 +59,5 @@ export interface AppSettings {
   sidebar_position?: 'left' | 'right' | 'hidden';
   density?: 'compact' | 'comfortable' | 'spacious';
   font_size?: 'sm' | 'md' | 'lg' | string;
-  background_type?: 'none' | 'solid' | 'gradient' | 'image';
-  background_value?: string;
-  background_blur?: number;
-  background_animation?: 'none' | 'aurora' | 'particles' | 'gradient_drift';
 }
 

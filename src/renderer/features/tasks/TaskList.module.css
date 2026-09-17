@@ -3,14 +3,14 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background: var(--bg-surface, #0f172a);
+  background: var(--surface-base);
   overflow: hidden;
   position: relative;
 }
 
 .quickAddRow {
   padding: var(--space-3) var(--space-6);
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .virtualScrollArea {
@@ -27,8 +27,8 @@
 }
 
 .virtualScrollArea::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  background: var(--border-default);
+  border-radius: var(--radius-xs);
 }
 
 .virtualInner {
@@ -55,14 +55,14 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) 0;
-  color: var(--text-tertiary, #64748b);
-  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
   cursor: pointer;
   user-select: none;
 }
 
 .completedHeader:hover {
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary);
 }
 
 .completedCaret {

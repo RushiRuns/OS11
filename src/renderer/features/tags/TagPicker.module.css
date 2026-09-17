@@ -13,14 +13,14 @@
   position: relative;
   width: 320px;
   max-width: 90vw;
-  background: var(--bg-surface, #1e293b);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-xl, 0 16px 48px rgba(0, 0, 0, 0.4));
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  color: var(--text-primary, #f8fafc);
+  color: var(--text-primary);
   animation: fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -40,11 +40,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .searchIcon {
-  color: var(--text-tertiary, #64748b);
+  color: var(--text-tertiary);
   font-size: 13px;
 }
 
@@ -52,23 +52,23 @@
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--text-primary, #f8fafc);
-  font-size: var(--text-sm, 14px);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
   outline: none;
   font-family: inherit;
 }
 
 .searchInput::placeholder {
-  color: var(--text-tertiary, #64748b);
+  color: var(--text-tertiary);
 }
 
 .closeButton {
   background: transparent;
   border: none;
-  color: var(--text-tertiary, #64748b);
+  color: var(--text-tertiary);
   cursor: pointer;
   padding: 4px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   line-height: 1;
   display: flex;
@@ -77,8 +77,8 @@
 }
 
 .closeButton:hover {
-  color: var(--text-primary, #f8fafc);
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .tagList {
@@ -95,26 +95,26 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2);
-  border-radius: var(--radius-md, 6px);
+  border-radius: var(--radius-md);
   cursor: pointer;
   background: transparent;
   border: none;
   width: 100%;
   text-align: left;
-  color: var(--text-secondary, #cbd5e1);
-  font-size: var(--text-sm, 13px);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
   transition: background 0.12s ease, color 0.12s ease;
 }
 
 .tagItem:hover,
 .tagItemActive {
-  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
-  color: var(--text-primary, #ffffff);
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .tagItemSelected {
-  color: var(--color-accent, #3b82f6);
-  font-weight: var(--weight-medium, 500);
+  color: var(--accent);
+  font-weight: var(--weight-medium);
 }
 
 .tagColorDot {
@@ -133,13 +133,13 @@
 
 .checkMark {
   font-size: 13px;
-  color: var(--color-accent, #3b82f6);
+  color: var(--accent);
 }
 
 .createSection {
   padding: var(--space-3);
-  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  background: var(--bg-surface-active, rgba(0, 0, 0, 0.2));
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

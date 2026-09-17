@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useAppStore } from './stores/app-store.js';
-import { useActiveList } from './stores/listStore.js';
 import { Titlebar } from './components/Titlebar/Titlebar.js';
 
 // Critical path — always in initial bundle (PERFORMANCE.md §5)
@@ -62,13 +61,11 @@ export function App(): React.ReactElement {
   const isMiniTimer = typeof window !== 'undefined' && window.location.hash.includes('mini-timer');
 
   const { activeListId, systemInfo, fetchSystemInfo } = useAppStore();
-  const activeList = useActiveList();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState<Record<string, unknown>>({});
   const isPomodoroFocus = usePomodoroStore((state) => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore((state) => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
@@ -90,7 +87,6 @@ export function App(): React.ReactElement {
     invoke<Record<string, unknown>>(IPC.SETTINGS.GET_ALL)
       .then((settings) => {
         if (settings) {
-          setGlobalSettings(settings);
           if (settings.onboarding_completed === false || settings.onboarding_completed === undefined) {
             setIsOnboardingOpen(true);
           }
@@ -260,44 +256,6 @@ export function App(): React.ReactElement {
 
   const isDetailVisible = !activeListId.startsWith('view_') && Boolean(selectedTask);
 
-  // Background theming: Per-list overrides global settings
-  const mainStyle: React.CSSProperties = {};
-  let bgClass = '';
-
-  const effectiveBgType = (activeList?.background_type && activeList.background_type !== 'none')
-    ? activeList.background_type
-    : (globalSettings.background_type as string ?? 'none');
-
-  const effectiveBgValue = (activeList?.background_value)
-    ? activeList.background_value
-    : (globalSettings.background_value as string ?? '');
-
-  const effectiveBlur = typeof globalSettings.background_blur === 'number'
-    ? globalSettings.background_blur
-    : 10;
-
-  if (effectiveBgType === 'solid' && effectiveBgValue) {
-    mainStyle.backgroundColor = effectiveBgValue;
-  } else if (effectiveBgType === 'gradient' && effectiveBgValue) {
-    mainStyle.background = effectiveBgValue;
-  } else if (effectiveBgType === 'image' && effectiveBgValue) {
-    mainStyle.backgroundImage = `url(${effectiveBgValue})`;
-    mainStyle.backgroundSize = 'cover';
-    mainStyle.backgroundPosition = 'center';
-    if (effectiveBlur > 0) {
-      mainStyle.backdropFilter = `blur(${effectiveBlur}px)`;
-    }
-  }
-
-  // Animated background classes
-  if (globalSettings.background_animation === 'aurora') {
-    bgClass = layoutStyles.animAurora;
-  } else if (globalSettings.background_animation === 'particles') {
-    bgClass = layoutStyles.animParticles;
-  } else if (globalSettings.background_animation === 'gradient_drift') {
-    bgClass = layoutStyles.animGradientDrift;
-  }
-
   return (
     <div className={layoutStyles.container}>
       {/* App Lock Protection Overlay */}
@@ -343,7 +301,7 @@ export function App(): React.ReactElement {
           </div>
 
           {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
-          <main className={`${layoutStyles.mainCol} ${bgClass}`} style={mainStyle}>
+          <main className={layoutStyles.mainCol}>
             {renderMainContent()}
           </main>
 
