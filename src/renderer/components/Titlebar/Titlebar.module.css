@@ -1,3 +1,22 @@
+.titlebarWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.topHitTrigger {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 25px;
+  background: transparent;
+  pointer-events: auto;
+}
+
 .titlebar {
   display: flex;
   align-items: center;
@@ -9,8 +28,33 @@
   -webkit-app-region: drag;
   user-select: none;
   font-family: var(--font-body);
-  position: relative;
-  z-index: var(--z-modal);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.12s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .titlebar {
+    transition: none;
+  }
 }
 
 .macTitlebar {
