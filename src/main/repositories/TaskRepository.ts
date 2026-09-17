@@ -120,11 +120,25 @@ export class TaskRepository extends BaseRepository {
     const id = ('id' in payload && payload.id) ? payload.id : uuidv4();
     const now = new Date().toISOString();
 
+    let listId = payload.list_id ?? 'list_inbox';
+    const checkStmt = this.db.prepare<[string], { id: string }>('SELECT id FROM lists WHERE id = ?');
+    if (!checkStmt.get(listId)) {
+      const inbox = checkStmt.get('list_inbox');
+      if (inbox) {
+        listId = 'list_inbox';
+      } else {
+        const fallback = this.db.prepare<[], { id: string }>('SELECT id FROM lists ORDER BY sort_order ASC LIMIT 1').get();
+        if (fallback) {
+          listId = fallback.id;
+        }
+      }
+    }
+
     const record: Task = {
       id,
       title: payload.title,
       notes: payload.notes ?? null,
-      list_id: payload.list_id ?? 'list_inbox',
+      list_id: listId,
       project_id: payload.project_id ?? null,
       section_id: payload.section_id ?? null,
       parent_task_id: payload.parent_task_id ?? null,

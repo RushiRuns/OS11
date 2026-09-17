@@ -407,6 +407,9 @@ export function Sidebar(): React.ReactElement {
           onDuplicate={handleDuplicateList}
           onExport={handleExportList}
           onDelete={(l) => {
+            if (activeListId === l.id) {
+              setActiveListId('smart_my_day');
+            }
             useListStore.getState().deleteList(l.id);
           }}
         />

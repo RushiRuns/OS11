@@ -42,6 +42,7 @@ export function ListContextMenu({
   if (!position) return null;
 
   const isSmart = list.is_smart === 1;
+  const isDeletable = list.is_smart !== 1 && list.id !== 'list_inbox';
 
   // Clamping to avoid viewport overflow
   const menuWidth = 190;
@@ -94,7 +95,7 @@ export function ListContextMenu({
           <span>Export List</span>
         </button>
 
-        {!isSmart && (
+        {isDeletable && (
           <>
             <div className={styles.separator} />
             <button

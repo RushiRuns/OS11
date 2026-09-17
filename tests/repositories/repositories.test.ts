@@ -65,6 +65,14 @@ describe('Phase 2 Repositories & Database Layer', () => {
     const found = taskRepo.getById(task.id);
     expect(found?.id).toBe(task.id);
 
+    // Create task with non-existent list_id (verifies fallback to list_inbox without FOREIGN KEY error)
+    const fallbackTask = taskRepo.create({
+      title: 'Task with invalid list',
+      list_id: 'non_existent_list_xyz',
+    });
+    expect(fallbackTask.id).toBeDefined();
+    expect(fallbackTask.list_id).toBe('list_inbox');
+
     // Update task
     const updated = taskRepo.update(task.id, { title: 'Updated unit test title' });
     expect(updated.title).toBe('Updated unit test title');

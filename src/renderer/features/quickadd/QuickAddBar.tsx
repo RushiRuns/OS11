@@ -95,7 +95,10 @@ export function QuickAddBar({
 
       // Determine clean title and attributes from parsed state or fallback
       let title = raw;
-      let targetListId = activeListId.startsWith('smart_') ? 'list_inbox' : activeListId;
+      let targetListId = 'list_inbox';
+      if (!activeListId.startsWith('smart_') && listsById[activeListId]) {
+        targetListId = activeListId;
+      }
       let priority = 0;
       let dueDate: string | null = null;
       let dueTime: string | null = null;
@@ -118,6 +121,18 @@ export function QuickAddBar({
           );
           if (matched) {
             targetListId = matched.id;
+          }
+        }
+      }
+
+      // Ensure targetListId is a valid existing list in listsById
+      if (!listsById[targetListId]) {
+        if (listsById['list_inbox']) {
+          targetListId = 'list_inbox';
+        } else {
+          const firstAvailable = Object.keys(listsById)[0];
+          if (firstAvailable) {
+            targetListId = firstAvailable;
           }
         }
       }
