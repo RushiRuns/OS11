@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore } from '../../stores/app-store.js';
-import { useListStore, useSmartLists, useUserLists, useListGroups } from '../../stores/listStore.js';
+import { useListStore, useSmartLists, useUserLists, useListGroups, usePinnedLists } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
@@ -38,6 +38,7 @@ export function Sidebar(): React.ReactElement {
   const { loadLists } = useListStore();
   const smartLists = useSmartLists();
   const userLists = useUserLists();
+  const pinnedLists = usePinnedLists();
   const listGroups = useListGroups();
   const { isEnabled, loadModules } = useModuleStore();
 
@@ -127,6 +128,7 @@ export function Sidebar(): React.ReactElement {
   const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
   const [draggingProjectId, setDraggingProjectId] = useState<string | null>(null);
+  const [draggingTopItemId, setDraggingTopItemId] = useState<string | null>(null);
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
   const [isDragOverRootLists, setIsDragOverRootLists] = useState(false);
   const [isDragOverRootProjects, setIsDragOverRootProjects] = useState(false);
@@ -147,7 +149,11 @@ export function Sidebar(): React.ReactElement {
     [projectsById]
   );
   const rootProjects = useMemo(
-    () => projects.filter((p: Project) => !p.group_id && p.status !== 'archived'),
+    () => projects.filter((p: Project) => !p.group_id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0),
+    [projects]
+  );
+  const pinnedProjects = useMemo(
+    () => projects.filter((p: Project) => (p.is_pinned ?? 0) === 1 && p.status !== 'archived'),
     [projects]
   );
 
@@ -163,11 +169,83 @@ export function Sidebar(): React.ReactElement {
       is_smart: 0,
       group_id: project.group_id ?? null,
       notification_enabled: 0,
+      is_pinned: project.is_pinned ?? 0,
+      pinned_sort_order: project.pinned_sort_order ?? 0,
       created_at: project.created_at,
       updated_at: project.updated_at,
     }),
     []
   );
+
+  interface TopSectionItem {
+    id: string;
+    type: 'smart' | 'list' | 'project';
+    rawId: string;
+    order: number;
+    listModel: List;
+    originalProject?: Project;
+  }
+
+  const topSectionItems = useMemo<TopSectionItem[]>(() => {
+    const items: TopSectionItem[] = [];
+
+    for (const sl of smartLists) {
+      items.push({
+        id: sl.id,
+        type: 'smart',
+        rawId: sl.id,
+        order: sl.pinned_sort_order ?? sl.sort_order,
+        listModel: sl,
+      });
+    }
+
+    for (const pl of pinnedLists) {
+      items.push({
+        id: pl.id,
+        type: 'list',
+        rawId: pl.id,
+        order: pl.pinned_sort_order ?? pl.sort_order,
+        listModel: pl,
+      });
+    }
+
+    for (const pp of pinnedProjects) {
+      items.push({
+        id: `project:${pp.id}`,
+        type: 'project',
+        rawId: pp.id,
+        order: pp.pinned_sort_order ?? pp.sort_order,
+        listModel: projectAsList(pp),
+        originalProject: pp,
+      });
+    }
+
+    return items.sort((a, b) => a.order - b.order);
+  }, [smartLists, pinnedLists, pinnedProjects, projectAsList]);
+
+  const handleTogglePinList = async (list: List) => {
+    const isCurrentlyPinned = Boolean(list.is_pinned);
+    const maxOrder = topSectionItems.length > 0
+      ? Math.max(...topSectionItems.map((i) => i.order))
+      : 0;
+
+    await useListStore.getState().updateList(list.id, {
+      is_pinned: isCurrentlyPinned ? 0 : 1,
+      pinned_sort_order: isCurrentlyPinned ? 0 : maxOrder + 1,
+    });
+  };
+
+  const handleTogglePinProject = async (project: Project) => {
+    const isCurrentlyPinned = Boolean(project.is_pinned);
+    const maxOrder = topSectionItems.length > 0
+      ? Math.max(...topSectionItems.map((i) => i.order))
+      : 0;
+
+    await updateProject(project.id, {
+      is_pinned: isCurrentlyPinned ? 0 : 1,
+      pinned_sort_order: isCurrentlyPinned ? 0 : maxOrder + 1,
+    });
+  };
 
   // Click-outside listener for profile menu
   useEffect(() => {
@@ -283,6 +361,7 @@ export function Sidebar(): React.ReactElement {
     const handleDragEnd = () => {
       setDraggingListId(null);
       setDraggingProjectId(null);
+      setDraggingTopItemId(null);
       setIsDragOverRootLists(false);
       setIsDragOverRootProjects(false);
       setDragOverGroupId(null);
@@ -314,46 +393,76 @@ export function Sidebar(): React.ReactElement {
     setContextMenuProjectPos({ x: e.clientX, y: e.clientY });
   };
 
-  // Drag over handler for smart lists (allow dropping smart list or task onto My Day)
-  const handleSmartListDragOver = (e: React.DragEvent, targetListId: string) => {
-    if (draggingListId) {
-      if (smartLists.some((l) => l.id === draggingListId)) {
-        e.preventDefault();
-      }
-    } else if (targetListId === 'smart_my_day') {
+  // Drag over handler for top section items
+  const handleTopSectionDragOver = (e: React.DragEvent, targetId: string) => {
+    if (draggingTopItemId) {
+      e.preventDefault();
+    } else if (targetId === 'smart_my_day') {
+      e.preventDefault();
+    } else if (e.dataTransfer.types.includes('text/plain')) {
       e.preventDefault();
     }
   };
 
-  // Reorder smart lists on drop, or assign task to My Day if task is dropped
-  const handleSmartListDrop = async (e: React.DragEvent, targetListId: string) => {
+  // Reorder top section on drop, or assign task if task is dropped
+  const handleTopSectionDrop = async (e: React.DragEvent, targetItem: TopSectionItem) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('text/plain');
-    if (taskId && !draggingListId) {
-      if (targetListId === 'smart_my_day') {
+
+    if (taskId && !draggingTopItemId && !draggingListId && !draggingProjectId) {
+      if (targetItem.id === 'smart_my_day') {
         const today = new Date().toISOString().split('T')[0];
         await useTaskStore.getState().updateTask({ id: taskId, my_day_date: today });
+      } else if (targetItem.type === 'project') {
+        await useTaskStore.getState().updateTask({ id: taskId, project_id: targetItem.rawId });
+      } else if (targetItem.type === 'list') {
+        await useTaskStore.getState().updateTask({ id: taskId, list_id: targetItem.rawId });
       }
       return;
     }
 
-    if (!draggingListId || draggingListId === targetListId) return;
+    if (!draggingTopItemId || draggingTopItemId === targetItem.id) {
+      setDraggingTopItemId(null);
+      setDraggingListId(null);
+      setDraggingProjectId(null);
+      return;
+    }
 
-    const currentOrder = [...smartLists];
-    const dragIdx = currentOrder.findIndex((l) => l.id === draggingListId);
-    const targetIdx = currentOrder.findIndex((l) => l.id === targetListId);
-    if (dragIdx === -1 || targetIdx === -1) return;
+    const currentItems = [...topSectionItems];
+    const dragIdx = currentItems.findIndex((i) => i.id === draggingTopItemId);
+    const targetIdx = currentItems.findIndex((i) => i.id === targetItem.id);
 
-    const [moved] = currentOrder.splice(dragIdx, 1);
-    currentOrder.splice(targetIdx, 0, moved);
+    if (dragIdx === -1 || targetIdx === -1) {
+      setDraggingTopItemId(null);
+      setDraggingListId(null);
+      setDraggingProjectId(null);
+      return;
+    }
 
-    const updates = currentOrder.map((l, index) => ({
-      id: l.id,
-      sortOrder: index,
-    }));
+    const [moved] = currentItems.splice(dragIdx, 1);
+    currentItems.splice(targetIdx, 0, moved);
 
-    useListStore.getState().reorderLists(updates);
+    for (let index = 0; index < currentItems.length; index++) {
+      const item = currentItems[index];
+      if (item.type === 'smart') {
+        useListStore.getState().updateList(item.rawId, {
+          sort_order: index,
+          pinned_sort_order: index,
+        });
+      } else if (item.type === 'list') {
+        useListStore.getState().updateList(item.rawId, {
+          pinned_sort_order: index,
+        });
+      } else if (item.type === 'project') {
+        updateProject(item.rawId, {
+          pinned_sort_order: index,
+        });
+      }
+    }
+
+    setDraggingTopItemId(null);
     setDraggingListId(null);
+    setDraggingProjectId(null);
   };
 
   // Context menu handler
@@ -656,21 +765,50 @@ export function Sidebar(): React.ReactElement {
         className={`${styles.scrollWrap} ${isScrolling ? styles.scrollWrapScrolling : ''}`}
         onScroll={handleScroll}
       >
-        {/* Flat & Reorderable Smart Lists */}
+        {/* Top Section: Smart Lists, Pinned Lists & Pinned Projects */}
         <div className={styles.smartListSection}>
-          {smartLists.map((list) => (
-            <ListItem
-              key={list.id}
-              list={list}
-              isActive={activeListId === list.id}
-              taskCount={getTaskCount(list.id)}
-              onClick={(id) => setActiveListId(id)}
-              isDraggable
-              onDragStart={(_e, id) => setDraggingListId(id)}
-              onDragOver={(e) => handleSmartListDragOver(e, list.id)}
-              onDrop={(e, id) => handleSmartListDrop(e, id)}
-            />
-          ))}
+          {topSectionItems.map((item) => {
+            const isProject = item.type === 'project';
+            const isActive = isProject
+              ? activeListId === item.id || (activeListId === 'view_projects' && selectedProjectId === item.rawId)
+              : activeListId === item.id;
+            const count = isProject ? getProjectTaskCount(item.rawId) : getTaskCount(item.rawId);
+
+            return (
+              <ListItem
+                key={item.id}
+                list={item.listModel}
+                isActive={isActive}
+                taskCount={count}
+                onClick={() => {
+                  if (isProject) {
+                    setSelectedProjectId(item.rawId);
+                    setActiveListId(item.id);
+                  } else {
+                    setActiveListId(item.id);
+                  }
+                }}
+                onContextMenu={(e) => {
+                  if (isProject && item.originalProject) {
+                    handleProjectContextMenu(e, item.originalProject);
+                  } else {
+                    handleContextMenu(e, item.listModel);
+                  }
+                }}
+                isDraggable
+                onDragStart={(_e) => {
+                  setDraggingTopItemId(item.id);
+                  if (isProject) {
+                    setDraggingProjectId(item.rawId);
+                  } else {
+                    setDraggingListId(item.rawId);
+                  }
+                }}
+                onDragOver={(e) => handleTopSectionDragOver(e, item.id)}
+                onDrop={(e) => handleTopSectionDrop(e, item)}
+              />
+            );
+          })}
         </div>
 
         {/* User Lists Section */}
@@ -720,7 +858,7 @@ export function Sidebar(): React.ReactElement {
         {/* Grouped User Lists */}
         {listGroups.map((group) => {
           const listsInGroup = userLists.filter((l) => l.group_id === group.id);
-          const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived');
+          const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
           if (listsInGroup.length === 0 && projectsInGroup.length > 0 && dragOverGroupId !== group.id) {
             return null;
           }
@@ -834,7 +972,7 @@ export function Sidebar(): React.ReactElement {
 
             {/* Grouped Projects */}
             {listGroups.map((group) => {
-              const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived');
+              const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
               if (projectsInGroup.length === 0 && dragOverGroupId !== group.id) {
                 return null;
               }
@@ -1080,6 +1218,7 @@ export function Sidebar(): React.ReactElement {
           }}
           onDuplicate={handleDuplicateList}
           onExport={handleExportList}
+          onTogglePin={handleTogglePinList}
           onDelete={(l) => {
             if (activeListId === l.id) {
               setActiveListId('smart_my_day');
@@ -1124,6 +1263,7 @@ export function Sidebar(): React.ReactElement {
           onArchive={async (proj) => {
             await archiveProject(proj.id);
           }}
+          onTogglePin={handleTogglePinProject}
           onDelete={async (proj) => {
             await deleteProject(proj.id);
             if (activeListId === `project:${proj.id}`) {

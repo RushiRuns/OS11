@@ -15,6 +15,7 @@ interface ProjectContextMenuProps {
   onEdit: (project: Project) => void;
   onArchive: (project: Project) => void;
   onDelete: (project: Project) => void;
+  onTogglePin?: (project: Project) => void;
 }
 
 export function ProjectContextMenu({
@@ -24,6 +25,7 @@ export function ProjectContextMenu({
   onEdit,
   onArchive,
   onDelete,
+  onTogglePin,
 }: ProjectContextMenuProps): React.ReactElement | null {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,7 @@ export function ProjectContextMenu({
   if (!position) return null;
 
   const menuWidth = 190;
-  const menuHeight = 200;
+  const menuHeight = 230;
   const posX = Math.min(position.x, window.innerWidth - menuWidth - 8);
   const posY = Math.min(position.y, window.innerHeight - menuHeight - 8);
 
@@ -59,6 +61,20 @@ export function ProjectContextMenu({
         style={{ left: posX, top: posY }}
         onClick={(e) => e.stopPropagation()}
       >
+        {onTogglePin && (
+          <button
+            type="button"
+            className={styles.menuItem}
+            onClick={() => {
+              onClose();
+              onTogglePin(project);
+            }}
+          >
+            <span>📌</span>
+            <span>{project.is_pinned === 1 ? 'Unpin from Top' : 'Pin to Top'}</span>
+          </button>
+        )}
+
         <button
           type="button"
           className={styles.menuItem}

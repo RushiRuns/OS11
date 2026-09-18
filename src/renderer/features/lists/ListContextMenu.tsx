@@ -16,6 +16,7 @@ interface ListContextMenuProps {
   onDuplicate: (list: List) => void;
   onExport: (list: List) => void;
   onDelete: (list: List) => void;
+  onTogglePin?: (list: List) => void;
 }
 
 export function ListContextMenu({
@@ -26,6 +27,7 @@ export function ListContextMenu({
   onDuplicate,
   onExport,
   onDelete,
+  onTogglePin,
 }: ListContextMenuProps): React.ReactElement | null {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +48,7 @@ export function ListContextMenu({
 
   // Clamping to avoid viewport overflow
   const menuWidth = 190;
-  const menuHeight = 220;
+  const menuHeight = 250;
   const posX = Math.min(position.x, window.innerWidth - menuWidth - 8);
   const posY = Math.min(position.y, window.innerHeight - menuHeight - 8);
 
@@ -58,6 +60,20 @@ export function ListContextMenu({
         style={{ left: posX, top: posY }}
         onClick={(e) => e.stopPropagation()}
       >
+        {!isSmart && onTogglePin && (
+          <button
+            type="button"
+            className={styles.menuItem}
+            onClick={() => {
+              onClose();
+              onTogglePin(list);
+            }}
+          >
+            <span>📌</span>
+            <span>{list.is_pinned === 1 ? 'Unpin from Top' : 'Pin to Top'}</span>
+          </button>
+        )}
+
         <button
           type="button"
           className={styles.menuItem}

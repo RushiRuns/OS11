@@ -122,6 +122,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       default_view: payload.default_view ?? 'list',
       sort_order: payload.sort_order ?? Date.now(),
       group_id: payload.group_id ?? null,
+      is_pinned:
+        payload.is_pinned !== undefined
+          ? typeof payload.is_pinned === 'boolean'
+            ? payload.is_pinned ? 1 : 0
+            : payload.is_pinned
+          : 0,
+      pinned_sort_order: payload.pinned_sort_order ?? 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -166,6 +173,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const updated: Project = {
       ...existing,
       ...fields,
+      is_pinned:
+        fields.is_pinned !== undefined
+          ? typeof fields.is_pinned === 'boolean'
+            ? fields.is_pinned ? 1 : 0
+            : fields.is_pinned
+          : existing.is_pinned ?? 0,
+      pinned_sort_order:
+        fields.pinned_sort_order !== undefined
+          ? fields.pinned_sort_order
+          : existing.pinned_sort_order ?? 0,
       updated_at: new Date().toISOString(),
     };
 

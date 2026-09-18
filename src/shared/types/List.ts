@@ -18,6 +18,8 @@ export interface List {
   smart_type?: SmartListType | null;
   group_id?: string | null;
   notification_enabled: number;
+  is_pinned?: number;
+  pinned_sort_order?: number;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +36,8 @@ export interface CreateListPayload {
   smart_type?: SmartListType | null;
   group_id?: string | null;
   notification_enabled?: boolean;
+  is_pinned?: boolean | number;
+  pinned_sort_order?: number;
 }
 
 export interface UpdateListPayload {
@@ -45,4 +49,6 @@ export interface UpdateListPayload {
   sort_order?: number;
   group_id?: string | null;
   notification_enabled?: boolean | number;
+  is_pinned?: boolean | number;
+  pinned_sort_order?: number;
 }

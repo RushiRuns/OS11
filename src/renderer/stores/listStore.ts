@@ -40,6 +40,8 @@ const DEFAULT_SMART_LISTS: List[] = [
     smart_type: 'my_day',
     group_id: null,
     notification_enabled: 1,
+    is_pinned: 1,
+    pinned_sort_order: 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -55,6 +57,8 @@ const DEFAULT_SMART_LISTS: List[] = [
     smart_type: 'important',
     group_id: null,
     notification_enabled: 1,
+    is_pinned: 1,
+    pinned_sort_order: 1,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -70,6 +74,8 @@ const DEFAULT_SMART_LISTS: List[] = [
     smart_type: 'planned',
     group_id: null,
     notification_enabled: 1,
+    is_pinned: 1,
+    pinned_sort_order: 2,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -85,6 +91,8 @@ const DEFAULT_SMART_LISTS: List[] = [
     smart_type: 'all',
     group_id: null,
     notification_enabled: 1,
+    is_pinned: 1,
+    pinned_sort_order: 3,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -100,6 +108,8 @@ const DEFAULT_SMART_LISTS: List[] = [
     smart_type: 'completed',
     group_id: null,
     notification_enabled: 1,
+    is_pinned: 1,
+    pinned_sort_order: 4,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -193,6 +203,13 @@ export const useListStore = create<ListStoreState>((set, get) => ({
       smart_type: payload.smart_type ?? null,
       group_id: payload.group_id ?? null,
       notification_enabled: payload.notification_enabled !== false ? 1 : 0,
+      is_pinned:
+        payload.is_pinned !== undefined
+          ? typeof payload.is_pinned === 'boolean'
+            ? payload.is_pinned ? 1 : 0
+            : payload.is_pinned
+          : 0,
+      pinned_sort_order: payload.pinned_sort_order ?? 0,
       created_at: now,
       updated_at: now,
     };
@@ -247,6 +264,16 @@ export const useListStore = create<ListStoreState>((set, get) => ({
             ? fields.notification_enabled ? 1 : 0
             : fields.notification_enabled
           : existing.notification_enabled,
+      is_pinned:
+        fields.is_pinned !== undefined
+          ? typeof fields.is_pinned === 'boolean'
+            ? fields.is_pinned ? 1 : 0
+            : fields.is_pinned
+          : existing.is_pinned ?? 0,
+      pinned_sort_order:
+        fields.pinned_sort_order !== undefined
+          ? fields.pinned_sort_order
+          : existing.pinned_sort_order ?? 0,
       updated_at: new Date().toISOString(),
     };
 
@@ -400,7 +427,16 @@ export function useUserLists(): List[] {
   return useListStore((state) =>
     state.orderedIds
       .map((id) => state.listsById[id])
-      .filter((l): l is List => Boolean(l && l.is_smart === 0))
+      .filter((l): l is List => Boolean(l && l.is_smart === 0 && (l.is_pinned ?? 0) === 0))
+  );
+}
+
+export function usePinnedLists(): List[] {
+  return useListStore((state) =>
+    state.orderedIds
+      .map((id) => state.listsById[id])
+      .filter((l): l is List => Boolean(l && l.is_smart === 0 && l.is_pinned === 1))
+      .sort((a, b) => (a.pinned_sort_order ?? 0) - (b.pinned_sort_order ?? 0))
   );
 }
 

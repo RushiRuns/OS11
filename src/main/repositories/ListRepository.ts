@@ -19,9 +19,30 @@ export class ListRepository extends BaseRepository {
     return res ?? null;
   }
 
+  private hasPinnedColsState: boolean | null = null;
+
+  private hasPinnedCols(): boolean {
+    if (this.hasPinnedColsState === null) {
+      try {
+        const cols = this.db.pragma('table_info(lists)') as Array<{ name: string }>;
+        this.hasPinnedColsState = cols.some((c) => c.name === 'is_pinned');
+      } catch {
+        this.hasPinnedColsState = false;
+      }
+    }
+    return this.hasPinnedColsState;
+  }
+
   public create(payload: CreateListPayload): List {
     const id = payload.id ?? uuidv4();
     const now = new Date().toISOString();
+
+    const isPinnedVal =
+      payload.is_pinned !== undefined
+        ? typeof payload.is_pinned === 'boolean'
+          ? payload.is_pinned ? 1 : 0
+          : payload.is_pinned
+        : 0;
 
     const record: List = {
       id,
@@ -35,21 +56,35 @@ export class ListRepository extends BaseRepository {
       smart_type: payload.smart_type ?? null,
       group_id: payload.group_id ?? null,
       notification_enabled: payload.notification_enabled !== false ? 1 : 0,
+      is_pinned: isPinnedVal,
+      pinned_sort_order: payload.pinned_sort_order ?? 0,
       created_at: now,
       updated_at: now,
     };
 
-    const stmt = this.db.prepare(`
-      INSERT INTO lists (
-        id, name, icon, color, background_type, background_value,
-        sort_order, is_smart, smart_type, group_id, notification_enabled,
-        created_at, updated_at
-      ) VALUES (
-        @id, @name, @icon, @color, @background_type, @background_value,
-        @sort_order, @is_smart, @smart_type, @group_id, @notification_enabled,
-        @created_at, @updated_at
-      )
-    `);
+    const stmt = this.hasPinnedCols()
+      ? this.db.prepare(`
+          INSERT INTO lists (
+            id, name, icon, color, background_type, background_value,
+            sort_order, is_smart, smart_type, group_id, notification_enabled,
+            is_pinned, pinned_sort_order, created_at, updated_at
+          ) VALUES (
+            @id, @name, @icon, @color, @background_type, @background_value,
+            @sort_order, @is_smart, @smart_type, @group_id, @notification_enabled,
+            @is_pinned, @pinned_sort_order, @created_at, @updated_at
+          )
+        `)
+      : this.db.prepare(`
+          INSERT INTO lists (
+            id, name, icon, color, background_type, background_value,
+            sort_order, is_smart, smart_type, group_id, notification_enabled,
+            created_at, updated_at
+          ) VALUES (
+            @id, @name, @icon, @color, @background_type, @background_value,
+            @sort_order, @is_smart, @smart_type, @group_id, @notification_enabled,
+            @created_at, @updated_at
+          )
+        `);
 
     stmt.run(record);
     return record;
@@ -71,22 +106,48 @@ export class ListRepository extends BaseRepository {
             ? fields.notification_enabled ? 1 : 0
             : fields.notification_enabled
           : current.notification_enabled,
+      is_pinned:
+        fields.is_pinned !== undefined
+          ? typeof fields.is_pinned === 'boolean'
+            ? fields.is_pinned ? 1 : 0
+            : fields.is_pinned
+          : current.is_pinned ?? 0,
+      pinned_sort_order:
+        fields.pinned_sort_order !== undefined
+          ? fields.pinned_sort_order
+          : current.pinned_sort_order ?? 0,
       updated_at: new Date().toISOString(),
     };
 
-    const stmt = this.db.prepare(`
-      UPDATE lists SET
-        name = @name,
-        icon = @icon,
-        color = @color,
-        background_type = @background_type,
-        background_value = @background_value,
-        sort_order = @sort_order,
-        group_id = @group_id,
-        notification_enabled = @notification_enabled,
-        updated_at = @updated_at
-      WHERE id = @id
-    `);
+    const stmt = this.hasPinnedCols()
+      ? this.db.prepare(`
+          UPDATE lists SET
+            name = @name,
+            icon = @icon,
+            color = @color,
+            background_type = @background_type,
+            background_value = @background_value,
+            sort_order = @sort_order,
+            group_id = @group_id,
+            notification_enabled = @notification_enabled,
+            is_pinned = @is_pinned,
+            pinned_sort_order = @pinned_sort_order,
+            updated_at = @updated_at
+          WHERE id = @id
+        `)
+      : this.db.prepare(`
+          UPDATE lists SET
+            name = @name,
+            icon = @icon,
+            color = @color,
+            background_type = @background_type,
+            background_value = @background_value,
+            sort_order = @sort_order,
+            group_id = @group_id,
+            notification_enabled = @notification_enabled,
+            updated_at = @updated_at
+          WHERE id = @id
+        `);
 
     stmt.run(updated);
     return updated;
