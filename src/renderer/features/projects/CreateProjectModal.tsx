@@ -8,6 +8,8 @@ interface CreateProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (project: Project) => void;
+  projectToEdit?: Project | null;
+  onSaved?: (project: Project) => void;
 }
 
 const PRESET_EMOJIS = ['📁', '🚀', '💼', '🎯', '💡', '📚', '🎨', '💻', '⚡', '🔥', '📊', '🛠️', '✨', '🏷️', '📦'];
@@ -33,8 +35,10 @@ export function CreateProjectModal({
   open,
   onOpenChange,
   onCreated,
+  projectToEdit,
+  onSaved,
 }: CreateProjectModalProps): React.ReactElement {
-  const { createProject, setSelectedProjectId } = useProjectStore();
+  const { createProject, updateProject, setSelectedProjectId } = useProjectStore();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -45,7 +49,15 @@ export function CreateProjectModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (projectToEdit) {
+      setName(projectToEdit.name);
+      setDescription(projectToEdit.description ?? '');
+      setIcon(projectToEdit.icon ?? '📁');
+      setColor(projectToEdit.color ?? PRESET_COLORS[0]);
+      setDefaultView(projectToEdit.default_view ?? 'list');
+      setShowEmojiPicker(false);
+      setIsSubmitting(false);
+    } else if (open) {
       setName('');
       setDescription('');
       setIcon('📁');
@@ -54,7 +66,7 @@ export function CreateProjectModal({
       setShowEmojiPicker(false);
       setIsSubmitting(false);
     }
-  }, [open]);
+  }, [open, projectToEdit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,18 +74,30 @@ export function CreateProjectModal({
 
     setIsSubmitting(true);
     try {
-      const created = await createProject({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        color,
-        icon,
-        default_view: defaultView,
-      });
-      setSelectedProjectId(created.id);
-      onCreated?.(created);
-      onOpenChange(false);
+      if (projectToEdit) {
+        const updated = await updateProject(projectToEdit.id, {
+          name: name.trim(),
+          description: description.trim() || null,
+          color,
+          icon,
+          default_view: defaultView,
+        });
+        onSaved?.(updated);
+        onOpenChange(false);
+      } else {
+        const created = await createProject({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          color,
+          icon,
+          default_view: defaultView,
+        });
+        setSelectedProjectId(created.id);
+        onCreated?.(created);
+        onOpenChange(false);
+      }
     } catch (err) {
-      console.error('Failed to create project:', err);
+      console.error('Failed to save project:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -83,8 +107,8 @@ export function CreateProjectModal({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Create Project"
-      description="Create a new structured project with sections, milestones, and views."
+      title={projectToEdit ? 'Edit Project' : 'Create Project'}
+      description={projectToEdit ? 'Update project details, appearance, and default view.' : 'Create a new structured project with sections, milestones, and views.'}
     >
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.fieldGroup}>
@@ -183,7 +207,9 @@ export function CreateProjectModal({
             className={styles.submitBtn}
             disabled={isSubmitting || !name.trim()}
           >
-            {isSubmitting ? 'Creating...' : 'Create Project'}
+            {isSubmitting
+              ? projectToEdit ? 'Saving...' : 'Creating...'
+              : projectToEdit ? 'Save Changes' : 'Create Project'}
           </button>
         </div>
       </form>

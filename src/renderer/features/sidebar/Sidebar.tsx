@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore } from '../../stores/app-store.js';
 import { useListStore, useSmartLists, useUserLists, useListGroups } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
@@ -9,10 +9,14 @@ import { CreateListModal } from '../lists/CreateListModal.js';
 import { ListGroupModal } from '../lists/ListGroupModal.js';
 import { ListContextMenu, type ListContextMenuPosition } from '../lists/ListContextMenu.js';
 import { ListGroupContextMenu } from '../lists/ListGroupContextMenu.js';
+import { useProjectStore } from '../../stores/projectStore.js';
+import { CreateProjectModal } from '../projects/CreateProjectModal.js';
+import { ProjectContextMenu, type ProjectContextMenuPosition } from '../projects/ProjectContextMenu.js';
 import { invoke } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { List } from '@shared/types/List.js';
 import type { ListGroup } from '@shared/types/ListGroup.js';
+import type { Project } from '@shared/types/index.js';
 import styles from './Sidebar.module.css';
 
 interface NavView {
@@ -24,7 +28,6 @@ interface NavView {
 
 const VIEWS: NavView[] = [
   { id: 'view_agenda', label: 'Agenda', icon: '📆', moduleName: 'agenda' },
-  { id: 'view_projects', label: 'Projects', icon: '📁', moduleName: 'project_management' },
   { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
 ];
 
@@ -37,6 +40,17 @@ export function Sidebar(): React.ReactElement {
   const userLists = useUserLists();
   const listGroups = useListGroups();
   const { isEnabled, loadModules } = useModuleStore();
+
+  const {
+    projectsById,
+    selectedProjectId,
+    setSelectedProjectId,
+    loadProjects,
+    deleteProject,
+    archiveProject,
+    updateProject,
+    reorderProjects,
+  } = useProjectStore();
 
   const tasksById = useTaskStore((state) => state.tasksById);
 
@@ -103,11 +117,19 @@ export function Sidebar(): React.ReactElement {
   const [contextMenuGroup, setContextMenuGroup] = useState<ListGroup | null>(null);
   const [contextMenuGroupPos, setContextMenuGroupPos] = useState<ListContextMenuPosition | null>(null);
 
+  // Projects modals and context menu state
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+  const [contextMenuProject, setContextMenuProject] = useState<Project | null>(null);
+  const [contextMenuProjectPos, setContextMenuProjectPos] = useState<ProjectContextMenuPosition | null>(null);
+
   // Folder collapse and drag-to-reorder state
   const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
+  const [draggingProjectId, setDraggingProjectId] = useState<string | null>(null);
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
   const [isDragOverRootLists, setIsDragOverRootLists] = useState(false);
+  const [isDragOverRootProjects, setIsDragOverRootProjects] = useState(false);
 
   // Sidebar resizer state (180px - 280px)
   const [isResizing, setIsResizing] = useState(false);
@@ -115,9 +137,37 @@ export function Sidebar(): React.ReactElement {
 
   useEffect(() => {
     loadLists();
+    loadProjects();
     loadModules();
     loadTags();
-  }, [loadLists, loadModules, loadTags]);
+  }, [loadLists, loadProjects, loadModules, loadTags]);
+
+  const projects = useMemo(
+    () => (Object.values(projectsById) as Project[]).sort((a, b) => a.sort_order - b.sort_order),
+    [projectsById]
+  );
+  const rootProjects = useMemo(
+    () => projects.filter((p: Project) => !p.group_id && p.status !== 'archived'),
+    [projects]
+  );
+
+  const projectAsList = useCallback(
+    (project: Project): List => ({
+      id: `project:${project.id}`,
+      name: project.name,
+      icon: project.icon ?? '📁',
+      color: project.color ?? null,
+      background_type: 'none',
+      background_value: null,
+      sort_order: project.sort_order,
+      is_smart: 0,
+      group_id: project.group_id ?? null,
+      notification_enabled: 0,
+      created_at: project.created_at,
+      updated_at: project.updated_at,
+    }),
+    []
+  );
 
   // Click-outside listener for profile menu
   useEffect(() => {
@@ -232,12 +282,37 @@ export function Sidebar(): React.ReactElement {
   useEffect(() => {
     const handleDragEnd = () => {
       setDraggingListId(null);
+      setDraggingProjectId(null);
+      setIsDragOverRootLists(false);
+      setIsDragOverRootProjects(false);
+      setDragOverGroupId(null);
     };
     window.addEventListener('dragend', handleDragEnd);
     return () => {
       window.removeEventListener('dragend', handleDragEnd);
     };
   }, []);
+
+  // Compute active task count for a project
+  const getProjectTaskCount = useCallback(
+    (projectId: string) => {
+      let count = 0;
+      for (const task of Object.values(tasksById)) {
+        if (task && task.project_id === projectId && task.is_trashed === 0 && task.is_completed === 0) {
+          count++;
+        }
+      }
+      return count;
+    },
+    [tasksById]
+  );
+
+  // Project context menu handler
+  const handleProjectContextMenu = (e: React.MouseEvent, project: Project) => {
+    e.preventDefault();
+    setContextMenuProject(project);
+    setContextMenuProjectPos({ x: e.clientX, y: e.clientY });
+  };
 
   // Drag over handler for smart lists (allow dropping smart list or task onto My Day)
   const handleSmartListDragOver = (e: React.DragEvent, targetListId: string) => {
@@ -327,14 +402,65 @@ export function Sidebar(): React.ReactElement {
     handleDrop(targetListId);
   };
 
-  // Move list into a folder by dropping onto folder header
+  // Reorder projects on drop, or assign task to project if task is dropped
+  const handleProjectDrop = async (targetProjectId: string) => {
+    if (!draggingProjectId || draggingProjectId === targetProjectId) return;
+
+    const projA = projectsById[draggingProjectId];
+    const projB = projectsById[targetProjectId];
+
+    if (projA && projB && projA.group_id !== projB.group_id) {
+      await updateProject(draggingProjectId, { group_id: projB.group_id });
+    }
+
+    const currentOrder = [...projects];
+    const dragIdx = currentOrder.findIndex((p) => p.id === draggingProjectId);
+    const targetIdx = currentOrder.findIndex((p) => p.id === targetProjectId);
+    if (dragIdx === -1 || targetIdx === -1) return;
+
+    const [moved] = currentOrder.splice(dragIdx, 1);
+    currentOrder.splice(targetIdx, 0, moved);
+
+    const updates = currentOrder.map((p, index) => ({
+      id: p.id,
+      sortOrder: index,
+    }));
+
+    reorderProjects(updates);
+    setDraggingProjectId(null);
+  };
+
+  const handleProjectItemDrop = async (e: React.DragEvent, targetProjectId: string) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && !draggingProjectId && !draggingListId) {
+      await useTaskStore.getState().updateTask({ id: taskId, project_id: targetProjectId });
+      return;
+    }
+    handleProjectDrop(targetProjectId);
+  };
+
+  const handleDropOnRootProjects = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverRootProjects(false);
+
+    if (draggingProjectId) {
+      const proj = projectsById[draggingProjectId];
+      if (proj && proj.group_id !== null) {
+        await updateProject(draggingProjectId, { group_id: null });
+      }
+      setDraggingProjectId(null);
+    }
+  };
+
+  // Move list or project into a folder by dropping onto folder header
   const handleDropOnGroup = async (e: React.DragEvent, targetGroupId: string) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverGroupId(null);
 
     const taskId = e.dataTransfer.getData('text/plain');
-    if (taskId && !draggingListId) {
+    if (taskId && !draggingListId && !draggingProjectId) {
       return;
     }
 
@@ -346,6 +472,15 @@ export function Sidebar(): React.ReactElement {
       // Ensure target folder is expanded so member list is visible
       setExpandedGroupIds((prev) => ({ ...prev, [targetGroupId]: true }));
       setDraggingListId(null);
+    }
+
+    if (draggingProjectId) {
+      const proj = projectsById[draggingProjectId];
+      if (proj && proj.group_id !== targetGroupId) {
+        await updateProject(draggingProjectId, { group_id: targetGroupId });
+      }
+      setExpandedGroupIds((prev) => ({ ...prev, [targetGroupId]: true }));
+      setDraggingProjectId(null);
     }
   };
 
@@ -585,6 +720,10 @@ export function Sidebar(): React.ReactElement {
         {/* Grouped User Lists */}
         {listGroups.map((group) => {
           const listsInGroup = userLists.filter((l) => l.group_id === group.id);
+          const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived');
+          if (listsInGroup.length === 0 && projectsInGroup.length > 0 && dragOverGroupId !== group.id) {
+            return null;
+          }
           const isOpen = isGroupExpanded(group.id);
           const isDragTarget = dragOverGroupId === group.id;
 
@@ -641,6 +780,129 @@ export function Sidebar(): React.ReactElement {
             </div>
           );
         })}
+
+        {/* Projects Section */}
+        {isEnabled('project_management') && (
+          <>
+            <div
+              className={`${styles.sectionLabel} ${isDragOverRootProjects ? styles.rootListsDragOver : ''}`}
+              onDragOver={(e) => {
+                if (draggingProjectId) {
+                  e.preventDefault();
+                  setIsDragOverRootProjects(true);
+                }
+              }}
+              onDragLeave={() => setIsDragOverRootProjects(false)}
+              onDrop={handleDropOnRootProjects}
+            >
+              <span>Projects</span>
+              <button
+                type="button"
+                className={styles.sectionActionBtn}
+                onClick={() => {
+                  setProjectToEdit(null);
+                  setIsCreateProjectModalOpen(true);
+                }}
+                title="New project"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Ungrouped Projects */}
+            {rootProjects.map((project: Project) => (
+              <ListItem
+                key={project.id}
+                list={projectAsList(project)}
+                isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
+                taskCount={getProjectTaskCount(project.id)}
+                onClick={() => {
+                  setSelectedProjectId(project.id);
+                  setActiveListId(`project:${project.id}`);
+                }}
+                onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                isDraggable
+                onDragStart={(_e) => setDraggingProjectId(project.id)}
+                onDragOver={(e) => {
+                  if (draggingProjectId) {
+                    e.preventDefault();
+                  }
+                }}
+                onDrop={(e) => handleProjectItemDrop(e, project.id)}
+              />
+            ))}
+
+            {/* Grouped Projects */}
+            {listGroups.map((group) => {
+              const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived');
+              if (projectsInGroup.length === 0 && dragOverGroupId !== group.id) {
+                return null;
+              }
+              const isOpen = isGroupExpanded(group.id);
+              const isDragTarget = dragOverGroupId === group.id;
+
+              return (
+                <div
+                  key={`proj_group_${group.id}`}
+                  className={`${styles.listGroupBlock} ${isDragTarget ? styles.groupDragOver : ''}`}
+                  onDragOver={(e) => {
+                    if (draggingProjectId) {
+                      e.preventDefault();
+                      setDragOverGroupId(group.id);
+                    }
+                  }}
+                  onDragLeave={() => setDragOverGroupId((curr) => (curr === group.id ? null : curr))}
+                  onDrop={(e) => handleDropOnGroup(e, group.id)}
+                >
+                  <button
+                    type="button"
+                    className={styles.groupHeaderButton}
+                    onClick={() => toggleGroup(group.id)}
+                    onContextMenu={(e) => handleGroupContextMenu(e, group)}
+                    aria-expanded={isOpen}
+                    aria-label={`Folder ${group.name}, ${projectsInGroup.length} projects`}
+                  >
+                    <span className={styles.groupIcon}>📁</span>
+                    <span className={styles.groupName}>{group.name}</span>
+                    <span
+                      className={`${styles.groupChevron} ${
+                        !isOpen ? styles.groupChevronCollapsed : ''
+                      }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className={styles.groupItems}>
+                      {projectsInGroup.map((project: Project) => (
+                        <ListItem
+                          key={project.id}
+                          list={projectAsList(project)}
+                          isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
+                          taskCount={getProjectTaskCount(project.id)}
+                          onClick={() => {
+                            setSelectedProjectId(project.id);
+                            setActiveListId(`project:${project.id}`);
+                          }}
+                          onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                          isDraggable
+                          onDragStart={(_e) => setDraggingProjectId(project.id)}
+                          onDragOver={(e) => {
+                            if (draggingProjectId) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onDrop={(e) => handleProjectItemDrop(e, project.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
 
         {/* Tags Section */}
         {Object.values(tagsById).length > 0 && (
@@ -823,6 +1085,50 @@ export function Sidebar(): React.ReactElement {
               setActiveListId('smart_my_day');
             }
             useListStore.getState().deleteList(l.id);
+          }}
+        />
+      )}
+
+      {/* Create / Edit Project Modal */}
+      <CreateProjectModal
+        open={isCreateProjectModalOpen}
+        onOpenChange={(open) => {
+          setIsCreateProjectModalOpen(open);
+          if (!open) setProjectToEdit(null);
+        }}
+        projectToEdit={projectToEdit}
+        onCreated={(proj) => {
+          setSelectedProjectId(proj.id);
+          setActiveListId(`project:${proj.id}`);
+        }}
+        onSaved={(proj) => {
+          if (selectedProjectId === proj.id) {
+            setSelectedProjectId(proj.id);
+          }
+        }}
+      />
+
+      {/* Right-click Context Menu for Projects */}
+      {contextMenuProject && (
+        <ProjectContextMenu
+          project={contextMenuProject}
+          position={contextMenuProjectPos}
+          onClose={() => {
+            setContextMenuProject(null);
+            setContextMenuProjectPos(null);
+          }}
+          onEdit={(proj) => {
+            setProjectToEdit(proj);
+            setIsCreateProjectModalOpen(true);
+          }}
+          onArchive={async (proj) => {
+            await archiveProject(proj.id);
+          }}
+          onDelete={async (proj) => {
+            await deleteProject(proj.id);
+            if (activeListId === `project:${proj.id}`) {
+              setActiveListId('smart_my_day');
+            }
           }}
         />
       )}

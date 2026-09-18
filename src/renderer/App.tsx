@@ -212,6 +212,14 @@ export function App(): React.ReactElement {
       );
     }
 
+    if (activeListId.startsWith('project:')) {
+      return (
+        <Suspense fallback={<ViewSkeleton />}>
+          <Projects />
+        </Suspense>
+      );
+    }
+
     switch (activeListId) {
       case 'smart_my_day':
         return (
@@ -260,7 +268,7 @@ export function App(): React.ReactElement {
     }
   };
 
-  const isDetailVisible = !activeListId.startsWith('view_') && Boolean(selectedTask);
+  const isDetailVisible = !activeListId.startsWith('view_') && !activeListId.startsWith('project:') && Boolean(selectedTask);
 
   return (
     <div className={layoutStyles.container}>

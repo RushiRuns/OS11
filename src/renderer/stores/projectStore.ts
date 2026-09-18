@@ -31,6 +31,7 @@ export interface ProjectState {
   loadProjects: () => Promise<void>;
   createProject: (payload: CreateProjectPayload) => Promise<Project>;
   updateProject: (id: string, fields: UpdateProjectPayload) => Promise<Project>;
+  reorderProjects: (updates: Array<{ id: string; sortOrder: number }>) => Promise<void>;
   archiveProject: (id: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
 
@@ -120,6 +121,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       due_date: payload.due_date ?? null,
       default_view: payload.default_view ?? 'list',
       sort_order: payload.sort_order ?? Date.now(),
+      group_id: payload.group_id ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -181,6 +183,29 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set((state) => ({
         projectsById: { ...state.projectsById, [id]: existing },
       }));
+      throw err;
+    }
+  },
+
+  reorderProjects: async (updates: Array<{ id: string; sortOrder: number }>) => {
+    const previousMap = { ...get().projectsById };
+
+    set((state) => {
+      const nextMap = { ...state.projectsById };
+      for (const u of updates) {
+        if (nextMap[u.id]) {
+          nextMap[u.id] = { ...nextMap[u.id], sort_order: u.sortOrder };
+        }
+      }
+      return { projectsById: nextMap };
+    });
+
+    try {
+      await Promise.all(
+        updates.map((u) => ipc.invoke(IPC.PROJECTS.REORDER, { id: u.id, sortOrder: u.sortOrder }))
+      );
+    } catch (err) {
+      set({ projectsById: previousMap });
       throw err;
     }
   },

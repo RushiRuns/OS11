@@ -19,6 +19,20 @@ export class ProjectRepository extends BaseRepository {
     return res ?? null;
   }
 
+  private hasGroupIdCol: boolean | null = null;
+
+  private hasGroupId(): boolean {
+    if (this.hasGroupIdCol === null) {
+      try {
+        const cols = this.db.pragma('table_info(projects)') as Array<{ name: string }>;
+        this.hasGroupIdCol = cols.some((c) => c.name === 'group_id');
+      } catch {
+        this.hasGroupIdCol = false;
+      }
+    }
+    return this.hasGroupIdCol;
+  }
+
   public create(payload: CreateProjectPayload): Project {
     const id = uuidv4();
     const now = new Date().toISOString();
@@ -33,19 +47,30 @@ export class ProjectRepository extends BaseRepository {
       due_date: payload.due_date ?? null,
       default_view: payload.default_view ?? 'list',
       sort_order: payload.sort_order ?? Date.now(),
+      group_id: payload.group_id ?? null,
       created_at: now,
       updated_at: now,
     };
 
-    const stmt = this.db.prepare(`
-      INSERT INTO projects (
-        id, name, description, color, icon, status,
-        due_date, default_view, sort_order, created_at, updated_at
-      ) VALUES (
-        @id, @name, @description, @color, @icon, @status,
-        @due_date, @default_view, @sort_order, @created_at, @updated_at
-      )
-    `);
+    const stmt = this.hasGroupId()
+      ? this.db.prepare(`
+          INSERT INTO projects (
+            id, name, description, color, icon, status,
+            due_date, default_view, sort_order, group_id, created_at, updated_at
+          ) VALUES (
+            @id, @name, @description, @color, @icon, @status,
+            @due_date, @default_view, @sort_order, @group_id, @created_at, @updated_at
+          )
+        `)
+      : this.db.prepare(`
+          INSERT INTO projects (
+            id, name, description, color, icon, status,
+            due_date, default_view, sort_order, created_at, updated_at
+          ) VALUES (
+            @id, @name, @description, @color, @icon, @status,
+            @due_date, @default_view, @sort_order, @created_at, @updated_at
+          )
+        `);
 
     stmt.run(record);
     return record;
@@ -61,22 +86,38 @@ export class ProjectRepository extends BaseRepository {
       ...current,
       ...fields,
       id,
+      group_id: fields.group_id !== undefined ? fields.group_id : current.group_id,
       updated_at: new Date().toISOString(),
     };
 
-    const stmt = this.db.prepare(`
-      UPDATE projects SET
-        name = @name,
-        description = @description,
-        color = @color,
-        icon = @icon,
-        status = @status,
-        due_date = @due_date,
-        default_view = @default_view,
-        sort_order = @sort_order,
-        updated_at = @updated_at
-      WHERE id = @id
-    `);
+    const stmt = this.hasGroupId()
+      ? this.db.prepare(`
+          UPDATE projects SET
+            name = @name,
+            description = @description,
+            color = @color,
+            icon = @icon,
+            status = @status,
+            due_date = @due_date,
+            default_view = @default_view,
+            sort_order = @sort_order,
+            group_id = @group_id,
+            updated_at = @updated_at
+          WHERE id = @id
+        `)
+      : this.db.prepare(`
+          UPDATE projects SET
+            name = @name,
+            description = @description,
+            color = @color,
+            icon = @icon,
+            status = @status,
+            due_date = @due_date,
+            default_view = @default_view,
+            sort_order = @sort_order,
+            updated_at = @updated_at
+          WHERE id = @id
+        `);
 
     stmt.run(updated);
     return updated;

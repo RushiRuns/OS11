@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useAppStore } from '../../stores/app-store.js';
 import { ProjectHeader } from './ProjectHeader.js';
 import { ProjectListView } from './ProjectListView.js';
 import { ProjectBoardView } from './ProjectBoardView.js';
@@ -29,6 +30,7 @@ export function Projects(): React.ReactElement {
   } = useProjectStore();
 
   const tasksById = useTaskStore((state) => state.tasksById);
+  const activeListId = useAppStore((state) => state.activeListId);
 
   const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -38,6 +40,15 @@ export function Projects(): React.ReactElement {
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
+
+  useEffect(() => {
+    if (activeListId.startsWith('project:')) {
+      const projId = activeListId.slice(8);
+      if (projId && projectsById[projId] && selectedProjectId !== projId) {
+        setSelectedProjectId(projId);
+      }
+    }
+  }, [activeListId, projectsById, selectedProjectId, setSelectedProjectId]);
 
   const projects = useMemo(
     () => Object.values(projectsById).sort((a, b) => a.sort_order - b.sort_order),

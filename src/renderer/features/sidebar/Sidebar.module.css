@@ -51,6 +51,10 @@
   margin-bottom: var(--space-2);
 }
 
+.projectsSection {
+  margin-top: var(--space-2);
+}
+
 .sectionLabel {
   display: flex;
   align-items: center;
