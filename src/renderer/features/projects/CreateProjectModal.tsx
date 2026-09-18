@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '../../components/primitives/Dialog/Dialog.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import type { Project } from '@shared/types/index.js';
+import { EmojiPicker } from '../../components/EmojiPicker/EmojiPicker.js';
 import styles from './CreateProjectModal.module.css';
 
 interface CreateProjectModalProps {
@@ -12,7 +13,6 @@ interface CreateProjectModalProps {
   onSaved?: (project: Project) => void;
 }
 
-const PRESET_EMOJIS = ['📁', '🚀', '💼', '🎯', '💡', '📚', '🎨', '💻', '⚡', '🔥', '📊', '🛠️', '✨', '🏷️', '📦'];
 const PRESET_COLORS = [
   '#1B88FF', // Blue
   '#27AE60', // Green
@@ -114,14 +114,26 @@ export function CreateProjectModal({
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Project Name</label>
           <div className={styles.inputRow}>
-            <button
-              type="button"
-              className={styles.emojiSelectButton}
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              title="Choose icon"
-            >
-              {icon}
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className={styles.emojiSelectButton}
+                onClick={() => setShowEmojiPicker((v) => !v)}
+                title="Choose icon"
+              >
+                {icon}
+              </button>
+              {showEmojiPicker && (
+                <EmojiPicker
+                  selectedEmoji={icon}
+                  onSelect={(selected) => {
+                    setIcon(selected);
+                    setShowEmojiPicker(false);
+                  }}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
+              )}
+            </div>
             <input
               type="text"
               className={styles.textInput}
@@ -132,23 +144,6 @@ export function CreateProjectModal({
               required
             />
           </div>
-          {showEmojiPicker && (
-            <div className={styles.presetGrid}>
-              {PRESET_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  className={styles.presetEmoji}
-                  onClick={() => {
-                    setIcon(emoji);
-                    setShowEmojiPicker(false);
-                  }}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className={styles.fieldGroup}>
