@@ -36,7 +36,7 @@ export class ProjectService {
     }
     return this.repository.update(id, {
       ...fields,
-      name: fields.name !== undefined ? fields.name.trim() : undefined,
+      ...(fields.name !== undefined ? { name: fields.name.trim() } : {}),
     });
   }
 

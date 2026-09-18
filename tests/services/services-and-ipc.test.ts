@@ -62,6 +62,18 @@ describe('Phase 3: Domain Services & IPC Client Adapter', () => {
     expect(projectService.getById(project.id).status).toBe('archived');
   });
 
+  it('ProjectService partially updates project fields without overwriting name with undefined', () => {
+    const projectRepo = new ProjectRepository(db);
+    const projectService = new ProjectService(projectRepo);
+
+    const project = projectService.create({ name: 'Alpha Redesign' });
+    expect(project.name).toBe('Alpha Redesign');
+
+    const updated = projectService.update(project.id, { sort_order: 5 });
+    expect(updated.name).toBe('Alpha Redesign');
+    expect(updated.sort_order).toBe(5);
+  });
+
   it('TagService associates and disassociates tags', () => {
     const taskRepo = new TaskRepository(db);
     const task = taskRepo.create({ title: 'Task with tags' });
