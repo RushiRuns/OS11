@@ -14,6 +14,37 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-3) var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color var(--transition-fast);
+}
+
+.scrollWrap::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollWrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollWrap::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background-color var(--transition-fast);
+}
+
+.scrollWrap:hover,
+.scrollWrapScrolling {
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.scrollWrap:hover::-webkit-scrollbar-thumb,
+.scrollWrapScrolling::-webkit-scrollbar-thumb {
+  background: var(--border-strong, rgba(255, 255, 255, 0.2));
+}
+
+.scrollWrap::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary, rgba(255, 255, 255, 0.4));
 }
 
 .sectionLabel {
@@ -71,26 +102,31 @@
 .bottomBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2px;
   height: 44px;
-  padding: 0 var(--space-3);
+  padding: 0 4px;
   border-top: 1px solid var(--border-subtle);
   background-color: var(--surface-sidebar);
+  flex-shrink: 0;
 }
 
 .newListButton {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  height: 32px;
+  flex: 1;
+  min-width: 0;
+  height: 38px;
   padding: 0 var(--space-2);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
+  font-weight: 500;
   cursor: pointer;
+  text-align: left;
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
@@ -100,9 +136,37 @@
 }
 
 .newListIcon {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--accent);
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  stroke: currentColor;
+}
+
+.newListLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.newGroupButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.newGroupButton:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
 }
 
 /* Drag resizer handle on right edge */
@@ -129,6 +193,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: var(--space-2);
   padding: var(--space-2) var(--space-2);
   border-bottom: 1px solid var(--border-subtle);
   background-color: var(--surface-sidebar);

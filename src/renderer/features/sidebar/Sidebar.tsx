@@ -9,6 +9,8 @@ import { SmartListGroup } from './SmartListGroup.js';
 import { CreateListModal } from '../lists/CreateListModal.js';
 import { ListGroupModal } from '../lists/ListGroupModal.js';
 import { ListContextMenu, type ListContextMenuPosition } from '../lists/ListContextMenu.js';
+import { invoke } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import type { List } from '@shared/types/List.js';
 import styles from './Sidebar.module.css';
 
@@ -25,6 +27,8 @@ const VIEWS: NavView[] = [
   { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
 ];
 
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
 export function Sidebar(): React.ReactElement {
   const { activeListId, setActiveListId, setSidebarVisible } = useAppStore();
   const { loadLists } = useListStore();
@@ -37,10 +41,56 @@ export function Sidebar(): React.ReactElement {
 
   const { tagsById, loadTags } = useTagStore();
 
-  // Profile dropdown and toggle state
+  // Profile dropdown, identity, and toggle state
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [userName, setUserName] = useState<string>('Local User');
+  const [userAvatarEmoji, setUserAvatarEmoji] = useState<string | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Auto-hiding scrollbar state
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleScroll = useCallback(() => {
+    setIsScrolling(true);
+    if (scrollTimerRef.current) {
+      clearTimeout(scrollTimerRef.current);
+    }
+    scrollTimerRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 800);
+  }, []);
+
+  const getInitials = useCallback((name: string): string => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return (name.slice(0, 2) || 'U').toUpperCase();
+  }, []);
+
+  useEffect(() => {
+    invoke<{ display_name?: string; avatar_emoji?: string | null }>(IPC.IDENTITY.GET)
+      .then((res) => {
+        if (res?.display_name) {
+          setUserName(res.display_name);
+        }
+        if (res?.avatar_emoji) {
+          setUserAvatarEmoji(res.avatar_emoji);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
+    };
+  }, []);
 
   // Modals and context menu state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -85,12 +135,27 @@ export function Sidebar(): React.ReactElement {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isProfileMenuOpen]);
+
+  // Global shortcut: Ctrl+L (or Cmd+L) to open Create List modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+      if (modKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        setListToEdit(null);
+        setIsCreateModalOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Compute task count per list
   const getTaskCount = useCallback(
@@ -262,12 +327,11 @@ export function Sidebar(): React.ReactElement {
           aria-haspopup="true"
           aria-expanded={isProfileMenuOpen}
           aria-label="User profile and menu"
-          title="Rushikesh Aundhakar"
+          title={userName}
         >
-          <div className={styles.avatar}>RA</div>
+          <div className={styles.avatar}>{userAvatarEmoji || getInitials(userName)}</div>
           <div className={styles.profileInfo}>
-            <span className={styles.profileName}>Rushikesh Aundhakar</span>
-            <span className={styles.profileEmail}>rushikeshaundhakar715@outlook.com</span>
+            <span className={styles.profileName}>{userName}</span>
           </div>
           <span className={styles.chevron}>{isProfileMenuOpen ? '▴' : '▾'}</span>
         </div>
@@ -322,33 +386,14 @@ export function Sidebar(): React.ReactElement {
               <span className={styles.menuItemIcon}>⚙️</span>
               <span>Settings</span>
             </button>
-
-            <div className={styles.menuDivider} role="separator" />
-
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={() => setIsProfileMenuOpen(false)}
-              role="menuitem"
-            >
-              <span className={styles.menuItemIcon}>👤</span>
-              <span>Manage accounts</span>
-            </button>
-
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={() => setIsProfileMenuOpen(false)}
-              role="menuitem"
-            >
-              <span className={styles.menuItemIcon}>🔄</span>
-              <span>Sync</span>
-            </button>
           </div>
         )}
       </div>
 
-      <div className={styles.scrollWrap}>
+      <div
+        className={`${styles.scrollWrap} ${isScrolling ? styles.scrollWrapScrolling : ''}`}
+        onScroll={handleScroll}
+      >
         {/* Smart Lists Collapsible Group */}
         <SmartListGroup
           smartLists={smartLists}
@@ -492,18 +537,49 @@ export function Sidebar(): React.ReactElement {
             setListToEdit(null);
             setIsCreateModalOpen(true);
           }}
+          title={isMac ? 'New list (Cmd + L)' : 'New list (Ctrl + L)'}
+          aria-label="New list"
         >
-          <span className={styles.newListIcon}>+</span>
-          <span>New List</span>
+          <svg
+            className={styles.newListIcon}
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span className={styles.newListLabel}>New list</span>
         </button>
 
         <button
           type="button"
-          className={styles.sectionActionBtn}
+          className={styles.newGroupButton}
           onClick={() => setIsGroupModalOpen(true)}
-          title="New folder"
+          title="Create a new group"
+          aria-label="Create a new group"
         >
-          📁+
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="7" width="13" height="13" rx="2" />
+            <path d="M19 3v6" />
+            <path d="M16 6h6" />
+          </svg>
         </button>
       </div>
 
