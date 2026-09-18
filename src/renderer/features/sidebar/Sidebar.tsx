@@ -5,7 +5,6 @@ import { useTaskStore } from '../../stores/taskStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { ListItem } from './ListItem.js';
-import { SmartListGroup } from './SmartListGroup.js';
 import { CreateListModal } from '../lists/CreateListModal.js';
 import { ListGroupModal } from '../lists/ListGroupModal.js';
 import { ListContextMenu, type ListContextMenuPosition } from '../lists/ListContextMenu.js';
@@ -228,6 +227,59 @@ export function Sidebar(): React.ReactElement {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing]);
+
+  // Reset drag state when drag ends anywhere
+  useEffect(() => {
+    const handleDragEnd = () => {
+      setDraggingListId(null);
+    };
+    window.addEventListener('dragend', handleDragEnd);
+    return () => {
+      window.removeEventListener('dragend', handleDragEnd);
+    };
+  }, []);
+
+  // Drag over handler for smart lists (allow dropping smart list or task onto My Day)
+  const handleSmartListDragOver = (e: React.DragEvent, targetListId: string) => {
+    if (draggingListId) {
+      if (smartLists.some((l) => l.id === draggingListId)) {
+        e.preventDefault();
+      }
+    } else if (targetListId === 'smart_my_day') {
+      e.preventDefault();
+    }
+  };
+
+  // Reorder smart lists on drop, or assign task to My Day if task is dropped
+  const handleSmartListDrop = async (e: React.DragEvent, targetListId: string) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && !draggingListId) {
+      if (targetListId === 'smart_my_day') {
+        const today = new Date().toISOString().split('T')[0];
+        await useTaskStore.getState().updateTask({ id: taskId, my_day_date: today });
+      }
+      return;
+    }
+
+    if (!draggingListId || draggingListId === targetListId) return;
+
+    const currentOrder = [...smartLists];
+    const dragIdx = currentOrder.findIndex((l) => l.id === draggingListId);
+    const targetIdx = currentOrder.findIndex((l) => l.id === targetListId);
+    if (dragIdx === -1 || targetIdx === -1) return;
+
+    const [moved] = currentOrder.splice(dragIdx, 1);
+    currentOrder.splice(targetIdx, 0, moved);
+
+    const updates = currentOrder.map((l, index) => ({
+      id: l.id,
+      sortOrder: index,
+    }));
+
+    useListStore.getState().reorderLists(updates);
+    setDraggingListId(null);
+  };
 
   // Context menu handler
   const handleContextMenu = (e: React.MouseEvent, list: List) => {
@@ -469,13 +521,22 @@ export function Sidebar(): React.ReactElement {
         className={`${styles.scrollWrap} ${isScrolling ? styles.scrollWrapScrolling : ''}`}
         onScroll={handleScroll}
       >
-        {/* Smart Lists Collapsible Group */}
-        <SmartListGroup
-          smartLists={smartLists}
-          activeListId={activeListId}
-          onSelectList={(id) => setActiveListId(id)}
-          getTaskCount={getTaskCount}
-        />
+        {/* Flat & Reorderable Smart Lists */}
+        <div className={styles.smartListSection}>
+          {smartLists.map((list) => (
+            <ListItem
+              key={list.id}
+              list={list}
+              isActive={activeListId === list.id}
+              taskCount={getTaskCount(list.id)}
+              onClick={(id) => setActiveListId(id)}
+              isDraggable
+              onDragStart={(_e, id) => setDraggingListId(id)}
+              onDragOver={(e) => handleSmartListDragOver(e, list.id)}
+              onDrop={(e, id) => handleSmartListDrop(e, id)}
+            />
+          ))}
+        </div>
 
         {/* User Lists Section */}
         <div
