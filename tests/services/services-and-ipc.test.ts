@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { ListRepository } from '../../src/main/repositories/ListRepository.js';
+import { ListGroupRepository } from '../../src/main/repositories/ListGroupRepository.js';
 import { ListService } from '../../src/main/services/list/ListService.js';
 import { ProjectRepository } from '../../src/main/repositories/ProjectRepository.js';
 import { ProjectService } from '../../src/main/services/project/ProjectService.js';
@@ -34,6 +35,20 @@ describe('Phase 3: Domain Services & IPC Client Adapter', () => {
     expect(smartLists.length).toBeGreaterThan(0);
 
     expect(() => listService.delete(smartLists[0].id)).toThrow('Cannot delete built-in smart lists.');
+  });
+
+  it('ListService partially updates list fields without overwriting name with undefined', () => {
+    const listRepo = new ListRepository(db);
+    const groupRepo = new ListGroupRepository(db);
+    const listService = new ListService(listRepo);
+
+    const group = groupRepo.create({ name: 'Work Folder' });
+    const created = listService.create({ name: 'Personal Tasks' });
+    expect(created.name).toBe('Personal Tasks');
+
+    const updated = listService.update(created.id, { group_id: group.id });
+    expect(updated.name).toBe('Personal Tasks');
+    expect(updated.group_id).toBe(group.id);
   });
 
   it('ProjectService creates and archives projects', () => {

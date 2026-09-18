@@ -9,9 +9,11 @@ import { SmartListGroup } from './SmartListGroup.js';
 import { CreateListModal } from '../lists/CreateListModal.js';
 import { ListGroupModal } from '../lists/ListGroupModal.js';
 import { ListContextMenu, type ListContextMenuPosition } from '../lists/ListContextMenu.js';
+import { ListGroupContextMenu } from '../lists/ListGroupContextMenu.js';
 import { invoke } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { List } from '@shared/types/List.js';
+import type { ListGroup } from '@shared/types/ListGroup.js';
 import styles from './Sidebar.module.css';
 
 interface NavView {
@@ -96,11 +98,17 @@ export function Sidebar(): React.ReactElement {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [listToEdit, setListToEdit] = useState<List | null>(null);
+  const [groupToEdit, setGroupToEdit] = useState<ListGroup | null>(null);
   const [contextMenuList, setContextMenuList] = useState<List | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<ListContextMenuPosition | null>(null);
+  const [contextMenuGroup, setContextMenuGroup] = useState<ListGroup | null>(null);
+  const [contextMenuGroupPos, setContextMenuGroupPos] = useState<ListContextMenuPosition | null>(null);
 
-  // Drag-to-reorder state
+  // Folder collapse and drag-to-reorder state
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
+  const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+  const [isDragOverRootLists, setIsDragOverRootLists] = useState(false);
 
   // Sidebar resizer state (180px - 280px)
   const [isResizing, setIsResizing] = useState(false);
@@ -229,8 +237,16 @@ export function Sidebar(): React.ReactElement {
   };
 
   // Reorder user lists on drop, or move task to list if task is dropped
-  const handleDrop = (targetListId: string) => {
+  const handleDrop = async (targetListId: string) => {
     if (!draggingListId || draggingListId === targetListId) return;
+
+    const listA = useListStore.getState().listsById[draggingListId];
+    const listB = useListStore.getState().listsById[targetListId];
+
+    // If moving between different groups or in/out of a group
+    if (listA && listB && listA.group_id !== listB.group_id) {
+      await useListStore.getState().updateList(draggingListId, { group_id: listB.group_id });
+    }
 
     const currentOrder = [...userLists];
     const dragIdx = currentOrder.findIndex((l) => l.id === draggingListId);
@@ -257,6 +273,65 @@ export function Sidebar(): React.ReactElement {
       return;
     }
     handleDrop(targetListId);
+  };
+
+  // Move list into a folder by dropping onto folder header
+  const handleDropOnGroup = async (e: React.DragEvent, targetGroupId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverGroupId(null);
+
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && !draggingListId) {
+      return;
+    }
+
+    if (draggingListId) {
+      const list = useListStore.getState().listsById[draggingListId];
+      if (list && list.group_id !== targetGroupId) {
+        await useListStore.getState().updateList(draggingListId, { group_id: targetGroupId });
+      }
+      // Ensure target folder is expanded so member list is visible
+      setExpandedGroupIds((prev) => ({ ...prev, [targetGroupId]: true }));
+      setDraggingListId(null);
+    }
+  };
+
+  // Move list out of folder into root lists by dropping onto Lists header
+  const handleDropOnRoot = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverRootLists(false);
+
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (taskId && !draggingListId) {
+      return;
+    }
+
+    if (draggingListId) {
+      const list = useListStore.getState().listsById[draggingListId];
+      if (list && list.group_id !== null) {
+        await useListStore.getState().updateList(draggingListId, { group_id: null });
+      }
+      setDraggingListId(null);
+    }
+  };
+
+  // Toggle folder expansion (defaults to true / expanded)
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroupIds((prev) => ({
+      ...prev,
+      [groupId]: prev[groupId] !== undefined ? !prev[groupId] : false,
+    }));
+  };
+
+  const isGroupExpanded = (groupId: string): boolean => {
+    return expandedGroupIds[groupId] !== false;
+  };
+
+  const handleGroupContextMenu = (e: React.MouseEvent, group: ListGroup) => {
+    e.preventDefault();
+    setContextMenuGroup(group);
+    setContextMenuGroupPos({ x: e.clientX, y: e.clientY });
   };
 
   // Duplicate list handler
@@ -403,7 +478,17 @@ export function Sidebar(): React.ReactElement {
         />
 
         {/* User Lists Section */}
-        <div className={styles.sectionLabel}>
+        <div
+          className={`${styles.sectionLabel} ${isDragOverRootLists ? styles.rootListsDragOver : ''}`}
+          onDragOver={(e) => {
+            if (draggingListId) {
+              e.preventDefault();
+              setIsDragOverRootLists(true);
+            }
+          }}
+          onDragLeave={() => setIsDragOverRootLists(false)}
+          onDrop={handleDropOnRoot}
+        >
           <span>Lists</span>
           <button
             type="button"
@@ -439,28 +524,59 @@ export function Sidebar(): React.ReactElement {
         {/* Grouped User Lists */}
         {listGroups.map((group) => {
           const listsInGroup = userLists.filter((l) => l.group_id === group.id);
+          const isOpen = isGroupExpanded(group.id);
+          const isDragTarget = dragOverGroupId === group.id;
+
           return (
-            <div key={group.id} className={styles.listGroupBlock}>
-              <div className={styles.groupHeader}>
-                <span>📁</span>
-                <span>{group.name}</span>
-              </div>
-              <div className={styles.groupItems}>
-                {listsInGroup.map((list) => (
-                  <ListItem
-                    key={list.id}
-                    list={list}
-                    isActive={activeListId === list.id}
-                    taskCount={getTaskCount(list.id)}
-                    onClick={(id) => setActiveListId(id)}
-                    onContextMenu={handleContextMenu}
-                    isDraggable
-                    onDragStart={(_e, id) => setDraggingListId(id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e, id) => handleItemDrop(e, id)}
-                  />
-                ))}
-              </div>
+            <div
+              key={group.id}
+              className={`${styles.listGroupBlock} ${isDragTarget ? styles.groupDragOver : ''}`}
+              onDragOver={(e) => {
+                if (draggingListId) {
+                  e.preventDefault();
+                  setDragOverGroupId(group.id);
+                }
+              }}
+              onDragLeave={() => setDragOverGroupId((curr) => (curr === group.id ? null : curr))}
+              onDrop={(e) => handleDropOnGroup(e, group.id)}
+            >
+              <button
+                type="button"
+                className={styles.groupHeaderButton}
+                onClick={() => toggleGroup(group.id)}
+                onContextMenu={(e) => handleGroupContextMenu(e, group)}
+                aria-expanded={isOpen}
+                aria-label={`Folder ${group.name}, ${listsInGroup.length} lists`}
+              >
+                <span className={styles.groupIcon}>📁</span>
+                <span className={styles.groupName}>{group.name}</span>
+                <span
+                  className={`${styles.groupChevron} ${
+                    !isOpen ? styles.groupChevronCollapsed : ''
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+
+              {isOpen && (
+                <div className={styles.groupItems}>
+                  {listsInGroup.map((list) => (
+                    <ListItem
+                      key={list.id}
+                      list={list}
+                      isActive={activeListId === list.id}
+                      taskCount={getTaskCount(list.id)}
+                      onClick={(id) => setActiveListId(id)}
+                      onContextMenu={handleContextMenu}
+                      isDraggable
+                      onDragStart={(_e, id) => setDraggingListId(id)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e, id) => handleItemDrop(e, id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -600,8 +716,31 @@ export function Sidebar(): React.ReactElement {
       {/* List Group Modal */}
       <ListGroupModal
         open={isGroupModalOpen}
-        onOpenChange={setIsGroupModalOpen}
+        onOpenChange={(open) => {
+          setIsGroupModalOpen(open);
+          if (!open) setGroupToEdit(null);
+        }}
+        groupToEdit={groupToEdit}
       />
+
+      {/* Right-click Context Menu for List Groups / Folders */}
+      {contextMenuGroup && (
+        <ListGroupContextMenu
+          group={contextMenuGroup}
+          position={contextMenuGroupPos}
+          onClose={() => {
+            setContextMenuGroup(null);
+            setContextMenuGroupPos(null);
+          }}
+          onRename={(grp) => {
+            setGroupToEdit(grp);
+            setIsGroupModalOpen(true);
+          }}
+          onDelete={(grp) => {
+            useListStore.getState().deleteGroup(grp.id);
+          }}
+        />
+      )}
 
       {/* Right-click Context Menu */}
       {contextMenuList && (

@@ -76,27 +76,91 @@
 }
 
 .listGroupBlock {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), outline var(--transition-fast);
 }
 
-.groupHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  font-weight: 500;
-  cursor: pointer;
+.groupDragOver {
+  background-color: var(--surface-hover);
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+.rootListsDragOver {
+  background-color: var(--surface-hover);
+  outline: 2px dashed var(--accent);
   border-radius: var(--radius-sm);
 }
 
-.groupHeader:hover {
+.groupHeaderButton {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-0-5);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  outline: none;
+  position: relative;
+}
+
+.groupHeaderButton:hover {
   background-color: var(--surface-hover);
 }
 
+.groupHeaderButton:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+.groupIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  margin-right: var(--space-2);
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.groupName {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.groupChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+  margin-left: var(--space-1);
+  flex-shrink: 0;
+}
+
+.groupChevronCollapsed {
+  transform: rotate(-90deg);
+}
+
 .groupItems {
-  padding-left: var(--space-2);
+  padding-left: var(--space-3);
+  overflow: hidden;
+  transition: opacity var(--transition-fast);
 }
 
 .bottomBar {
