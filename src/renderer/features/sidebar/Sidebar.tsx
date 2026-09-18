@@ -20,15 +20,13 @@ interface NavView {
 }
 
 const VIEWS: NavView[] = [
-  { id: 'view_dashboard', label: 'Dashboard', icon: '📊', moduleName: 'dashboard' },
   { id: 'view_agenda', label: 'Agenda', icon: '📆', moduleName: 'agenda' },
   { id: 'view_projects', label: 'Projects', icon: '📁', moduleName: 'project_management' },
   { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
-  { id: 'view_settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export function Sidebar(): React.ReactElement {
-  const { activeListId, setActiveListId } = useAppStore();
+  const { activeListId, setActiveListId, setSidebarVisible } = useAppStore();
   const { loadLists } = useListStore();
   const smartLists = useSmartLists();
   const userLists = useUserLists();
@@ -38,6 +36,11 @@ export function Sidebar(): React.ReactElement {
   const tasksById = useTaskStore((state) => state.tasksById);
 
   const { tagsById, loadTags } = useTagStore();
+
+  // Profile dropdown and toggle state
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Modals and context menu state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -58,6 +61,36 @@ export function Sidebar(): React.ReactElement {
     loadModules();
     loadTags();
   }, [loadLists, loadModules, loadTags]);
+
+  // Click-outside listener for profile menu
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(target) &&
+        menuRef.current &&
+        !menuRef.current.contains(target)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
 
   // Compute task count per list
   const getTaskCount = useCallback(
@@ -212,6 +245,109 @@ export function Sidebar(): React.ReactElement {
       className={styles.sidebarContainer}
       aria-label="Application Sidebar"
     >
+      {/* Top Profile Header & Collapse Toggle */}
+      <div className={styles.header}>
+        <div
+          ref={profileRef}
+          className={styles.profileTrigger}
+          onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsProfileMenuOpen((prev) => !prev);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-haspopup="true"
+          aria-expanded={isProfileMenuOpen}
+          aria-label="User profile and menu"
+          title="Rushikesh Aundhakar"
+        >
+          <div className={styles.avatar}>RA</div>
+          <div className={styles.profileInfo}>
+            <span className={styles.profileName}>Rushikesh Aundhakar</span>
+            <span className={styles.profileEmail}>rushikeshaundhakar715@outlook.com</span>
+          </div>
+          <span className={styles.chevron}>{isProfileMenuOpen ? '▴' : '▾'}</span>
+        </div>
+
+        <button
+          type="button"
+          className={styles.collapseBtn}
+          onClick={() => setSidebarVisible(false)}
+          title="Collapse sidebar"
+          aria-label="Collapse sidebar"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+          </svg>
+        </button>
+
+        {/* Profile Dropdown Menu */}
+        {isProfileMenuOpen && (
+          <div ref={menuRef} className={styles.profileMenu} role="menu" aria-label="Profile navigation options">
+            <button
+              type="button"
+              className={`${styles.menuItem} ${activeListId === 'view_dashboard' ? styles.menuItemActive : ''}`}
+              onClick={() => {
+                setActiveListId('view_dashboard');
+                setIsProfileMenuOpen(false);
+              }}
+              role="menuitem"
+            >
+              <span className={styles.menuItemIcon}>📊</span>
+              <span>Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.menuItem} ${activeListId === 'view_settings' ? styles.menuItemActive : ''}`}
+              onClick={() => {
+                setActiveListId('view_settings');
+                setIsProfileMenuOpen(false);
+              }}
+              role="menuitem"
+            >
+              <span className={styles.menuItemIcon}>⚙️</span>
+              <span>Settings</span>
+            </button>
+
+            <div className={styles.menuDivider} role="separator" />
+
+            <button
+              type="button"
+              className={styles.menuItem}
+              onClick={() => setIsProfileMenuOpen(false)}
+              role="menuitem"
+            >
+              <span className={styles.menuItemIcon}>👤</span>
+              <span>Manage accounts</span>
+            </button>
+
+            <button
+              type="button"
+              className={styles.menuItem}
+              onClick={() => setIsProfileMenuOpen(false)}
+              role="menuitem"
+            >
+              <span className={styles.menuItemIcon}>🔄</span>
+              <span>Sync</span>
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className={styles.scrollWrap}>
         {/* Smart Lists Collapsible Group */}
         <SmartListGroup

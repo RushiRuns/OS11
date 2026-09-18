@@ -60,7 +60,13 @@ export function App(): React.ReactElement {
   const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
   const isMiniTimer = typeof window !== 'undefined' && window.location.hash.includes('mini-timer');
 
-  const { activeListId, systemInfo, fetchSystemInfo } = useAppStore();
+  const {
+    activeListId,
+    systemInfo,
+    fetchSystemInfo,
+    isSidebarVisible,
+    setSidebarVisible,
+  } = useAppStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -291,7 +297,7 @@ export function App(): React.ReactElement {
       ) : (
         <div
           className={layoutStyles.shellGrid}
-          data-sidebar={effectiveFocusMode ? 'hidden' : 'visible'}
+          data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
           data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
           data-focus={effectiveFocusMode ? 'active' : 'inactive'}
         >
@@ -301,7 +307,30 @@ export function App(): React.ReactElement {
           </div>
 
           {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
-          <main className={layoutStyles.mainCol}>
+          <main className={`${layoutStyles.mainCol} ${!isSidebarVisible ? layoutStyles.mainColSidebarHidden : ''}`}>
+            {!isSidebarVisible && !effectiveFocusMode && (
+              <button
+                type="button"
+                className={layoutStyles.floatingSidebarToggle}
+                onClick={() => setSidebarVisible(true)}
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="18" height="18" x="3" y="3" rx="2" />
+                  <path d="M9 3v18" />
+                </svg>
+              </button>
+            )}
             {renderMainContent()}
           </main>
 

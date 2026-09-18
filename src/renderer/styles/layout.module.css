@@ -50,6 +50,36 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 320px;
+  position: relative;
+}
+
+.mainColSidebarHidden {
+  padding-left: 44px;
+}
+
+.floatingSidebarToggle {
+  position: absolute;
+  top: 14px;
+  left: 10px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background-color: var(--surface-sidebar);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.floatingSidebarToggle:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+  border-color: var(--border-strong);
 }
 
 /* Detail Panel Column */
