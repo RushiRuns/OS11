@@ -4,24 +4,23 @@
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   min-height: var(--task-height-comfortable, 44px);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-left: var(--priority-border-width, 2.5px) solid transparent;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-md);
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
   position: relative;
   user-select: none;
+  outline: none;
 }
 
 .taskCard:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-default);
+  background: transparent;
 }
 
 .taskCardSelected {
-  background: var(--surface-selected);
-  border-color: var(--accent);
+  background: transparent;
+  outline: none;
 }
 
 /* Priority Left Borders (FEEL UI: border color only, no badge or icon) */
@@ -283,7 +282,7 @@
   color: var(--color-warning);
 }
 
-/* Multi-Select Checkbox (reveals on card hover or always when multi-select active) */
+/* Multi-Select Checkbox (only when multi-select active, never on simple card hover) */
 .multiSelectCheckboxWrap {
   display: none;
   align-items: center;
@@ -291,7 +290,6 @@
   margin-right: -4px;
 }
 
-.taskCard:hover .multiSelectCheckboxWrap,
 .taskCard[data-multiselect="active"] .multiSelectCheckboxWrap {
   display: flex;
 }

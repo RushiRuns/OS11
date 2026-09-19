@@ -214,26 +214,28 @@ export const TaskCard = memo(function TaskCard({
         ⋮⋮
       </span>
 
-      {/* Multi-Select Checkbox */}
-      <div
-        className={styles.multiSelectCheckboxWrap}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (e.shiftKey) {
-            selectRange(allTaskIds || [], task.id);
-          } else {
-            toggleSelect(task.id);
-          }
-        }}
-      >
-        <input
-          type="checkbox"
-          className={styles.multiSelectInput}
-          checked={isMultiSelected}
-          onChange={() => {}}
-          aria-label={`Select ${task.title}`}
-        />
-      </div>
+      {/* Multi-Select Checkbox (only rendered when multi-select is active) */}
+      {(isMultiSelectActive || isMultiSelected) && (
+        <div
+          className={styles.multiSelectCheckboxWrap}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (e.shiftKey) {
+              selectRange(allTaskIds || [], task.id);
+            } else {
+              toggleSelect(task.id);
+            }
+          }}
+        >
+          <input
+            type="checkbox"
+            className={styles.multiSelectInput}
+            checked={isMultiSelected}
+            onChange={() => {}}
+            aria-label={`Select ${task.title}`}
+          />
+        </div>
+      )}
 
       {/* Checkbox */}
       <div
@@ -413,53 +415,55 @@ export const TaskCard = memo(function TaskCard({
         )}
       </div>
 
-      {/* Layer 3: Action Buttons */}
-      <div className={styles.actionsRow} onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          className={styles.iconButton}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsTagPickerOpen(true);
-          }}
-          title="Tags (Ctrl+T)"
-          aria-label="Manage Tags"
-        >
-          🏷️
-        </button>
+      {/* Layer 3: Action Buttons (only in project variant; standard views use sidebar icon) */}
+      {variant === 'project' && (
+        <div className={styles.actionsRow} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsTagPickerOpen(true);
+            }}
+            title="Tags (Ctrl+T)"
+            aria-label="Manage Tags"
+          >
+            🏷️
+          </button>
 
-        <button
-          type="button"
-          className={`${styles.iconButton} ${
-            task.is_starred === 1 ? styles.starButtonActive : ''
-          }`}
-          onClick={() => onToggleStar?.(task.id)}
-          title={task.is_starred === 1 ? 'Unstar' : 'Star'}
-          aria-label="Toggle Star"
-        >
-          ★
-        </button>
+          <button
+            type="button"
+            className={`${styles.iconButton} ${
+              task.is_starred === 1 ? styles.starButtonActive : ''
+            }`}
+            onClick={() => onToggleStar?.(task.id)}
+            title={task.is_starred === 1 ? 'Unstar' : 'Star'}
+            aria-label="Toggle Star"
+          >
+            ★
+          </button>
 
-        <button
-          type="button"
-          className={styles.iconButton}
-          onClick={() => onDuplicate?.(task.id)}
-          title="Duplicate Task"
-          aria-label="Duplicate Task"
-        >
-          ⧉
-        </button>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => onDuplicate?.(task.id)}
+            title="Duplicate Task"
+            aria-label="Duplicate Task"
+          >
+            ⧉
+          </button>
 
-        <button
-          type="button"
-          className={styles.iconButton}
-          onClick={() => onDelete?.(task.id)}
-          title="Move to Trash"
-          aria-label="Delete Task"
-        >
-          ✕
-        </button>
-      </div>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => onDelete?.(task.id)}
+            title="Move to Trash"
+            aria-label="Delete Task"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Dedicated Hover Sidebar Trigger Icon (standard views) */}
       {variant !== 'project' && (
