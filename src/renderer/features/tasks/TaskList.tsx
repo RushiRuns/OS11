@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useDeferredValue, useCallback, useM
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   useDndMonitor,
+  DragOverlay,
+  type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
 } from '@dnd-kit/core';
@@ -50,6 +52,7 @@ export function TaskList({
     restoreTask,
     duplicateTask,
     makeSubtask,
+    promoteSubtask,
     reorderTask,
   } = useTaskStore();
 
@@ -57,7 +60,21 @@ export function TaskList({
   const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
   const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
-  const [subtaskTargetId, setSubtaskTargetId] = useState<string | null>(null);
+
+  // --- Drag-and-drop nesting state -----------------------------------------
+  // Outliner-style DnD (Todoist/Workflowy pattern): the row you're hovering
+  // determines WHERE in the list you'd land (draggingTaskId + dropIndicator.top),
+  // and how far LEFT you drag horizontally determines how shallow the nesting
+  // is (dropIndicator.depth). Dropping with no horizontal movement nests as a
+  // child of whatever row is directly above the insertion point - dragging
+  // left "outdents" it back out, one level per INDENT_PX pixels.
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    depth: number;
+  } | null>(null);
 
   // Context menu state
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
@@ -270,47 +287,154 @@ export function TaskList({
     onDeleteTask: handleDeleteTask,
   });
 
-  // Handle Dnd-kit Drag Over (detect subtask nesting target)
+  // --- Outliner-style drop planning ----------------------------------------
+  // Pixels of horizontal drag that equal one indent level. Matches the 28px
+  // per-depth indent TaskCard already uses, so the drop-line indent lines up
+  // visually with where a card at that depth would actually sit.
+  const INDENT_PX = 28;
+  // How far in from the list's left edge a depth-0 drop line should start.
+  // This should line up with where a depth-0 card's title text begins
+  // (past the chevron + checkbox). Nudge this one number if the line looks
+  // offset from your cards.
+  const INDENT_LINE_BASE_PADDING = 40;
+
+  interface DropPlan {
+    parentId: string | null;
+    prevSiblingId: string | null;
+    nextSiblingId: string | null;
+    depth: number;
+    lineTop: number; // viewport-relative Y of the insertion point
+  }
+
+  // Given the task being dragged, whatever row dnd-kit currently reports as
+  // "over", and how far the pointer has moved horizontally since the drag
+  // started, work out: which two siblings the dropped task would land
+  // between, and how deep it would nest.
+  //
+  // Depth rule (matches Todoist/Workflowy-style outliners): by default
+  // (no leftward drag) the task nests as a CHILD of whatever row sits
+  // directly above the insertion point - that's what makes nesting the
+  // "easy" outcome instead of something you have to precisely aim for.
+  // Dragging left "outdents" it - each INDENT_PX of leftward movement steps
+  // it back out one level, down to top-level (depth 0).
+  const computeDropPlan = useCallback(
+    (
+      activeId: string,
+      overId: string,
+      deltaX: number,
+      activeRect: { top: number; height: number } | null,
+      overRect: { top: number; height: number }
+    ): DropPlan | null => {
+      const visible = flattenedIncomplete.filter((i) => i.task.id !== activeId);
+      const overIndex = visible.findIndex((i) => i.task.id === overId);
+      if (overIndex === -1) return null;
+
+      const activeCenterY = activeRect
+        ? activeRect.top + activeRect.height / 2
+        : overRect.top + overRect.height / 2;
+      const overCenterY = overRect.top + overRect.height / 2;
+      const insertBefore = activeCenterY < overCenterY;
+
+      // The "anchor" is whichever visible row will sit directly ABOVE the
+      // dropped task once it lands - that row's depth caps how deep we can nest.
+      const anchorItem = insertBefore
+        ? (overIndex > 0 ? visible[overIndex - 1] : null)
+        : visible[overIndex];
+
+      const anchorDepth = anchorItem ? anchorItem.depth : -1;
+      const maxDepth = anchorItem ? anchorDepth + 1 : 0;
+
+      const leftSteps = Math.max(0, Math.round(-deltaX / INDENT_PX));
+      const depth = Math.max(0, Math.min(maxDepth, maxDepth - leftSteps));
+
+      let parentTask: Task | null = null;
+      if (depth > 0 && anchorItem) {
+        let current: Task | undefined = anchorItem.task;
+        let currentDepth = anchorDepth;
+        while (current && currentDepth > depth - 1) {
+          const pid: string | null = current.parent_task_id ?? null;
+          current = pid ? tasksById[pid] : undefined;
+          currentDepth -= 1;
+        }
+        parentTask = current ?? null;
+      }
+      const parentId = parentTask ? parentTask.id : null;
+
+      // Find the actual prev/next siblings under that parent, scanning
+      // outward from the insertion gap (skips over any of a sibling's own
+      // nested descendants automatically, since those have a different
+      // parent_task_id).
+      const gapIndex = insertBefore ? overIndex : overIndex + 1;
+      let prevSiblingId: string | null = null;
+      for (let i = gapIndex - 1; i >= 0; i--) {
+        const pid = visible[i].task.parent_task_id ?? null;
+        if (pid === parentId) {
+          prevSiblingId = visible[i].task.id;
+          break;
+        }
+      }
+      let nextSiblingId: string | null = null;
+      for (let i = gapIndex; i < visible.length; i++) {
+        const pid = visible[i].task.parent_task_id ?? null;
+        if (pid === parentId) {
+          nextSiblingId = visible[i].task.id;
+          break;
+        }
+      }
+
+      const lineTop = insertBefore ? overRect.top : overRect.top + overRect.height;
+
+      return { parentId, prevSiblingId, nextSiblingId, depth, lineTop };
+    },
+    [flattenedIncomplete, tasksById]
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggingTaskId(String(event.active.id));
+  };
+
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
+    const { active, over, delta } = event;
     if (!over || active.id === over.id) {
-      if (subtaskTargetId !== null) setSubtaskTargetId(null);
+      setDropIndicator(null);
       return;
     }
 
     const overIdStr = String(over.id);
     if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
-      if (subtaskTargetId !== null) setSubtaskTargetId(null);
+      setDropIndicator(null);
+      return; // Handled by App.tsx (sidebar list/project/tag drop targets)
+    }
+
+    const overRect = over.rect;
+    if (!overRect) {
+      setDropIndicator(null);
+      return;
+    }
+    const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
+
+    const plan = computeDropPlan(String(active.id), overIdStr, delta.x, activeRect, overRect);
+    if (!plan) {
+      setDropIndicator(null);
       return;
     }
 
-    const activeRect = active.rect.current.translated;
-    const overRect = over.rect;
-
-    if (activeRect && overRect) {
-      const activeCenterY = activeRect.top + activeRect.height / 2;
-      const overCenterY = overRect.top + overRect.height / 2;
-      const distance = Math.abs(activeCenterY - overCenterY);
-      // If dropped directly within center 60% of card: nest as subtask
-      if (distance < overRect.height * 0.3) {
-        if (subtaskTargetId !== over.id) {
-          console.log('[DragDrop] Subtask target hover:', over.id);
-          setSubtaskTargetId(String(over.id));
-        }
-        return;
-      }
+    const containerRect = parentRef.current?.getBoundingClientRect();
+    if (!containerRect) {
+      setDropIndicator(null);
+      return;
     }
 
-    if (subtaskTargetId !== null) {
-      setSubtaskTargetId(null);
-    }
+    const left = containerRect.left + INDENT_LINE_BASE_PADDING + plan.depth * INDENT_PX;
+    const width = Math.max(40, containerRect.right - left - 16);
+
+    setDropIndicator({ top: plan.lineTop, left, width, depth: plan.depth });
   };
 
-  // Handle Dnd-kit Drag End (Reorder & Nest Subtask)
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    const targetSubtaskId = subtaskTargetId;
-    setSubtaskTargetId(null);
+    const { active, over, delta } = event;
+    setDraggingTaskId(null);
+    setDropIndicator(null);
 
     if (!over || active.id === over.id) return;
 
@@ -319,37 +443,45 @@ export function TaskList({
       return; // Handled by App.tsx
     }
 
-    // 1. Direct drop onto card: Nest as Subtask
-    if (targetSubtaskId && targetSubtaskId === over.id) {
-      try {
-        console.log('[DragDrop] Nesting as subtask commit:', { childId: active.id, parentId: over.id });
-        await makeSubtask(String(active.id), String(over.id));
-      } catch (err) {
-        console.error('Failed to make subtask:', err);
+    const overRect = over.rect;
+    if (!overRect) return;
+    const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
+
+    const plan = computeDropPlan(String(active.id), overIdStr, delta.x, activeRect, overRect);
+    if (!plan) return;
+
+    const activeId = String(active.id);
+    const activeTask = tasksById[activeId];
+    if (!activeTask) return;
+
+    const currentParentId = activeTask.parent_task_id ?? null;
+
+    try {
+      if (plan.parentId !== currentParentId) {
+        if (plan.parentId === null) {
+          await promoteSubtask(activeId);
+        } else {
+          await makeSubtask(activeId, plan.parentId);
+        }
       }
-      return;
+
+      const prevSibling = plan.prevSiblingId ? tasksById[plan.prevSiblingId] : null;
+      const nextSibling = plan.nextSiblingId ? tasksById[plan.nextSiblingId] : null;
+      const newSortOrder = between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null);
+      await reorderTask(activeId, newSortOrder);
+    } catch (err) {
+      console.error('Failed to move task:', err);
     }
-
-    // 2. Otherwise: Reorder between cards silently (no toast notification)
-    const flatTasks = flattenedIncomplete.map((i) => i.task);
-    const oldIndex = flatTasks.findIndex((t) => t.id === active.id);
-    const newIndex = flatTasks.findIndex((t) => t.id === over.id);
-
-    if (oldIndex < 0 || newIndex < 0) return;
-
-    const prevTask = newIndex > 0 ? (newIndex > oldIndex ? flatTasks[newIndex] : flatTasks[newIndex - 1]) : null;
-    const nextTask = newIndex < flatTasks.length - 1 ? (newIndex > oldIndex ? flatTasks[newIndex + 1] : flatTasks[newIndex]) : null;
-
-    const newSortOrder = between(prevTask?.sort_order ?? null, nextTask?.sort_order ?? null);
-    console.log('[DragDrop] Reorder commit:', { taskId: active.id, newSortOrder });
-
-    await reorderTask(String(active.id), newSortOrder);
   };
 
   useDndMonitor({
+    onDragStart: handleDragStart,
     onDragOver: handleDragOver,
     onDragEnd: handleDragEnd,
-    onDragCancel: () => setSubtaskTargetId(null),
+    onDragCancel: () => {
+      setDraggingTaskId(null);
+      setDropIndicator(null);
+    },
   });
 
   const headerTitle = (() => {
@@ -436,7 +568,6 @@ export function TaskList({
                       onToggleExpand={toggleParentExpand}
                       isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
                       allTaskIds={allTaskIds}
-                      isSubtaskTarget={subtaskTargetId === task.id}
                       onSelect={(t) => setFocusedTaskId(t.id)}
                       onOpenDetail={(t) => onSelectTask?.(t)}
                       onToggleComplete={toggleComplete}
@@ -512,6 +643,109 @@ export function TaskList({
           )}
         </div>
       </SortableContext>
+
+      {/* Insertion-point indicator: a thin line at the exact row-gap the
+          dragged task would land in, indented to preview the nesting depth
+          it would land at. Positioned fixed (viewport coords) so it doesn't
+          need to know about the virtualizer's internal scroll math. */}
+      {dropIndicator && (
+        <>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              top: `${dropIndicator.top}px`,
+              left: `${dropIndicator.left}px`,
+              width: `${dropIndicator.width}px`,
+              height: '2px',
+              background: 'var(--accent)',
+              zIndex: 60,
+              pointerEvents: 'none',
+              transform: 'translateY(-1px)',
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              top: `${dropIndicator.top}px`,
+              left: `${dropIndicator.left - 4}px`,
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              border: '2px solid var(--accent)',
+              background: 'var(--surface-base)',
+              zIndex: 61,
+              pointerEvents: 'none',
+              transform: 'translate(0, -50%)',
+            }}
+          />
+        </>
+      )}
+
+      {/* Floating drag preview: follows the pointer directly instead of the
+          card animating/shifting in place, so it's always obvious what
+          you're holding and where it'll go. */}
+      <DragOverlay dropAnimation={null}>
+        {draggingTaskId
+          ? (() => {
+              const draggingItem = flattenedIncomplete.find((i) => i.task.id === draggingTaskId);
+              const draggingTask = draggingItem?.task ?? tasksById[draggingTaskId];
+              if (!draggingTask) return null;
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-md, 10px)',
+                    background: 'var(--surface-raised, #2a2a2e)',
+                    border: '1px solid var(--border-subtle, #3a3a3e)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+                    maxWidth: '420px',
+                    cursor: 'grabbing',
+                  }}
+                >
+                  <span
+                    style={{ fontSize: '13px', color: 'var(--text-tertiary, #888)', lineHeight: 1 }}
+                    aria-hidden="true"
+                  >
+                    ⠿
+                  </span>
+                  <span
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      border: '2px solid var(--text-tertiary, #888)',
+                      flexShrink: 0,
+                    }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      color: 'var(--text-primary, #fff)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {draggingTask.title}
+                  </span>
+                  {draggingItem?.hasSubtasks && (
+                    <span
+                      style={{ fontSize: '12px', color: 'var(--text-tertiary, #888)', flexShrink: 0 }}
+                    >
+                      {draggingItem.subtaskCount.completed}/{draggingItem.subtaskCount.total}
+                    </span>
+                  )}
+                </div>
+              );
+            })()
+          : null}
+      </DragOverlay>
 
       {/* Bulk Action Bar (Framer Motion AnimatePresence) */}
       <BulkActionBar />

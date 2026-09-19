@@ -1,10 +1,8 @@
 import React, { memo, useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
-import { useTaskStore } from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { ipc } from '../../services/ipc.js';
@@ -23,7 +21,6 @@ export interface TaskCardProps {
   onToggleExpand?: (taskId: string) => void;
   isSelected?: boolean;
   allTaskIds?: string[];
-  isSubtaskTarget?: boolean;
   variant?: 'standard' | 'project';
   onOpenDetail?: (task: Task) => void;
   onSelect?: (task: Task) => void;
@@ -45,7 +42,6 @@ export const TaskCard = memo(function TaskCard({
   onToggleExpand,
   isSelected = false,
   allTaskIds,
-  isSubtaskTarget = false,
   variant = 'standard',
   onOpenDetail,
   onSelect,
@@ -78,16 +74,15 @@ export const TaskCard = memo(function TaskCard({
     attributes,
     listeners,
     setNodeRef,
-    transform,
-    transition,
     isDragging,
   } = useSortable({ id: task.id });
 
+  // No transform/transition here on purpose: TaskList now shows a floating
+  // DragOverlay preview that follows the pointer plus a separate drop-line
+  // indicator, instead of this row sliding around in place. This row just
+  // hides itself while it's the one being dragged.
   const sortableStyle: React.CSSProperties = {
-    transform: transform
-      ? `${CSS.Transform.toString(transform)}${isDragging ? ' scale(0.98)' : ''}`
-      : undefined,
-    transition,
+    opacity: isDragging ? 0 : 1,
     marginLeft: depth > 0 ? `${depth * 28}px` : undefined,
   };
 
@@ -175,22 +170,20 @@ export const TaskCard = memo(function TaskCard({
       style={sortableStyle}
       {...attributes}
       {...listeners}
-      draggable
-      onDragStart={(e) => {
-        (window as any).__draggingTaskId = task.id;
-        e.dataTransfer.setData('text/plain', task.id);
-        e.dataTransfer.setData('application/json', JSON.stringify({ taskId: task.id }));
-        e.dataTransfer.effectAllowed = 'move';
-      }}
-      onDragEnd={() => {
-        (window as any).__draggingTaskId = null;
-      }}
+      // NOTE: Task reordering + "drop onto a card to nest as a subtask" is handled
+      // ENTIRELY by @dnd-kit (via the {...attributes}/{...listeners} above, plus
+      // handleDragOver/handleDragEnd in TaskList.tsx). This card is intentionally
+      // NOT natively `draggable` and no longer starts a native HTML5 drag for
+      // task-to-task moves - that used to run *in parallel* with dnd-kit's pointer
+      // based drag and the two systems fought over the same pointerdown, which is
+      // why nesting felt broken/inconsistent. The native onDragOver/onDrop below
+      // are kept ONLY for dropping real OS files (e.g. from Finder/Explorer) onto
+      // a card to attach them - that is a different feature and still needs them.
       className={`${styles.taskCard} ${getPriorityClass(task.priority)} ${
         isSelected ? styles.taskCardSelected : ''
       }`}
       data-multiselect={isMultiSelectActive || isMultiSelected ? 'active' : 'inactive'}
       data-dragging={isDragging ? 'true' : 'false'}
-      data-droptarget={isSubtaskTarget ? 'true' : 'false'}
       data-filedrop={fileOver ? 'true' : 'false'}
       onClick={handleClick}
       onContextMenu={(e) => {
@@ -198,23 +191,18 @@ export const TaskCard = memo(function TaskCard({
         onContextMenu?.(e, task);
       }}
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/plain')) {
+        // Only react to real OS file drags here. Internal task-card drags are
+        // handled by dnd-kit and must never be intercepted by this handler.
+        if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault();
-          if (e.dataTransfer.types.includes('Files')) {
-            setFileOver(true);
-          }
+          setFileOver(true);
         }
       }}
       onDragLeave={() => setFileOver(false)}
       onDrop={async (e) => {
         setFileOver(false);
-        const droppedTaskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
-        if (droppedTaskId && droppedTaskId !== task.id) {
-          e.preventDefault();
-          e.stopPropagation();
-          await useTaskStore.getState().makeSubtask(droppedTaskId, task.id);
-          return;
-        }
+        // Only real OS files are handled here now. Task-to-task nesting is
+        // handled by dnd-kit's onDragEnd in TaskList.tsx, not here.
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
           e.preventDefault();
           e.stopPropagation();

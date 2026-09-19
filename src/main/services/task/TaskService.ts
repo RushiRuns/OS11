@@ -60,7 +60,7 @@ export class TaskService {
   }
 
   public getAll(): Task[] {
-    return this.taskRepo.getAllTasks();
+    return this.taskRepo.getAll();
   }
 
   public getById(id: string): Task {
@@ -301,7 +301,7 @@ export class TaskService {
     // Check dependency cycle
     const cycle = wouldCreateCycle(id, parentId, () => {
       // Return parent-child relationships as dependency edges
-      return this.taskRepo.getAllTasks()
+      return this.taskRepo.getAll()
         .filter((t) => t.parent_task_id !== null)
         .map((t) => ({ task_id: t.id, depends_on_task_id: t.parent_task_id! }));
     });
