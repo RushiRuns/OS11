@@ -3,13 +3,15 @@
   flex-direction: column;
   width: 100%;
   margin-bottom: var(--space-2);
+  position: relative;
 }
 
 .inputCard {
+  position: relative;
   display: flex;
   align-items: center;
-  height: var(--quick-add-height, 52px);
-  padding: 0 var(--space-4);
+  min-height: var(--quick-add-height, 52px);
+  padding: var(--space-2) var(--space-4);
   background-color: var(--surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl, 16px);
@@ -28,21 +30,74 @@
   margin-right: var(--space-3);
   user-select: none;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
-.input {
+.inputWrapper {
+  position: relative;
   flex: 1;
-  height: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+.syntaxOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-word;
   font-family: var(--font-body);
   font-size: var(--text-md);
+  line-height: 1.4;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tokenPlaceholder {
+  color: var(--text-placeholder);
+}
+
+.tokenTitle {
   color: var(--text-primary);
 }
 
-.input::placeholder {
-  color: var(--text-placeholder);
+.tokenNotes {
+  color: var(--text-secondary);
+}
+
+.tokenTag {
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+.tokenDelimiter {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-semibold);
+}
+
+.inputArea {
+  width: 100%;
+  min-height: 28px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: 1.4;
+  color: transparent;
+  caret-color: var(--text-primary);
+  z-index: 1;
+  padding: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .kbdBadge {
@@ -57,4 +112,62 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   user-select: none;
+  margin-left: var(--space-2);
+  flex-shrink: 0;
 }
+
+/* Floating Tag Autocomplete Menu */
+.tagMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 36px;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: 360px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-high);
+  padding: var(--space-1) 0;
+}
+
+.tagMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.tagMenuItem:hover,
+.tagMenuItemActive {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.tagMenuHash {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-bold);
+}
+
+.tagMenuName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagMenuBadge {
+  font-size: var(--text-xs);
+  background: var(--accent-muted);
+  color: var(--accent);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  font-weight: var(--weight-medium);
+}
+

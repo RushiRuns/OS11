@@ -218,6 +218,7 @@ export function ProjectListView({
                       <TaskCard
                         key={task.id}
                         task={task}
+                        variant="project"
                         isSelected={selectedTaskId === task.id}
                         onSelect={() => onSelectTask(task)}
                       />
@@ -256,6 +257,7 @@ export function ProjectListView({
                   <TaskCard
                     key={task.id}
                     task={task}
+                    variant="project"
                     isSelected={selectedTaskId === task.id}
                     onSelect={() => onSelectTask(task)}
                   />

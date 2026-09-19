@@ -67,6 +67,57 @@
   align-items: center;
 }
 
+.circularCheckbox :global(button) {
+  border-radius: var(--radius-full) !important;
+}
+
+.contentColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+
+.notesRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.notesText {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 2.7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 1px;
+}
+
+.inlineTagPill {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.inlineTagPill:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 .titleArea {
   flex: 1;
   min-width: 0;
@@ -97,6 +148,36 @@
   font-size: var(--text-base);
   color: var(--text-primary);
   outline: none;
+}
+
+/* Dedicated Hover-activated Sidebar Trigger Icon */
+.sidebarTriggerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  margin-left: var(--space-1);
+  flex-shrink: 0;
+}
+
+.taskCard:hover .sidebarTriggerBtn,
+.taskCard:focus-within .sidebarTriggerBtn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebarTriggerBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 /* Layer 2: Metadata & Badges (Visible on hover/focus or when active) */

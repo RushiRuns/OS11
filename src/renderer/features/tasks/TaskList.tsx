@@ -66,6 +66,7 @@ export function TaskList({
   // Context menu state
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -312,9 +313,10 @@ export function TaskList({
                     >
                       <TaskCard
                         task={task}
-                        isSelected={selectedTaskId === task.id}
+                        isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
                         allTaskIds={allTaskIds}
-                        onSelect={onSelectTask}
+                        onSelect={(t) => setFocusedTaskId(t.id)}
+                        onOpenDetail={(t) => onSelectTask?.(t)}
                         onToggleComplete={toggleComplete}
                         onToggleStar={toggleStar}
                         onUpdateTitle={(id, title) => updateTask({ id, title })}
@@ -365,9 +367,10 @@ export function TaskList({
                       <div key={task.id} role="listitem">
                         <TaskCard
                           task={task}
-                          isSelected={selectedTaskId === task.id}
+                          isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
                           allTaskIds={allTaskIds}
-                          onSelect={onSelectTask}
+                          onSelect={(t) => setFocusedTaskId(t.id)}
+                          onOpenDetail={(t) => onSelectTask?.(t)}
                           onToggleComplete={toggleComplete}
                           onToggleStar={toggleStar}
                           onUpdateTitle={(id, title) => updateTask({ id, title })}

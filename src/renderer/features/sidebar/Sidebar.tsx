@@ -12,11 +12,14 @@ import { ListGroupContextMenu } from '../lists/ListGroupContextMenu.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { CreateProjectModal } from '../projects/CreateProjectModal.js';
 import { ProjectContextMenu, type ProjectContextMenuPosition } from '../projects/ProjectContextMenu.js';
+import { TagContextMenu, type TagContextMenuPosition } from '../tags/TagContextMenu.js';
+import { TagEditModal } from '../tags/TagEditModal.js';
 import { invoke } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { List } from '@shared/types/List.js';
 import type { ListGroup } from '@shared/types/ListGroup.js';
 import type { Project } from '@shared/types/index.js';
+import type { Tag } from '@shared/types/Tag.js';
 import styles from './Sidebar.module.css';
 
 interface NavView {
@@ -123,6 +126,49 @@ export function Sidebar(): React.ReactElement {
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [contextMenuProject, setContextMenuProject] = useState<Project | null>(null);
   const [contextMenuProjectPos, setContextMenuProjectPos] = useState<ProjectContextMenuPosition | null>(null);
+
+  // Tag context menu and edit modal state
+  const [contextMenuTag, setContextMenuTag] = useState<Tag | null>(null);
+  const [contextMenuTagPos, setContextMenuTagPos] = useState<TagContextMenuPosition | null>(null);
+  const [tagToEdit, setTagToEdit] = useState<Tag | null>(null);
+  const [isTagEditModalOpen, setIsTagEditModalOpen] = useState(false);
+
+  // Section collapse persistence state (LISTS, PROJECTS, TAGS, VIEWS)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('os11:sidebar_collapsed_sections');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleSection = (sectionKey: string) => {
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [sectionKey]: !prev[sectionKey] };
+      try {
+        localStorage.setItem('os11:sidebar_collapsed_sections', JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  const handleTagContextMenu = (e: React.MouseEvent, tag: Tag) => {
+    e.preventDefault();
+    setContextMenuTag(tag);
+    setContextMenuTagPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleDeleteTag = async (tag: Tag) => {
+    if (window.confirm(`Delete tag #${tag.name}? It will be removed from all tasks.`)) {
+      if (activeListId === `tag:${tag.id}`) {
+        setActiveListId('smart_my_day');
+      }
+      await useTagStore.getState().deleteTag(tag.id);
+    }
+  };
 
   // Folder collapse and drag-to-reorder state
   const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
@@ -814,6 +860,16 @@ export function Sidebar(): React.ReactElement {
         {/* User Lists Section */}
         <div
           className={`${styles.sectionLabel} ${isDragOverRootLists ? styles.rootListsDragOver : ''}`}
+          onClick={() => toggleSection('lists')}
+          role="button"
+          tabIndex={0}
+          aria-expanded={!collapsedSections['lists']}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleSection('lists');
+            }
+          }}
           onDragOver={(e) => {
             if (draggingListId) {
               e.preventDefault();
@@ -827,7 +883,8 @@ export function Sidebar(): React.ReactElement {
           <button
             type="button"
             className={styles.sectionActionBtn}
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setListToEdit(null);
               setIsCreateModalOpen(true);
             }}
@@ -837,143 +894,34 @@ export function Sidebar(): React.ReactElement {
           </button>
         </div>
 
-        {/* Ungrouped User Lists */}
-        {userLists
-          .filter((l) => !l.group_id)
-          .map((list) => (
-            <ListItem
-              key={list.id}
-              list={list}
-              isActive={activeListId === list.id}
-              taskCount={getTaskCount(list.id)}
-              onClick={(id) => setActiveListId(id)}
-              onContextMenu={handleContextMenu}
-              isDraggable
-              onDragStart={(_e, id) => setDraggingListId(id)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e, id) => handleItemDrop(e, id)}
-            />
-          ))}
+        <div
+          className={styles.collapsibleWrapper}
+          data-collapsed={collapsedSections['lists'] ? 'true' : 'false'}
+        >
+          <div className={styles.collapsibleInner}>
+            {/* Ungrouped User Lists */}
+            {userLists
+              .filter((l) => !l.group_id)
+              .map((list) => (
+                <ListItem
+                  key={list.id}
+                  list={list}
+                  isActive={activeListId === list.id}
+                  taskCount={getTaskCount(list.id)}
+                  onClick={(id) => setActiveListId(id)}
+                  onContextMenu={handleContextMenu}
+                  isDraggable
+                  onDragStart={(_e, id) => setDraggingListId(id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e, id) => handleItemDrop(e, id)}
+                />
+              ))}
 
-        {/* Grouped User Lists */}
-        {listGroups.map((group) => {
-          const listsInGroup = userLists.filter((l) => l.group_id === group.id);
-          const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
-          if (listsInGroup.length === 0 && projectsInGroup.length > 0 && dragOverGroupId !== group.id) {
-            return null;
-          }
-          const isOpen = isGroupExpanded(group.id);
-          const isDragTarget = dragOverGroupId === group.id;
-
-          return (
-            <div
-              key={group.id}
-              className={`${styles.listGroupBlock} ${isDragTarget ? styles.groupDragOver : ''}`}
-              onDragOver={(e) => {
-                if (draggingListId) {
-                  e.preventDefault();
-                  setDragOverGroupId(group.id);
-                }
-              }}
-              onDragLeave={() => setDragOverGroupId((curr) => (curr === group.id ? null : curr))}
-              onDrop={(e) => handleDropOnGroup(e, group.id)}
-            >
-              <button
-                type="button"
-                className={styles.groupHeaderButton}
-                onClick={() => toggleGroup(group.id)}
-                onContextMenu={(e) => handleGroupContextMenu(e, group)}
-                aria-expanded={isOpen}
-                aria-label={`Folder ${group.name}, ${listsInGroup.length} lists`}
-              >
-                <span className={styles.groupIcon}>📁</span>
-                <span className={styles.groupName}>{group.name}</span>
-                <span
-                  className={`${styles.groupChevron} ${
-                    !isOpen ? styles.groupChevronCollapsed : ''
-                  }`}
-                >
-                  ▾
-                </span>
-              </button>
-
-              {isOpen && (
-                <div className={styles.groupItems}>
-                  {listsInGroup.map((list) => (
-                    <ListItem
-                      key={list.id}
-                      list={list}
-                      isActive={activeListId === list.id}
-                      taskCount={getTaskCount(list.id)}
-                      onClick={(id) => setActiveListId(id)}
-                      onContextMenu={handleContextMenu}
-                      isDraggable
-                      onDragStart={(_e, id) => setDraggingListId(id)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e, id) => handleItemDrop(e, id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Projects Section */}
-        {isEnabled('project_management') && (
-          <>
-            <div
-              className={`${styles.sectionLabel} ${isDragOverRootProjects ? styles.rootListsDragOver : ''}`}
-              onDragOver={(e) => {
-                if (draggingProjectId) {
-                  e.preventDefault();
-                  setIsDragOverRootProjects(true);
-                }
-              }}
-              onDragLeave={() => setIsDragOverRootProjects(false)}
-              onDrop={handleDropOnRootProjects}
-            >
-              <span>Projects</span>
-              <button
-                type="button"
-                className={styles.sectionActionBtn}
-                onClick={() => {
-                  setProjectToEdit(null);
-                  setIsCreateProjectModalOpen(true);
-                }}
-                title="New project"
-              >
-                +
-              </button>
-            </div>
-
-            {/* Ungrouped Projects */}
-            {rootProjects.map((project: Project) => (
-              <ListItem
-                key={project.id}
-                list={projectAsList(project)}
-                isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
-                taskCount={getProjectTaskCount(project.id)}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  setActiveListId(`project:${project.id}`);
-                }}
-                onContextMenu={(e) => handleProjectContextMenu(e, project)}
-                isDraggable
-                onDragStart={(_e) => setDraggingProjectId(project.id)}
-                onDragOver={(e) => {
-                  if (draggingProjectId) {
-                    e.preventDefault();
-                  }
-                }}
-                onDrop={(e) => handleProjectItemDrop(e, project.id)}
-              />
-            ))}
-
-            {/* Grouped Projects */}
+            {/* Grouped User Lists */}
             {listGroups.map((group) => {
+              const listsInGroup = userLists.filter((l) => l.group_id === group.id);
               const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
-              if (projectsInGroup.length === 0 && dragOverGroupId !== group.id) {
+              if (listsInGroup.length === 0 && projectsInGroup.length > 0 && dragOverGroupId !== group.id) {
                 return null;
               }
               const isOpen = isGroupExpanded(group.id);
@@ -981,10 +929,10 @@ export function Sidebar(): React.ReactElement {
 
               return (
                 <div
-                  key={`proj_group_${group.id}`}
+                  key={group.id}
                   className={`${styles.listGroupBlock} ${isDragTarget ? styles.groupDragOver : ''}`}
                   onDragOver={(e) => {
-                    if (draggingProjectId) {
+                    if (draggingListId) {
                       e.preventDefault();
                       setDragOverGroupId(group.id);
                     }
@@ -998,7 +946,7 @@ export function Sidebar(): React.ReactElement {
                     onClick={() => toggleGroup(group.id)}
                     onContextMenu={(e) => handleGroupContextMenu(e, group)}
                     aria-expanded={isOpen}
-                    aria-label={`Folder ${group.name}, ${projectsInGroup.length} projects`}
+                    aria-label={`Folder ${group.name}, ${listsInGroup.length} lists`}
                   >
                     <span className={styles.groupIcon}>📁</span>
                     <span className={styles.groupName}>{group.name}</span>
@@ -1013,25 +961,18 @@ export function Sidebar(): React.ReactElement {
 
                   {isOpen && (
                     <div className={styles.groupItems}>
-                      {projectsInGroup.map((project: Project) => (
+                      {listsInGroup.map((list) => (
                         <ListItem
-                          key={project.id}
-                          list={projectAsList(project)}
-                          isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
-                          taskCount={getProjectTaskCount(project.id)}
-                          onClick={() => {
-                            setSelectedProjectId(project.id);
-                            setActiveListId(`project:${project.id}`);
-                          }}
-                          onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                          key={list.id}
+                          list={list}
+                          isActive={activeListId === list.id}
+                          taskCount={getTaskCount(list.id)}
+                          onClick={(id) => setActiveListId(id)}
+                          onContextMenu={handleContextMenu}
                           isDraggable
-                          onDragStart={(_e) => setDraggingProjectId(project.id)}
-                          onDragOver={(e) => {
-                            if (draggingProjectId) {
-                              e.preventDefault();
-                            }
-                          }}
-                          onDrop={(e) => handleProjectItemDrop(e, project.id)}
+                          onDragStart={(_e, id) => setDraggingListId(id)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e, id) => handleItemDrop(e, id)}
                         />
                       ))}
                     </div>
@@ -1039,68 +980,254 @@ export function Sidebar(): React.ReactElement {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Projects Section - only shown when module enabled AND user has created projects */}
+        {isEnabled('project_management') && projects.length > 0 && (
+          <>
+            <div
+              className={`${styles.sectionLabel} ${isDragOverRootProjects ? styles.rootListsDragOver : ''}`}
+              onClick={() => toggleSection('projects')}
+              role="button"
+              tabIndex={0}
+              aria-expanded={!collapsedSections['projects']}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleSection('projects');
+                }
+              }}
+              onDragOver={(e) => {
+                if (draggingProjectId) {
+                  e.preventDefault();
+                  setIsDragOverRootProjects(true);
+                }
+              }}
+              onDragLeave={() => setIsDragOverRootProjects(false)}
+              onDrop={handleDropOnRootProjects}
+            >
+              <span>Projects</span>
+              <button
+                type="button"
+                className={styles.sectionActionBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProjectToEdit(null);
+                  setIsCreateProjectModalOpen(true);
+                }}
+                title="New project"
+              >
+                +
+              </button>
+            </div>
+
+            <div
+              className={styles.collapsibleWrapper}
+              data-collapsed={collapsedSections['projects'] ? 'true' : 'false'}
+            >
+              <div className={styles.collapsibleInner}>
+                {/* Ungrouped Projects */}
+                {rootProjects.map((project: Project) => (
+                  <ListItem
+                    key={project.id}
+                    list={projectAsList(project)}
+                    isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
+                    taskCount={getProjectTaskCount(project.id)}
+                    onClick={() => {
+                      setSelectedProjectId(project.id);
+                      setActiveListId(`project:${project.id}`);
+                    }}
+                    onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                    isDraggable
+                    onDragStart={(_e) => setDraggingProjectId(project.id)}
+                    onDragOver={(e) => {
+                      if (draggingProjectId) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onDrop={(e) => handleProjectItemDrop(e, project.id)}
+                  />
+                ))}
+
+                {/* Grouped Projects */}
+                {listGroups.map((group) => {
+                  const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
+                  if (projectsInGroup.length === 0 && dragOverGroupId !== group.id) {
+                    return null;
+                  }
+                  const isOpen = isGroupExpanded(group.id);
+                  const isDragTarget = dragOverGroupId === group.id;
+
+                  return (
+                    <div
+                      key={`proj_group_${group.id}`}
+                      className={`${styles.listGroupBlock} ${isDragTarget ? styles.groupDragOver : ''}`}
+                      onDragOver={(e) => {
+                        if (draggingProjectId) {
+                          e.preventDefault();
+                          setDragOverGroupId(group.id);
+                        }
+                      }}
+                      onDragLeave={() => setDragOverGroupId((curr) => (curr === group.id ? null : curr))}
+                      onDrop={(e) => handleDropOnGroup(e, group.id)}
+                    >
+                      <button
+                        type="button"
+                        className={styles.groupHeaderButton}
+                        onClick={() => toggleGroup(group.id)}
+                        onContextMenu={(e) => handleGroupContextMenu(e, group)}
+                        aria-expanded={isOpen}
+                        aria-label={`Folder ${group.name}, ${projectsInGroup.length} projects`}
+                      >
+                        <span className={styles.groupIcon}>📁</span>
+                        <span className={styles.groupName}>{group.name}</span>
+                        <span
+                          className={`${styles.groupChevron} ${
+                            !isOpen ? styles.groupChevronCollapsed : ''
+                          }`}
+                        >
+                          ▾
+                        </span>
+                      </button>
+
+                      {isOpen && (
+                        <div className={styles.groupItems}>
+                          {projectsInGroup.map((project: Project) => (
+                            <ListItem
+                              key={project.id}
+                              list={projectAsList(project)}
+                              isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
+                              taskCount={getProjectTaskCount(project.id)}
+                              onClick={() => {
+                                setSelectedProjectId(project.id);
+                                setActiveListId(`project:${project.id}`);
+                              }}
+                              onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                              isDraggable
+                              onDragStart={(_e) => setDraggingProjectId(project.id)}
+                              onDragOver={(e) => {
+                                if (draggingProjectId) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onDrop={(e) => handleProjectItemDrop(e, project.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
 
-        {/* Tags Section */}
+        {/* Tags Section - only shown when user has created tags */}
         {Object.values(tagsById).length > 0 && (
           <>
-            <div className={styles.sectionLabel}>Tags</div>
-            {Object.values(tagsById).map((tag) => {
-              const pseudoList: List = {
-                id: `tag:${tag.id}`,
-                name: `#${tag.name}`,
-                icon: null,
-                color: tag.color ?? 'var(--tag-gray)',
-                background_type: 'none',
-                background_value: null,
-                sort_order: tag.sort_order,
-                is_smart: 0,
-                notification_enabled: 0,
-                created_at: tag.created_at,
-                updated_at: tag.created_at,
-              };
-              return (
-                <ListItem
-                  key={tag.id}
-                  list={pseudoList}
-                  isActive={activeListId === `tag:${tag.id}`}
-                  taskCount={getTagTaskCount(tag.id)}
-                  onClick={(id) => setActiveListId(id)}
-                />
-              );
-            })}
+            <div
+              className={styles.sectionLabel}
+              onClick={() => toggleSection('tags')}
+              role="button"
+              tabIndex={0}
+              aria-expanded={!collapsedSections['tags']}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleSection('tags');
+                }
+              }}
+            >
+              <span>Tags</span>
+            </div>
+
+            <div
+              className={styles.collapsibleWrapper}
+              data-collapsed={collapsedSections['tags'] ? 'true' : 'false'}
+            >
+              <div className={styles.collapsibleInner}>
+                {Object.values(tagsById).map((tag) => {
+                  const pseudoList: List = {
+                    id: `tag:${tag.id}`,
+                    name: `#${tag.name}`,
+                    icon: null,
+                    color: tag.color ?? 'var(--tag-gray)',
+                    background_type: 'none',
+                    background_value: null,
+                    sort_order: tag.sort_order,
+                    is_smart: 0,
+                    notification_enabled: 0,
+                    created_at: tag.created_at,
+                    updated_at: tag.created_at,
+                  };
+                  return (
+                    <ListItem
+                      key={tag.id}
+                      list={pseudoList}
+                      isActive={activeListId === `tag:${tag.id}`}
+                      taskCount={getTagTaskCount(tag.id)}
+                      onClick={(id) => setActiveListId(id)}
+                      onContextMenu={(e) => handleTagContextMenu(e, tag)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
 
-        {/* Views Section (omits disabled modules per Phase 6 spec) */}
+        {/* Views Section */}
         {enabledViews.length > 0 && (
           <>
-            <div className={styles.sectionLabel}>Views</div>
-            {enabledViews.map((item) => {
-              const isActive = activeListId === item.id;
-              const pseudoList: List = {
-                id: item.id,
-                name: item.label,
-                icon: item.icon,
-                color: null,
-                background_type: 'none',
-                background_value: null,
-                sort_order: 0,
-                is_smart: 1,
-                notification_enabled: 0,
-                created_at: '',
-                updated_at: '',
-              };
-              return (
-                <ListItem
-                  key={item.id}
-                  list={pseudoList}
-                  isActive={isActive}
-                  onClick={(id) => setActiveListId(id)}
-                />
-              );
-            })}
+            <div
+              className={styles.sectionLabel}
+              onClick={() => toggleSection('views')}
+              role="button"
+              tabIndex={0}
+              aria-expanded={!collapsedSections['views']}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleSection('views');
+                }
+              }}
+            >
+              <span>Views</span>
+            </div>
+
+            <div
+              className={styles.collapsibleWrapper}
+              data-collapsed={collapsedSections['views'] ? 'true' : 'false'}
+            >
+              <div className={styles.collapsibleInner}>
+                {enabledViews.map((item) => {
+                  const isActive = activeListId === item.id;
+                  const pseudoList: List = {
+                    id: item.id,
+                    name: item.label,
+                    icon: item.icon,
+                    color: null,
+                    background_type: 'none',
+                    background_value: null,
+                    sort_order: 0,
+                    is_smart: 1,
+                    notification_enabled: 0,
+                    created_at: '',
+                    updated_at: '',
+                  };
+                  return (
+                    <ListItem
+                      key={item.id}
+                      list={pseudoList}
+                      isActive={isActive}
+                      onClick={(id) => setActiveListId(id)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -1272,6 +1399,33 @@ export function Sidebar(): React.ReactElement {
           }}
         />
       )}
+
+      {/* Right-click Context Menu for Tags */}
+      {contextMenuTag && (
+        <TagContextMenu
+          tag={contextMenuTag}
+          position={contextMenuTagPos}
+          onClose={() => {
+            setContextMenuTag(null);
+            setContextMenuTagPos(null);
+          }}
+          onEdit={(tag) => {
+            setTagToEdit(tag);
+            setIsTagEditModalOpen(true);
+          }}
+          onDelete={handleDeleteTag}
+        />
+      )}
+
+      {/* Edit Tag Modal */}
+      <TagEditModal
+        open={isTagEditModalOpen}
+        onOpenChange={(open) => {
+          setIsTagEditModalOpen(open);
+          if (!open) setTagToEdit(null);
+        }}
+        tagToEdit={tagToEdit}
+      />
     </aside>
   );
 }

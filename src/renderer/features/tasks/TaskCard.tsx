@@ -18,6 +18,8 @@ export interface TaskCardProps {
   isSelected?: boolean;
   allTaskIds?: string[];
   isSubtaskTarget?: boolean;
+  variant?: 'standard' | 'project';
+  onOpenDetail?: (task: Task) => void;
   onSelect?: (task: Task) => void;
   onToggleComplete?: (id: string) => void;
   onToggleStar?: (id: string) => void;
@@ -33,6 +35,8 @@ export const TaskCard = memo(function TaskCard({
   isSelected = false,
   allTaskIds,
   isSubtaskTarget = false,
+  variant = 'standard',
+  onOpenDetail,
   onSelect,
   onToggleComplete,
   onToggleStar,
@@ -231,9 +235,9 @@ export const TaskCard = memo(function TaskCard({
         />
       </div>
 
-      {/* Layer 1: Checkbox & Title */}
+      {/* Checkbox */}
       <div
-        className={styles.checkboxWrap}
+        className={`${styles.checkboxWrap} ${variant !== 'project' ? styles.circularCheckbox : ''}`}
         onClick={(e) => {
           e.stopPropagation();
           onToggleComplete?.(task.id);
@@ -246,34 +250,104 @@ export const TaskCard = memo(function TaskCard({
         />
       </div>
 
-      <div className={styles.titleArea}>
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            className={styles.titleInput}
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={handleSaveTitle}
-            onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Edit title for ${task.title}`}
-          />
-        ) : (
-          <span
-            className={`${styles.titleText} ${
-              task.is_completed === 1 ? styles.completedTitle : ''
-            }`}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-            title={task.title}
-          >
-            {task.title}
-          </span>
-        )}
-      </div>
+      {variant !== 'project' ? (
+        /* Standard View: Multi-Layer Apple Reminders Layout */
+        <div className={styles.contentColumn}>
+          {/* Row 1: Title */}
+          <div className={styles.titleArea}>
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                type="text"
+                className={styles.titleInput}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={handleSaveTitle}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Edit title for ${task.title}`}
+              />
+            ) : (
+              <span
+                className={`${styles.titleText} ${
+                  task.is_completed === 1 ? styles.completedTitle : ''
+                }`}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditing(true);
+                }}
+                title={task.title}
+              >
+                {task.title}
+              </span>
+            )}
+          </div>
+
+          {/* Row 2: Notes (if present) - lighter text */}
+          {task.notes && (
+            <div className={styles.notesRow} title={task.notes}>
+              <span className={styles.notesText}>{task.notes}</span>
+            </div>
+          )}
+
+          {/* Row 3: Tags (if present) - styled with lighter notes color */}
+          {taskTags.length > 0 && (
+            <div className={styles.tagsRow}>
+              {taskTags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className={styles.inlineTagPill}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+                    }
+                  }}
+                  title={`Tag: #${tag.name}`}
+                >
+                  #{tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Project View: Compact Single-Line Title */
+        <div className={styles.titleArea}>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              className={styles.titleInput}
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={handleSaveTitle}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Edit title for ${task.title}`}
+            />
+          ) : (
+            <span
+              className={`${styles.titleText} ${
+                task.is_completed === 1 ? styles.completedTitle : ''
+              }`}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              title={task.title}
+            >
+              {task.title}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Layer 2: Metadata Badges (Hover/Focus progressive disclosure) */}
       <div className={styles.metadataWrap}>
@@ -291,34 +365,34 @@ export const TaskCard = memo(function TaskCard({
           </span>
         )}
 
-        {/* Tag Pills with Color-blind Accessible Shapes */}
-        {taskTags.map((tag) => (
-          <span
-            key={tag.id}
-            className={styles.tagDotPill}
-            role="button"
-            tabIndex={0}
-            aria-label={`Filter by tag ${tag.name}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+        {variant === 'project' &&
+          taskTags.map((tag) => (
+            <span
+              key={tag.id}
+              className={styles.tagDotPill}
+              role="button"
+              tabIndex={0}
+              aria-label={`Filter by tag ${tag.name}`}
+              onClick={(e) => {
                 e.stopPropagation();
                 useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-              }
-            }}
-            title={`Tag: #${tag.name}`}
-          >
-            <span
-              className={`${styles.tagDot} ${getTagShapeClass(tag.id || tag.name)}`}
-              style={{ background: tag.color ?? 'var(--tag-gray)' }}
-              aria-hidden="true"
-            />
-            <span>#{tag.name}</span>
-          </span>
-        ))}
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+                }
+              }}
+              title={`Tag: #${tag.name}`}
+            >
+              <span
+                className={`${styles.tagDot} ${getTagShapeClass(tag.id || tag.name)}`}
+                style={{ background: tag.color ?? 'var(--tag-gray)' }}
+                aria-hidden="true"
+              />
+              <span>#{tag.name}</span>
+            </span>
+          ))}
 
         {task.pomodoro_count > 0 && (
           <span className={styles.badgePill} title="Completed Pomodoro Sessions">
@@ -386,6 +460,34 @@ export const TaskCard = memo(function TaskCard({
           ✕
         </button>
       </div>
+
+      {/* Dedicated Hover Sidebar Trigger Icon (standard views) */}
+      {variant !== 'project' && (
+        <button
+          type="button"
+          className={styles.sidebarTriggerBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetail?.(task);
+          }}
+          title="Open task details"
+          aria-label="Open task details"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M15 3v18" />
+          </svg>
+        </button>
+      )}
 
       {isTagPickerOpen && (
         <TagPicker
