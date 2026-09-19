@@ -549,7 +549,7 @@ export function Sidebar(): React.ReactElement {
 
   const handleItemDrop = async (e: React.DragEvent, targetListId: string) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('text/plain');
+    const taskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
     if (taskId && !draggingListId) {
       await useTaskStore.getState().updateTask({ id: taskId, list_id: targetListId });
       return;
@@ -587,7 +587,7 @@ export function Sidebar(): React.ReactElement {
 
   const handleProjectItemDrop = async (e: React.DragEvent, targetProjectId: string) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('text/plain');
+    const taskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
     if (taskId && !draggingProjectId && !draggingListId) {
       await useTaskStore.getState().updateTask({ id: taskId, project_id: targetProjectId });
       return;
@@ -823,6 +823,7 @@ export function Sidebar(): React.ReactElement {
             return (
               <ListItem
                 key={item.id}
+                droppableId={isProject ? `project:${item.rawId}` : `list:${item.rawId}`}
                 list={item.listModel}
                 isActive={isActive}
                 taskCount={count}
@@ -905,6 +906,7 @@ export function Sidebar(): React.ReactElement {
               .map((list) => (
                 <ListItem
                   key={list.id}
+                  droppableId={`list:${list.id}`}
                   list={list}
                   isActive={activeListId === list.id}
                   taskCount={getTaskCount(list.id)}
@@ -964,6 +966,7 @@ export function Sidebar(): React.ReactElement {
                       {listsInGroup.map((list) => (
                         <ListItem
                           key={list.id}
+                          droppableId={`list:${list.id}`}
                           list={list}
                           isActive={activeListId === list.id}
                           taskCount={getTaskCount(list.id)}
@@ -1031,6 +1034,7 @@ export function Sidebar(): React.ReactElement {
                 {rootProjects.map((project: Project) => (
                   <ListItem
                     key={project.id}
+                    droppableId={`project:${project.id}`}
                     list={projectAsList(project)}
                     isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
                     taskCount={getProjectTaskCount(project.id)}
@@ -1042,9 +1046,8 @@ export function Sidebar(): React.ReactElement {
                     isDraggable
                     onDragStart={(_e) => setDraggingProjectId(project.id)}
                     onDragOver={(e) => {
-                      if (draggingProjectId) {
-                        e.preventDefault();
-                      }
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
                     }}
                     onDrop={(e) => handleProjectItemDrop(e, project.id)}
                   />
@@ -1096,6 +1099,7 @@ export function Sidebar(): React.ReactElement {
                           {projectsInGroup.map((project: Project) => (
                             <ListItem
                               key={project.id}
+                              droppableId={`project:${project.id}`}
                               list={projectAsList(project)}
                               isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
                               taskCount={getProjectTaskCount(project.id)}
@@ -1107,9 +1111,8 @@ export function Sidebar(): React.ReactElement {
                               isDraggable
                               onDragStart={(_e) => setDraggingProjectId(project.id)}
                               onDragOver={(e) => {
-                                if (draggingProjectId) {
-                                  e.preventDefault();
-                                }
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
                               }}
                               onDrop={(e) => handleProjectItemDrop(e, project.id)}
                             />
@@ -1165,11 +1168,23 @@ export function Sidebar(): React.ReactElement {
                   return (
                     <ListItem
                       key={tag.id}
+                      droppableId={`tag:${tag.id}`}
                       list={pseudoList}
                       isActive={activeListId === `tag:${tag.id}`}
                       taskCount={getTagTaskCount(tag.id)}
                       onClick={(id) => setActiveListId(id)}
                       onContextMenu={(e) => handleTagContextMenu(e, tag)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'copy';
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        const taskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
+                        if (taskId) {
+                          await useTagStore.getState().addTagToTask(taskId, tag.id);
+                        }
+                      }}
                     />
                   );
                 })}

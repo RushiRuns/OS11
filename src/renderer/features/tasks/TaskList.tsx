@@ -1,17 +1,12 @@
-import React, { useState, useRef, useEffect, useDeferredValue, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useDeferredValue, useCallback, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
+  useDndMonitor,
   type DragEndEvent,
+  type DragOverEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { between } from '@shared/utils/fractional-index.js';
@@ -62,6 +57,7 @@ export function TaskList({
   const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
   const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const [subtaskTargetId, setSubtaskTargetId] = useState<string | null>(null);
 
   // Context menu state
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
@@ -70,17 +66,20 @@ export function TaskList({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // Dnd-kit sensors: Pointer distance threshold 8px prevents click/drag conflict
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const tasksById = useTaskStore((state) => state.tasksById);
+  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(new Set());
+
+  const toggleParentExpand = useCallback((parentId: string) => {
+    setCollapsedParentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) {
+        next.delete(parentId);
+      } else {
+        next.add(parentId);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     loadTasks();
@@ -113,11 +112,10 @@ export function TaskList({
           case 'smart_all':
           case 'smart_all_tasks':
             return tasks
-              .filter((t) => t.parent_task_id === null)
               .sort((a, b) => a.sort_order - b.sort_order);
           default:
             return tasks
-              .filter((t) => t.list_id === activeListId && t.parent_task_id === null)
+              .filter((t) => t.list_id === activeListId)
               .sort((a, b) => a.sort_order - b.sort_order);
         }
       },
@@ -134,13 +132,82 @@ export function TaskList({
     deferredConfig
   );
 
-  const allTaskIds = filteredIncomplete.map((t) => t.id);
+  // Hierarchical tree flattening with indentation depth and collapse state
+  const flattenedIncomplete = useMemo(() => {
+    const activeTasksMap = new Map<string, Task>();
+    for (const t of filteredIncomplete) {
+      activeTasksMap.set(t.id, t);
+    }
 
-  // TanStack Virtualizer
+    const childrenByParentId = new Map<string, Task[]>();
+    for (const t of filteredIncomplete) {
+      if (t.parent_task_id) {
+        const list = childrenByParentId.get(t.parent_task_id) || [];
+        list.push(t);
+        childrenByParentId.set(t.parent_task_id, list);
+      }
+    }
+
+    const subtaskStats = new Map<string, { completed: number; total: number }>();
+    for (const t of Object.values(tasksById)) {
+      if (t.is_trashed === 0 && t.parent_task_id) {
+        const stats = subtaskStats.get(t.parent_task_id) || { completed: 0, total: 0 };
+        stats.total += 1;
+        if (t.is_completed === 1) stats.completed += 1;
+        subtaskStats.set(t.parent_task_id, stats);
+      }
+    }
+
+    const rootTasks = filteredIncomplete.filter(
+      (t) => !t.parent_task_id || !activeTasksMap.has(t.parent_task_id)
+    );
+
+    interface FlattenedTaskItem {
+      task: Task;
+      depth: number;
+      hasSubtasks: boolean;
+      isExpanded: boolean;
+      subtaskCount: { completed: number; total: number };
+    }
+
+    const result: FlattenedTaskItem[] = [];
+
+    const appendTree = (task: Task, depth: number) => {
+      const stats = subtaskStats.get(task.id) || { completed: 0, total: 0 };
+      const hasSubtasks = stats.total > 0;
+      const isExpanded = !collapsedParentIds.has(task.id);
+
+      result.push({
+        task,
+        depth,
+        hasSubtasks,
+        isExpanded,
+        subtaskCount: stats,
+      });
+
+      if (hasSubtasks && isExpanded) {
+        const children = childrenByParentId.get(task.id) || [];
+        for (const child of children) {
+          appendTree(child, depth + 1);
+        }
+      }
+    };
+
+    for (const root of rootTasks) {
+      appendTree(root, 0);
+    }
+
+    return result;
+  }, [filteredIncomplete, tasksById, collapsedParentIds]);
+
+  const allTaskIds = flattenedIncomplete.map((item) => item.task.id);
+
+  // TanStack Virtualizer with dynamic measurement and uniform flexible 8px gap
   const virtualizer = useVirtualizer({
-    count: filteredIncomplete.length,
+    count: flattenedIncomplete.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 44, // var(--task-height-comfortable)
+    estimateSize: () => 52,
+    gap: 8,
     overscan: 10,
   });
 
@@ -203,36 +270,87 @@ export function TaskList({
     onDeleteTask: handleDeleteTask,
   });
 
+  // Handle Dnd-kit Drag Over (detect subtask nesting target)
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      if (subtaskTargetId !== null) setSubtaskTargetId(null);
+      return;
+    }
+
+    const overIdStr = String(over.id);
+    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
+      if (subtaskTargetId !== null) setSubtaskTargetId(null);
+      return;
+    }
+
+    const activeRect = active.rect.current.translated;
+    const overRect = over.rect;
+
+    if (activeRect && overRect) {
+      const activeCenterY = activeRect.top + activeRect.height / 2;
+      const overCenterY = overRect.top + overRect.height / 2;
+      const distance = Math.abs(activeCenterY - overCenterY);
+      // If dropped directly within center 60% of card: nest as subtask
+      if (distance < overRect.height * 0.3) {
+        if (subtaskTargetId !== over.id) {
+          console.log('[DragDrop] Subtask target hover:', over.id);
+          setSubtaskTargetId(String(over.id));
+        }
+        return;
+      }
+    }
+
+    if (subtaskTargetId !== null) {
+      setSubtaskTargetId(null);
+    }
+  };
+
   // Handle Dnd-kit Drag End (Reorder & Nest Subtask)
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    const targetSubtaskId = subtaskTargetId;
+    setSubtaskTargetId(null);
+
     if (!over || active.id === over.id) return;
 
-    const oldIndex = filteredIncomplete.findIndex((t) => t.id === active.id);
-    const newIndex = filteredIncomplete.findIndex((t) => t.id === over.id);
+    const overIdStr = String(over.id);
+    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
+      return; // Handled by App.tsx
+    }
+
+    // 1. Direct drop onto card: Nest as Subtask
+    if (targetSubtaskId && targetSubtaskId === over.id) {
+      try {
+        console.log('[DragDrop] Nesting as subtask commit:', { childId: active.id, parentId: over.id });
+        await makeSubtask(String(active.id), String(over.id));
+      } catch (err) {
+        console.error('Failed to make subtask:', err);
+      }
+      return;
+    }
+
+    // 2. Otherwise: Reorder between cards silently (no toast notification)
+    const flatTasks = flattenedIncomplete.map((i) => i.task);
+    const oldIndex = flatTasks.findIndex((t) => t.id === active.id);
+    const newIndex = flatTasks.findIndex((t) => t.id === over.id);
 
     if (oldIndex < 0 || newIndex < 0) return;
 
-    const activeTask = filteredIncomplete[oldIndex];
-
-    const prevTask = newIndex > 0 ? (newIndex > oldIndex ? filteredIncomplete[newIndex] : filteredIncomplete[newIndex - 1]) : null;
-    const nextTask = newIndex < filteredIncomplete.length - 1 ? (newIndex > oldIndex ? filteredIncomplete[newIndex + 1] : filteredIncomplete[newIndex]) : null;
+    const prevTask = newIndex > 0 ? (newIndex > oldIndex ? flatTasks[newIndex] : flatTasks[newIndex - 1]) : null;
+    const nextTask = newIndex < flatTasks.length - 1 ? (newIndex > oldIndex ? flatTasks[newIndex + 1] : flatTasks[newIndex]) : null;
 
     const newSortOrder = between(prevTask?.sort_order ?? null, nextTask?.sort_order ?? null);
-    const oldSortOrder = activeTask.sort_order;
+    console.log('[DragDrop] Reorder commit:', { taskId: active.id, newSortOrder });
 
     await reorderTask(String(active.id), newSortOrder);
-
-    pushAction({
-      description: `Reordered "${activeTask.title}"`,
-      undoFn: async () => {
-        await reorderTask(String(active.id), oldSortOrder);
-      },
-      redoFn: async () => {
-        await reorderTask(String(active.id), newSortOrder);
-      },
-    });
   };
+
+  useDndMonitor({
+    onDragOver: handleDragOver,
+    onDragEnd: handleDragEnd,
+    onDragCancel: () => setSubtaskTargetId(null),
+  });
 
   const headerTitle = (() => {
     switch (activeListId) {
@@ -275,44 +393,103 @@ export function TaskList({
         <QuickAddBar />
       </div>
 
-      {/* Virtual Scroll Area wrapped in DndContext & SortableContext */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+      {/* Virtual Scroll Area wrapped in SortableContext */}
+      <SortableContext
+        items={allTaskIds}
+        strategy={verticalListSortingStrategy}
       >
-        <SortableContext
-          items={allTaskIds}
-          strategy={verticalListSortingStrategy}
-        >
-          <div ref={parentRef} className={styles.virtualScrollArea}>
-            {filteredIncomplete.length === 0 && completedTasks.length === 0 ? (
-              <EmptyState
-                title="All clear"
-                description="No tasks in this list. Press Ctrl+N to add one."
-              />
-            ) : (
-              <div
-                className={styles.virtualInner}
-                style={{ height: `${virtualizer.getTotalSize()}px` }}
-                role="list"
-                aria-label="Tasks"
-              >
-                {virtualizer.getVirtualItems().map((virtualItem) => {
-                  const task = filteredIncomplete[virtualItem.index];
-                  if (!task) return null;
+        <div ref={parentRef} className={styles.virtualScrollArea}>
+          {flattenedIncomplete.length === 0 && completedTasks.length === 0 ? (
+            <EmptyState
+              title="All clear"
+              description="No tasks in this list. Press Ctrl+N to add one."
+            />
+          ) : (
+            <div
+              className={styles.virtualInner}
+              style={{ height: `${virtualizer.getTotalSize()}px` }}
+              role="list"
+              aria-label="Tasks"
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const item = flattenedIncomplete[virtualItem.index];
+                if (!item) return null;
+                const { task, depth, hasSubtasks, isExpanded, subtaskCount } = item;
 
-                  return (
-                    <div
-                      key={task.id}
-                      className={styles.virtualItem}
-                      style={{
-                        transform: `translateY(${virtualItem.start}px)`,
+                return (
+                  <div
+                    key={task.id}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualItem.index}
+                    className={styles.virtualItem}
+                    style={{
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                    role="listitem"
+                  >
+                    <TaskCard
+                      task={task}
+                      depth={depth}
+                      hasSubtasks={hasSubtasks}
+                      isExpanded={isExpanded}
+                      subtaskCount={subtaskCount}
+                      onToggleExpand={toggleParentExpand}
+                      isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                      allTaskIds={allTaskIds}
+                      isSubtaskTarget={subtaskTargetId === task.id}
+                      onSelect={(t) => setFocusedTaskId(t.id)}
+                      onOpenDetail={(t) => onSelectTask?.(t)}
+                      onToggleComplete={toggleComplete}
+                      onToggleStar={toggleStar}
+                      onUpdateTitle={(id, title) => updateTask({ id, title })}
+                      onDelete={handleDeleteTask}
+                      onDuplicate={duplicateTask}
+                      onContextMenu={(e, t) => {
+                        setContextMenuTask(t);
+                        setContextMenuPos({ x: e.clientX, y: e.clientY });
                       }}
-                      role="listitem"
-                    >
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Collapsible Completed Section */}
+          {completedTasks.length > 0 && (
+            <div className={styles.completedSection}>
+              <div
+                className={styles.completedHeader}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isCompletedOpen}
+                aria-label={`Completed tasks (${completedTasks.length})`}
+                onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsCompletedOpen(!isCompletedOpen);
+                  }
+                }}
+              >
+                <span
+                  className={`${styles.completedCaret} ${
+                    isCompletedOpen ? styles.completedCaretOpen : ''
+                  }`}
+                  aria-hidden="true"
+                >
+                  ▶
+                </span>
+                <span>Completed ({completedTasks.length})</span>
+              </div>
+
+              {isCompletedOpen && (
+                <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                  {completedTasks.map((task) => (
+                    <div key={task.id} role="listitem">
                       <TaskCard
                         task={task}
+                        depth={task.parent_task_id ? 1 : 0}
                         isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
                         allTaskIds={allTaskIds}
                         onSelect={(t) => setFocusedTaskId(t.id)}
@@ -328,68 +505,13 @@ export function TaskList({
                         }}
                       />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Collapsible Completed Section */}
-            {completedTasks.length > 0 && (
-              <div className={styles.completedSection}>
-                <div
-                  className={styles.completedHeader}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={isCompletedOpen}
-                  aria-label={`Completed tasks (${completedTasks.length})`}
-                  onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setIsCompletedOpen(!isCompletedOpen);
-                    }
-                  }}
-                >
-                  <span
-                    className={`${styles.completedCaret} ${
-                      isCompletedOpen ? styles.completedCaretOpen : ''
-                    }`}
-                    aria-hidden="true"
-                  >
-                    ▶
-                  </span>
-                  <span>Completed ({completedTasks.length})</span>
+                  ))}
                 </div>
-
-                {isCompletedOpen && (
-                  <div className={styles.completedList} role="list" aria-label="Completed tasks">
-                    {completedTasks.map((task) => (
-                      <div key={task.id} role="listitem">
-                        <TaskCard
-                          task={task}
-                          isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                          allTaskIds={allTaskIds}
-                          onSelect={(t) => setFocusedTaskId(t.id)}
-                          onOpenDetail={(t) => onSelectTask?.(t)}
-                          onToggleComplete={toggleComplete}
-                          onToggleStar={toggleStar}
-                          onUpdateTitle={(id, title) => updateTask({ id, title })}
-                          onDelete={handleDeleteTask}
-                          onDuplicate={duplicateTask}
-                          onContextMenu={(e, t) => {
-                            setContextMenuTask(t);
-                            setContextMenuPos({ x: e.clientX, y: e.clientY });
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </SortableContext>
-      </DndContext>
+              )}
+            </div>
+          )}
+        </div>
+      </SortableContext>
 
       {/* Bulk Action Bar (Framer Motion AnimatePresence) */}
       <BulkActionBar />

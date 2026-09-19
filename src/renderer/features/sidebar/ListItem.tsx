@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import type { List } from '@shared/types/List.js';
 import styles from './ListItem.module.css';
 
@@ -6,6 +7,7 @@ interface ListItemProps {
   list: List;
   isActive: boolean;
   taskCount?: number;
+  droppableId?: string;
   onClick: (listId: string) => void;
   onContextMenu?: (e: React.MouseEvent, list: List) => void;
   isDraggable?: boolean;
@@ -18,6 +20,7 @@ export const ListItem = memo(function ListItem({
   list,
   isActive,
   taskCount = 0,
+  droppableId,
   onClick,
   onContextMenu,
   isDraggable = false,
@@ -25,6 +28,16 @@ export const ListItem = memo(function ListItem({
   onDragOver,
   onDrop,
 }: ListItemProps): React.ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: droppableId || `droppable-${list.id}`,
+    disabled: !droppableId,
+    data: {
+      type: 'sidebar-item',
+      id: droppableId,
+      listId: list.id,
+    },
+  });
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     onClick(list.id);
@@ -39,14 +52,20 @@ export const ListItem = memo(function ListItem({
 
   return (
     <button
+      ref={setNodeRef}
       type="button"
-      className={`${styles.itemButton} ${isActive ? styles.itemActive : ''}`}
+      className={`${styles.itemButton} ${isActive ? styles.itemActive : ''} ${
+        isOver ? styles.dropTargetActive : ''
+      }`}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
       draggable={isDraggable}
       onDragStart={(e) => onDragStart?.(e, list.id)}
       onDragOver={(e) => onDragOver?.(e, list.id)}
-      onDrop={(e) => onDrop?.(e, list.id)}
+      onDrop={(e) => {
+        console.log('[DragDrop] Native drop on item:', { id: list.id, droppableId });
+        onDrop?.(e, list.id);
+      }}
       aria-selected={isActive}
       aria-label={`${list.name}${taskCount > 0 ? `, ${taskCount} items` : ''}`}
     >

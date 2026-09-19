@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
+import { useTaskStore } from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { ipc } from '../../services/ipc.js';
@@ -15,6 +16,11 @@ import styles from './TaskCard.module.css';
 
 export interface TaskCardProps {
   task: Task;
+  depth?: number;
+  hasSubtasks?: boolean;
+  isExpanded?: boolean;
+  subtaskCount?: { completed: number; total: number };
+  onToggleExpand?: (taskId: string) => void;
   isSelected?: boolean;
   allTaskIds?: string[];
   isSubtaskTarget?: boolean;
@@ -32,6 +38,11 @@ export interface TaskCardProps {
 
 export const TaskCard = memo(function TaskCard({
   task,
+  depth = 0,
+  hasSubtasks = false,
+  isExpanded = true,
+  subtaskCount,
+  onToggleExpand,
   isSelected = false,
   allTaskIds,
   isSubtaskTarget = false,
@@ -77,6 +88,7 @@ export const TaskCard = memo(function TaskCard({
       ? `${CSS.Transform.toString(transform)}${isDragging ? ' scale(0.98)' : ''}`
       : undefined,
     transition,
+    marginLeft: depth > 0 ? `${depth * 28}px` : undefined,
   };
 
   useEffect(() => {
@@ -163,6 +175,16 @@ export const TaskCard = memo(function TaskCard({
       style={sortableStyle}
       {...attributes}
       {...listeners}
+      draggable
+      onDragStart={(e) => {
+        (window as any).__draggingTaskId = task.id;
+        e.dataTransfer.setData('text/plain', task.id);
+        e.dataTransfer.setData('application/json', JSON.stringify({ taskId: task.id }));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnd={() => {
+        (window as any).__draggingTaskId = null;
+      }}
       className={`${styles.taskCard} ${getPriorityClass(task.priority)} ${
         isSelected ? styles.taskCardSelected : ''
       }`}
@@ -176,14 +198,23 @@ export const TaskCard = memo(function TaskCard({
         onContextMenu?.(e, task);
       }}
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('Files')) {
+        if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/plain')) {
           e.preventDefault();
-          setFileOver(true);
+          if (e.dataTransfer.types.includes('Files')) {
+            setFileOver(true);
+          }
         }
       }}
       onDragLeave={() => setFileOver(false)}
       onDrop={async (e) => {
         setFileOver(false);
+        const droppedTaskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
+        if (droppedTaskId && droppedTaskId !== task.id) {
+          e.preventDefault();
+          e.stopPropagation();
+          await useTaskStore.getState().makeSubtask(droppedTaskId, task.id);
+          return;
+        }
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
           e.preventDefault();
           e.stopPropagation();
@@ -230,6 +261,26 @@ export const TaskCard = memo(function TaskCard({
             aria-label={`Select ${task.title}`}
           />
         </div>
+      )}
+
+      {/* Subtask Chevron Toggle (Matching Image 4) */}
+      {hasSubtasks ? (
+        <button
+          type="button"
+          className={styles.subtaskChevronBtn}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpand?.(task.id);
+          }}
+          aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+        >
+          <span className={styles.subtaskChevron}>
+            {isExpanded ? '▼' : '►'}
+          </span>
+        </button>
+      ) : (
+        <span className={styles.subtaskChevronSpacer} />
       )}
 
       {/* Checkbox */}
@@ -281,6 +332,19 @@ export const TaskCard = memo(function TaskCard({
               </span>
             )}
           </div>
+
+          {/* Subtask Count Badge (Matching Image 4: e.g. "⑂ 0/1") */}
+          {hasSubtasks && subtaskCount && (
+            <div
+              className={styles.subtaskCountBadge}
+              title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
+            >
+              <span>⑂</span>
+              <span>
+                {subtaskCount.completed}/{subtaskCount.total}
+              </span>
+            </div>
+          )}
 
           {/* Row 2: Notes (if present) - lighter text */}
           {task.notes && (

@@ -77,3 +77,10 @@
   background-color: var(--accent-muted);
   color: var(--accent);
 }
+
+.dropTargetActive {
+  background-color: rgba(59, 130, 246, 0.18) !important;
+  outline: 2px dashed var(--accent, #3b82f6) !important;
+  outline-offset: -2px;
+  color: var(--accent) !important;
+}

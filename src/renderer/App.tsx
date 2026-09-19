@@ -19,6 +19,19 @@ import { ReviewManager } from './features/review/ReviewManager.js';
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
+import { useTagStore } from './stores/tagStore.js';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DragOverEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ipc, invoke } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
@@ -270,6 +283,58 @@ export function App(): React.ReactElement {
 
   const isDetailVisible = !activeListId.startsWith('view_') && !activeListId.startsWith('project:') && Boolean(selectedTask);
 
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleAppDragStart = (event: DragStartEvent) => {
+    console.log('[DragDrop] Drag start:', event.active.id);
+  };
+
+  const handleAppDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (over) {
+      console.log('[DragDrop] Hover target detected:', over.id, 'from active:', active.id);
+    }
+  };
+
+  const handleAppDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    console.log('[DragDrop] Drag end event:', { activeId: active.id, overId: over?.id });
+    if (!over || active.id === over.id) return;
+
+    const overIdStr = String(over.id);
+    const activeTaskId = String(active.id);
+
+    if (overIdStr.startsWith('list:')) {
+      const targetListId = overIdStr.slice(5);
+      console.log('[DragDrop] Drop commit on list:', targetListId, 'with payload:', { taskId: activeTaskId, target: overIdStr });
+      await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
+      return;
+    }
+
+    if (overIdStr.startsWith('project:')) {
+      const targetProjectId = overIdStr.slice(8);
+      console.log('[DragDrop] Drop commit on project:', targetProjectId, 'with payload:', { taskId: activeTaskId, target: overIdStr });
+      await useTaskStore.getState().updateTask({ id: activeTaskId, project_id: targetProjectId });
+      return;
+    }
+
+    if (overIdStr.startsWith('tag:')) {
+      const targetTagId = overIdStr.slice(4);
+      console.log('[DragDrop] Drop commit on tag:', targetTagId, 'with payload:', { taskId: activeTaskId, target: overIdStr });
+      await useTagStore.getState().addTagToTask(activeTaskId, targetTagId);
+      return;
+    }
+  };
+
   return (
     <div className={layoutStyles.container}>
       {/* App Lock Protection Overlay */}
@@ -303,50 +368,58 @@ export function App(): React.ReactElement {
           onSelectTask={(task) => setSelectedTask(task)}
         />
       ) : (
-        <div
-          className={layoutStyles.shellGrid}
-          data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
-          data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
-          data-focus={effectiveFocusMode ? 'active' : 'inactive'}
+        <DndContext
+          sensors={dndSensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleAppDragStart}
+          onDragOver={handleAppDragOver}
+          onDragEnd={handleAppDragEnd}
         >
-          {/* Column 1: Sidebar (Critical path) */}
-          <div className={layoutStyles.sidebarCol}>
-            <Sidebar />
-          </div>
+          <div
+            className={layoutStyles.shellGrid}
+            data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
+            data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
+            data-focus={effectiveFocusMode ? 'active' : 'inactive'}
+          >
+            {/* Column 1: Sidebar (Critical path) */}
+            <div className={layoutStyles.sidebarCol}>
+              <Sidebar />
+            </div>
 
-          {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
-          <main className={`${layoutStyles.mainCol} ${!isSidebarVisible ? layoutStyles.mainColSidebarHidden : ''}`}>
-            {!isSidebarVisible && !effectiveFocusMode && (
-              <button
-                type="button"
-                className={layoutStyles.floatingSidebarToggle}
-                onClick={() => setSidebarVisible(true)}
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
+            <main className={`${layoutStyles.mainCol} ${!isSidebarVisible ? layoutStyles.mainColSidebarHidden : ''}`}>
+              {!isSidebarVisible && !effectiveFocusMode && (
+                <button
+                  type="button"
+                  className={layoutStyles.floatingSidebarToggle}
+                  onClick={() => setSidebarVisible(true)}
+                  title="Expand sidebar"
+                  aria-label="Expand sidebar"
                 >
-                  <rect width="18" height="18" x="3" y="3" rx="2" />
-                  <path d="M9 3v18" />
-                </svg>
-              </button>
-            )}
-            {renderMainContent()}
-          </main>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M9 3v18" />
+                  </svg>
+                </button>
+              )}
+              {renderMainContent()}
+            </main>
 
-          {/* Column 3: Detail Panel (Critical path) */}
-          <div className={layoutStyles.detailCol}>
-            <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+            {/* Column 3: Detail Panel (Critical path) */}
+            <div className={layoutStyles.detailCol}>
+              <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+            </div>
           </div>
-        </div>
+        </DndContext>
       )}
 
       {/* Rollover Prompt on day change for incomplete yesterday tasks */}

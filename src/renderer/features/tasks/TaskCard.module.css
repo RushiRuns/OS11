@@ -64,6 +64,52 @@
 }
 
 /* Layer 1: Always Visible */
+.subtaskChevronBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-xs);
+  transition: color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.subtaskChevronBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.subtaskChevron {
+  font-size: 9px;
+  display: inline-block;
+  line-height: 1;
+  user-select: none;
+}
+
+.subtaskChevronSpacer {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.subtaskCountBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: 1px;
+  line-height: 1;
+}
+
 .checkboxWrap {
   flex-shrink: 0;
   display: flex;
@@ -172,8 +218,7 @@
   flex-shrink: 0;
 }
 
-.taskCard:hover .sidebarTriggerBtn,
-.taskCard:focus-within .sidebarTriggerBtn {
+.taskCard:hover .sidebarTriggerBtn {
   opacity: 1;
   pointer-events: auto;
 }
@@ -312,9 +357,10 @@
 }
 
 .taskCard[data-droptarget="true"] {
-  border: 1.5px dashed var(--accent);
-  background: var(--surface-hover);
+  border: 1.5px dashed var(--accent) !important;
+  background: var(--surface-hover) !important;
   border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .taskCard[data-filedrop="true"] {
