@@ -7,11 +7,15 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   cursor: pointer;
   position: relative;
   user-select: none;
   outline: none;
+}
+
+.taskCard:active {
+  cursor: grabbing;
 }
 
 .taskCard:hover {
@@ -301,35 +305,16 @@
   height: 14px;
 }
 
-/* Drag Handle */
-.dragGrip {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  user-select: none;
-  margin-right: -4px;
-}
-
-.taskCard:hover .dragGrip {
-  display: flex;
-}
-
-.dragGrip:active {
+/* Drag States */
+.taskCard[data-dragging="true"] {
+  opacity: 0.45;
   cursor: grabbing;
 }
 
-/* Drag States */
-.taskCard[data-dragging="true"] {
-  opacity: 0.4;
-  transform: scale(0.98);
-}
-
 .taskCard[data-droptarget="true"] {
-  border: 2px dashed var(--accent);
+  border: 1.5px dashed var(--accent);
   background: var(--surface-hover);
+  border-radius: var(--radius-md);
 }
 
 .taskCard[data-filedrop="true"] {

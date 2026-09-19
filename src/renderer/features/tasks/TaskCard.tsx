@@ -73,7 +73,9 @@ export const TaskCard = memo(function TaskCard({
   } = useSortable({ id: task.id });
 
   const sortableStyle: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform
+      ? `${CSS.Transform.toString(transform)}${isDragging ? ' scale(0.98)' : ''}`
+      : undefined,
     transition,
   };
 
@@ -159,6 +161,8 @@ export const TaskCard = memo(function TaskCard({
     <div
       ref={setNodeRef}
       style={sortableStyle}
+      {...attributes}
+      {...listeners}
       className={`${styles.taskCard} ${getPriorityClass(task.priority)} ${
         isSelected ? styles.taskCardSelected : ''
       }`}
@@ -204,20 +208,11 @@ export const TaskCard = memo(function TaskCard({
       role="row"
       aria-selected={isSelected || isMultiSelected}
     >
-      {/* Drag Grip Handle */}
-      <span
-        className={styles.dragGrip}
-        {...attributes}
-        {...listeners}
-        title="Drag to reorder or nest task"
-      >
-        ⋮⋮
-      </span>
-
       {/* Multi-Select Checkbox (only rendered when multi-select is active) */}
       {(isMultiSelectActive || isMultiSelected) && (
         <div
           className={styles.multiSelectCheckboxWrap}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             if (e.shiftKey) {
@@ -240,6 +235,7 @@ export const TaskCard = memo(function TaskCard({
       {/* Checkbox */}
       <div
         className={`${styles.checkboxWrap} ${variant !== 'project' ? styles.circularCheckbox : ''}`}
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onToggleComplete?.(task.id);
@@ -266,6 +262,7 @@ export const TaskCard = memo(function TaskCard({
                 onChange={(e) => setEditTitle(e.target.value)}
                 onBlur={handleSaveTitle}
                 onKeyDown={handleKeyDown}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
                 aria-label={`Edit title for ${task.title}`}
               />
@@ -301,6 +298,7 @@ export const TaskCard = memo(function TaskCard({
                   className={styles.inlineTagPill}
                   role="button"
                   tabIndex={0}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     useAppStore.getState().setActiveListId(`tag:${tag.id}`);
@@ -331,6 +329,7 @@ export const TaskCard = memo(function TaskCard({
               onChange={(e) => setEditTitle(e.target.value)}
               onBlur={handleSaveTitle}
               onKeyDown={handleKeyDown}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Edit title for ${task.title}`}
             />
@@ -375,6 +374,7 @@ export const TaskCard = memo(function TaskCard({
               role="button"
               tabIndex={0}
               aria-label={`Filter by tag ${tag.name}`}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 useAppStore.getState().setActiveListId(`tag:${tag.id}`);
@@ -417,7 +417,11 @@ export const TaskCard = memo(function TaskCard({
 
       {/* Layer 3: Action Buttons (only in project variant; standard views use sidebar icon) */}
       {variant === 'project' && (
-        <div className={styles.actionsRow} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={styles.actionsRow}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             type="button"
             className={styles.iconButton}
@@ -470,6 +474,7 @@ export const TaskCard = memo(function TaskCard({
         <button
           type="button"
           className={styles.sidebarTriggerBtn}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onOpenDetail?.(task);
