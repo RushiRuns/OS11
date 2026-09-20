@@ -529,7 +529,7 @@ export function TaskList({
   })();
 
   return (
-    <div className={styles.taskListContainer}>
+    <div className={styles.taskListContainer} data-dragging={Boolean(draggingTaskId)}>
       {/* Header with Search/Filter bar */}
       <TaskListHeader
         title={headerTitle}

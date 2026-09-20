@@ -2,7 +2,7 @@
   width: var(--checkbox-size);
   height: var(--checkbox-size);
   border-radius: var(--radius-sm);
-  border: var(--checkbox-border-width) solid var(--border-default);
+  border: var(--checkbox-border-width) solid var(--checkbox-border, var(--border-strong));
   cursor: pointer;
   background: transparent;
   display: inline-flex;

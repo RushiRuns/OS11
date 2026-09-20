@@ -2,7 +2,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) 26px;
+  margin-left: -12px;
+  width: calc(100% + 12px);
   min-height: var(--task-height-comfortable, 44px);
   background: transparent;
   border: none;
@@ -12,6 +14,7 @@
   position: relative;
   user-select: none;
   outline: none;
+  box-sizing: border-box;
 }
 
 .taskCard:active {
@@ -63,8 +66,12 @@
   }
 }
 
-/* Layer 1: Always Visible */
+/* Subtask Chevron Toggle: Positioned in left gutter (yellow line), reveals on hover without pushing card */
 .subtaskChevronBtn {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
   background: transparent;
   border: none;
   padding: 0;
@@ -77,8 +84,17 @@
   cursor: pointer;
   color: var(--text-tertiary);
   border-radius: var(--radius-xs);
-  transition: color 0.15s ease, background-color 0.15s ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
   flex-shrink: 0;
+  z-index: 2;
+}
+
+.taskCard:hover .subtaskChevronBtn,
+.taskCard:focus-within .subtaskChevronBtn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .subtaskChevronBtn:hover {
@@ -87,17 +103,15 @@
 }
 
 .subtaskChevron {
-  font-size: 9px;
-  display: inline-block;
-  line-height: 1;
-  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transform: rotate(0deg);
 }
 
-.subtaskChevronSpacer {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  display: inline-block;
+.subtaskChevronExpanded .subtaskChevron {
+  transform: rotate(90deg);
 }
 
 .subtaskCountBadge {

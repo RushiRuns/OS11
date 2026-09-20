@@ -42,6 +42,22 @@
   left: 0;
   width: 100%;
   box-sizing: border-box;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  animation: subtaskFadeIn 0.18s ease-out;
+}
+
+@keyframes subtaskFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.taskListContainer[data-dragging="true"] .virtualItem {
+  transition: none;
+  animation: none;
 }
 
 /* Completed Section */

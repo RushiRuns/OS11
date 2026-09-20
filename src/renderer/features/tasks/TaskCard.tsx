@@ -83,7 +83,7 @@ export const TaskCard = memo(function TaskCard({
   // hides itself while it's the one being dragged.
   const sortableStyle: React.CSSProperties = {
     opacity: isDragging ? 0 : 1,
-    marginLeft: depth > 0 ? `${depth * 28}px` : undefined,
+    marginLeft: depth > 0 ? `${depth * 28 - 12}px` : undefined,
   };
 
   useEffect(() => {
@@ -251,11 +251,11 @@ export const TaskCard = memo(function TaskCard({
         </div>
       )}
 
-      {/* Subtask Chevron Toggle (Matching Image 4) */}
-      {hasSubtasks ? (
+      {/* Subtask Chevron Toggle (Positioned in left gutter; reveals on hover without shifting card) */}
+      {hasSubtasks && (
         <button
           type="button"
-          className={styles.subtaskChevronBtn}
+          className={`${styles.subtaskChevronBtn} ${isExpanded ? styles.subtaskChevronExpanded : ''}`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
@@ -264,11 +264,21 @@ export const TaskCard = memo(function TaskCard({
           aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
         >
           <span className={styles.subtaskChevron}>
-            {isExpanded ? '▼' : '►'}
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
           </span>
         </button>
-      ) : (
-        <span className={styles.subtaskChevronSpacer} />
       )}
 
       {/* Checkbox */}
