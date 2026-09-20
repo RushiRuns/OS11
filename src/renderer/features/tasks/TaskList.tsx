@@ -38,6 +38,43 @@ interface TaskListProps {
   selectedTaskId?: string | null;
 }
 
+export interface FlattenedTaskItem {
+  task: Task;
+  depth: number;
+  hasSubtasks: boolean;
+  isExpanded: boolean;
+  subtaskCount: { completed: number; total: number };
+}
+
+export function computeTaskItemEstimate(item?: {
+  task?: { notes?: string | null };
+  hasSubtasks?: boolean;
+}): number {
+  if (!item) return 44;
+  let height = 44; // base single-line title comfortable height
+  if (item.task?.notes) {
+    height += 20; // notes row
+  }
+  if (item.hasSubtasks) {
+    height += 18; // subtask count badge / chevron row
+  }
+  return height;
+}
+
+export function createTaskListVirtualizerOptions<TElement extends Element>(
+  items: Array<{ task: { id: string; notes?: string | null }; hasSubtasks?: boolean }>,
+  getScrollElement: () => TElement | null
+) {
+  return {
+    count: items.length,
+    getScrollElement,
+    getItemKey: (index: number) => items[index]?.task.id ?? index,
+    estimateSize: (index: number) => computeTaskItemEstimate(items[index]),
+    gap: 8,
+    overscan: 10,
+  };
+}
+
 export function TaskList({
   onSelectTask,
   selectedTaskId,
@@ -179,14 +216,6 @@ export function TaskList({
       (t) => !t.parent_task_id || !activeTasksMap.has(t.parent_task_id)
     );
 
-    interface FlattenedTaskItem {
-      task: Task;
-      depth: number;
-      hasSubtasks: boolean;
-      isExpanded: boolean;
-      subtaskCount: { completed: number; total: number };
-    }
-
     const result: FlattenedTaskItem[] = [];
 
     const appendTree = (task: Task, depth: number) => {
@@ -219,14 +248,13 @@ export function TaskList({
 
   const allTaskIds = flattenedIncomplete.map((item) => item.task.id);
 
-  // TanStack Virtualizer with dynamic measurement and uniform flexible 8px gap
-  const virtualizer = useVirtualizer({
-    count: flattenedIncomplete.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    gap: 8,
-    overscan: 10,
-  });
+  // TanStack Virtualizer with dynamic measurement, getItemKey by task.id, and uniform 8px gap
+  const virtualizer = useVirtualizer(
+    useMemo(
+      () => createTaskListVirtualizerOptions(flattenedIncomplete, () => parentRef.current),
+      [flattenedIncomplete]
+    )
+  );
 
   // Task deletion with Undo Toast
   const handleDeleteTask = useCallback(
@@ -550,7 +578,7 @@ export function TaskList({
 
                 return (
                   <div
-                    key={task.id}
+                    key={virtualItem.key}
                     ref={virtualizer.measureElement}
                     data-index={virtualItem.index}
                     className={styles.virtualItem}
