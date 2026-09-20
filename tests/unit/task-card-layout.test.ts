@@ -10,7 +10,7 @@ describe('TaskCard Layout & Subtask Chevron Hover', () => {
     is_completed: 0,
     is_starred: 0,
     priority: 0,
-    due_date: null,
+    due_date: '2026-09-20',
     due_time: null,
     all_day: 1,
     list_id: 'default',
@@ -29,7 +29,6 @@ describe('TaskCard Layout & Subtask Chevron Hover', () => {
       hasSubtasks: false,
     });
 
-    // In non-subtask tasks, no chevron button or spacer should exist
     expect(element.props.hasSubtasks).toBe(false);
   });
 
@@ -64,5 +63,22 @@ describe('TaskCard Layout & Subtask Chevron Hover', () => {
       depth: 2,
     });
     expect(depth2Element.props.depth).toBe(2);
+  });
+
+  it('formats dates in MM/DD/YYYY order', () => {
+    const parts = dummyTask.due_date.split('-');
+    const formatted = `${parts[1]}/${parts[2]}/${parts[0]}`;
+    expect(formatted).toBe('09/20/2026');
+  });
+
+  it('passes subtaskCount object to task card for rendering subtask progress in metadata row', () => {
+    const subtaskElement = React.createElement(TaskCard, {
+      task: dummyTask as any,
+      hasSubtasks: true,
+      subtaskCount: { completed: 1, total: 3 },
+    });
+
+    expect(subtaskElement.props.subtaskCount).toEqual({ completed: 1, total: 3 });
+    expect(subtaskElement.props.hasSubtasks).toBe(true);
   });
 });

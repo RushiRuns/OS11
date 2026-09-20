@@ -1,4 +1,4 @@
-import React, { memo, useState, useRef, useEffect } from 'react';
+import React, { memo, useState, useRef, useEffect, useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
@@ -65,6 +65,19 @@ export const TaskCard = memo(function TaskCard({
   const taskTags = useTagStore((state) => state.getTagsForTask(task.id));
   const loadTagsForTask = useTagStore((state) => state.loadTagsForTask);
   const attachmentCount = useAttachmentStore((state) => state.countsByTaskId[task.id] ?? 0);
+
+  const formattedDueDate = useMemo(() => {
+    if (!task.due_date) return null;
+    const parts = task.due_date.split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts;
+      return `${m}/${d}/${y}`;
+    }
+    return task.due_date;
+  }, [task.due_date]);
+
+  const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
+  const hasMetadataRow = Boolean(formattedDueDate || taskTags.length > 0 || hasSubtaskBadge);
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -331,19 +344,6 @@ export const TaskCard = memo(function TaskCard({
             )}
           </div>
 
-          {/* Subtask Count Badge (Matching Image 4: e.g. "⑂ 0/1") */}
-          {hasSubtasks && subtaskCount && (
-            <div
-              className={styles.subtaskCountBadge}
-              title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
-            >
-              <span>⑂</span>
-              <span>
-                {subtaskCount.completed}/{subtaskCount.total}
-              </span>
-            </div>
-          )}
-
           {/* Row 2: Notes (if present) - lighter text */}
           {task.notes && (
             <div className={styles.notesRow} title={task.notes}>
@@ -351,31 +351,86 @@ export const TaskCard = memo(function TaskCard({
             </div>
           )}
 
-          {/* Row 3: Tags (if present) - styled with lighter notes color */}
-          {taskTags.length > 0 && (
-            <div className={styles.tagsRow}>
-              {taskTags.map((tag) => (
+          {/* Row 3: Unified Metadata Row: [Due Date] · [Tags] · [Subtask Progress] */}
+          {hasMetadataRow && (
+            <div className={styles.metadataRow}>
+              {formattedDueDate && (
                 <span
-                  key={tag.id}
-                  className={styles.inlineTagPill}
-                  role="button"
-                  tabIndex={0}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.stopPropagation();
-                      useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-                    }
-                  }}
-                  title={`Tag: #${tag.name}`}
+                  className={`${styles.metaDate} ${
+                    isOverdue ? styles.metaDateOverdue : ''
+                  }`}
+                  title={`Due: ${formattedDueDate}`}
                 >
-                  #{tag.name}
+                  {formattedDueDate}
                 </span>
-              ))}
+              )}
+
+              {formattedDueDate && (taskTags.length > 0 || hasSubtaskBadge) && (
+                <span className={styles.metaDot} aria-hidden="true">
+                  ·
+                </span>
+              )}
+
+              {taskTags.length > 0 && (
+                <div className={styles.tagsGroup}>
+                  {taskTags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      className={styles.inlineTagPill}
+                      role="button"
+                      tabIndex={0}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+                        }
+                      }}
+                      title={`Tag: #${tag.name}`}
+                    >
+                      #{tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {taskTags.length > 0 && hasSubtaskBadge && (
+                <span className={styles.metaDot} aria-hidden="true">
+                  ·
+                </span>
+              )}
+
+              {hasSubtaskBadge && subtaskCount && (
+                <div
+                  className={styles.subtaskCountBadge}
+                  title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
+                >
+                  <span className={styles.subtaskCountIcon}>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="2" y="2" width="12" height="4" rx="2" />
+                      <path d="M4 6v3.5a2 2 0 0 0 2 2h1" />
+                      <rect x="7" y="9.5" width="7" height="4" rx="2" />
+                    </svg>
+                  </span>
+                  <span>
+                    {subtaskCount.completed}/{subtaskCount.total}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -414,7 +469,7 @@ export const TaskCard = memo(function TaskCard({
 
       {/* Layer 2: Metadata Badges (Hover/Focus progressive disclosure) */}
       <div className={styles.metadataWrap}>
-        {task.due_date && (
+        {variant === 'project' && task.due_date && (
           <span
             className={`${styles.dueDateChip} ${
               isOverdueAndCritical
@@ -424,7 +479,7 @@ export const TaskCard = memo(function TaskCard({
                 : ''
             }`}
           >
-            {task.due_date}
+            {formattedDueDate || task.due_date}
           </span>
         )}
 

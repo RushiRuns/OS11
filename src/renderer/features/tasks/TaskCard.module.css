@@ -1,6 +1,6 @@
 .taskCard {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3) var(--space-2) 26px;
   margin-left: -12px;
@@ -70,7 +70,7 @@
 .subtaskChevronBtn {
   position: absolute;
   left: 6px;
-  top: 50%;
+  top: 19px;
   transform: translateY(-50%);
   background: transparent;
   border: none;
@@ -114,20 +114,11 @@
   transform: rotate(90deg);
 }
 
-.subtaskCountBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  margin-top: 1px;
-  line-height: 1;
-}
-
 .checkboxWrap {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  margin-top: 1px;
 }
 
 .circularCheckbox :global(button) {
@@ -140,7 +131,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .notesRow {
@@ -166,6 +157,62 @@
   align-items: center;
   gap: var(--space-2);
   margin-top: 1px;
+}
+
+.metadataRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.metaDot {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.metaDate {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.metaDateOverdue {
+  color: var(--color-danger) !important;
+  font-weight: var(--weight-medium);
+}
+
+.tagsGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.subtaskCountBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.subtaskCountIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
 }
 
 .inlineTagPill {
