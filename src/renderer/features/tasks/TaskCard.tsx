@@ -33,6 +33,62 @@ export interface TaskCardProps {
   onFileDrop?: (taskId: string, files: FileList) => void;
 }
 
+export function formatDateTime(
+  dueDate?: string | null,
+  dueTime?: string | null,
+  allDay?: number
+): string | null {
+  if (!dueDate && !dueTime) return null;
+
+  let formattedDate: string | null = null;
+  let timeStr: string | null = null;
+
+  if (dueDate) {
+    if (dueDate.includes('T')) {
+      const [dPart, tPart] = dueDate.split('T');
+      const parts = dPart.split('-');
+      if (parts.length === 3) {
+        formattedDate = `${parts[1]}/${parts[2]}/${parts[0]}`;
+      } else {
+        formattedDate = dPart;
+      }
+      if (!dueTime && tPart && allDay !== 1) {
+        timeStr = tPart.slice(0, 5);
+      }
+    } else {
+      const parts = dueDate.split('-');
+      if (parts.length === 3) {
+        formattedDate = `${parts[1]}/${parts[2]}/${parts[0]}`;
+      } else {
+        formattedDate = dueDate;
+      }
+    }
+  }
+
+  if (dueTime && allDay !== 1) {
+    timeStr = dueTime;
+  }
+
+  let formattedTime: string | null = null;
+  if (timeStr && allDay !== 1) {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = match[2];
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      formattedTime = `${hours}:${minutes} ${ampm}`;
+    } else {
+      formattedTime = timeStr;
+    }
+  }
+
+  if (formattedDate && formattedTime) {
+    return `${formattedDate}, ${formattedTime}`;
+  }
+  return formattedDate || formattedTime;
+}
+
 export const TaskCard = memo(function TaskCard({
   task,
   depth = 0,
@@ -67,14 +123,8 @@ export const TaskCard = memo(function TaskCard({
   const attachmentCount = useAttachmentStore((state) => state.countsByTaskId[task.id] ?? 0);
 
   const formattedDueDate = useMemo(() => {
-    if (!task.due_date) return null;
-    const parts = task.due_date.split('-');
-    if (parts.length === 3) {
-      const [y, m, d] = parts;
-      return `${m}/${d}/${y}`;
-    }
-    return task.due_date;
-  }, [task.due_date]);
+    return formatDateTime(task.due_date, task.due_time, task.all_day);
+  }, [task.due_date, task.due_time, task.all_day]);
 
   const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
   const hasMetadataRow = Boolean(formattedDueDate || taskTags.length > 0 || hasSubtaskBadge);
@@ -170,10 +220,21 @@ export const TaskCard = memo(function TaskCard({
   };
 
   // Check if overdue
-  const isOverdue =
-    Boolean(task.due_date) &&
-    task.is_completed === 0 &&
-    new Date(task.due_date!).getTime() < new Date().setHours(0, 0, 0, 0);
+  const isOverdue = useMemo(() => {
+    if (!task.due_date || task.is_completed === 1) return false;
+    if (task.due_time && task.all_day !== 1) {
+      const timePart = task.due_time.length === 5 ? `${task.due_time}:00` : task.due_time;
+      const datePart = task.due_date.split('T')[0];
+      const dueTimestamp = new Date(`${datePart}T${timePart}`).getTime();
+      if (!isNaN(dueTimestamp)) {
+        return dueTimestamp < Date.now();
+      }
+    }
+    const d = new Date(task.due_date.split('T')[0] + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
+  }, [task.due_date, task.due_time, task.all_day, task.is_completed]);
 
   const isOverdueAndCritical = isOverdue && task.priority >= 3;
 
@@ -411,12 +472,12 @@ export const TaskCard = memo(function TaskCard({
                 >
                   <span className={styles.subtaskCountIcon}>
                     <svg
-                      width="13"
-                      height="13"
+                      width="14"
+                      height="14"
                       viewBox="0 0 16 16"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="1.6"
+                      strokeWidth="1.8"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       aria-hidden="true"

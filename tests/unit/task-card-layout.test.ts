@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
-import { TaskCard } from '../../src/renderer/features/tasks/TaskCard.js';
+import { TaskCard, formatDateTime } from '../../src/renderer/features/tasks/TaskCard.js';
 
 describe('TaskCard Layout & Subtask Chevron Hover', () => {
   const dummyTask = {
@@ -69,6 +69,22 @@ describe('TaskCard Layout & Subtask Chevron Hover', () => {
     const parts = dummyTask.due_date.split('-');
     const formatted = `${parts[1]}/${parts[2]}/${parts[0]}`;
     expect(formatted).toBe('09/20/2026');
+    expect(formatDateTime(dummyTask.due_date, null, 1)).toBe('09/20/2026');
+  });
+
+  it('formats dates with time in 12-hour AM/PM format when time is present', () => {
+    expect(formatDateTime('2026-09-20', '14:30', 0)).toBe('09/20/2026, 2:30 PM');
+    expect(formatDateTime('2026-09-20', '09:00:00', 0)).toBe('09/20/2026, 9:00 AM');
+    expect(formatDateTime('2026-09-20', '00:15', 0)).toBe('09/20/2026, 12:15 AM');
+    expect(formatDateTime('2026-09-20', '12:00', 0)).toBe('09/20/2026, 12:00 PM');
+  });
+
+  it('suppresses time display when all_day is 1', () => {
+    expect(formatDateTime('2026-09-20', '14:30', 1)).toBe('09/20/2026');
+  });
+
+  it('parses time from ISO datetime strings when due_time is not separately provided', () => {
+    expect(formatDateTime('2026-09-20T16:45:00.000Z', null, 0)).toBe('09/20/2026, 4:45 PM');
   });
 
   it('passes subtaskCount object to task card for rendering subtask progress in metadata row', () => {
@@ -82,3 +98,4 @@ describe('TaskCard Layout & Subtask Chevron Hover', () => {
     expect(subtaskElement.props.hasSubtasks).toBe(true);
   });
 });
+
