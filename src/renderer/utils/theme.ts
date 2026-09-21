@@ -140,6 +140,10 @@ export function applyFontFamily(fontFamily: string): void {
   if (!fontFamily || fontFamily === 'Inter') {
     root.style.removeProperty('--font-sans');
   } else {
-    root.style.setProperty('--font-sans', fontFamily);
+    // Wrap font name in quotes if not already formatted with quotes/fallbacks
+    const formatted = fontFamily.includes(',') || fontFamily.startsWith('"') || fontFamily.startsWith("'")
+      ? fontFamily
+      : `'${fontFamily}', sans-serif`;
+    root.style.setProperty('--font-sans', formatted);
   }
 }

@@ -3,70 +3,12 @@
  *
  * Rules:
  *  1. Zero external network requests (no Google Fonts CDN).
- *  2. Resolves installed system copies first (Inter / JetBrains Mono)
- *     and falls back cleanly to native OS system fonts.
+ *  2. Resolves installed system copies first and falls back cleanly to local assets.
+ *  3. 30 Sans-Serif font families packaged offline in WOFF2 format.
  */
 
 /* ============================================================
-   INTER (UI Body & Headings)
-   Weights: 300 (Light), 400 (Regular), 500 (Medium),
-            600 (SemiBold), 700 (Bold)
-   ============================================================ */
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src:
-    local('Inter Light'),
-    local('Inter-Light');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src:
-    local('Inter Regular'),
-    local('Inter-Regular'),
-    local('Inter');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src:
-    local('Inter Medium'),
-    local('Inter-Medium');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src:
-    local('Inter SemiBold'),
-    local('Inter-SemiBold');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src:
-    local('Inter Bold'),
-    local('Inter-Bold');
-}
-
-/* ============================================================
    JETBRAINS MONO (Notes Code Blocks & Monospace Elements)
-   Weights: 400 (Regular), 500 (Medium)
    ============================================================ */
 
 @font-face {
@@ -88,4 +30,802 @@
   src:
     local('JetBrains Mono Medium'),
     local('JetBrainsMono-Medium');
+}
+
+/* ============================================================
+   INTER
+   ============================================================ */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Inter Regular'),
+    local('Inter-Regular'),
+    local('Inter'),
+    url('../assets/fonts/inter-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Inter Bold'),
+    local('Inter-Bold'),
+    url('../assets/fonts/inter-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   MANROPE
+   ============================================================ */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Manrope Regular'),
+    local('Manrope-Regular'),
+    local('Manrope'),
+    url('../assets/fonts/manrope-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Manrope Bold'),
+    local('Manrope-Bold'),
+    url('../assets/fonts/manrope-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   PLUS JAKARTA SANS
+   ============================================================ */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Plus Jakarta Sans Regular'),
+    local('Plus Jakarta Sans-Regular'),
+    local('Plus Jakarta Sans'),
+    url('../assets/fonts/plus-jakarta-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Plus Jakarta Sans Bold'),
+    local('Plus Jakarta Sans-Bold'),
+    url('../assets/fonts/plus-jakarta-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   ROBOTO
+   ============================================================ */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Roboto Regular'),
+    local('Roboto-Regular'),
+    local('Roboto'),
+    url('../assets/fonts/roboto-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Roboto Bold'),
+    local('Roboto-Bold'),
+    url('../assets/fonts/roboto-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   OPEN SANS
+   ============================================================ */
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Open Sans Regular'),
+    local('Open Sans-Regular'),
+    local('Open Sans'),
+    url('../assets/fonts/open-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Open Sans Bold'),
+    local('Open Sans-Bold'),
+    url('../assets/fonts/open-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   LATO
+   ============================================================ */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Lato Regular'),
+    local('Lato-Regular'),
+    local('Lato'),
+    url('../assets/fonts/lato-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Lato Bold'),
+    local('Lato-Bold'),
+    url('../assets/fonts/lato-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   MONTSERRAT
+   ============================================================ */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Montserrat Regular'),
+    local('Montserrat-Regular'),
+    local('Montserrat'),
+    url('../assets/fonts/montserrat-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Montserrat Bold'),
+    local('Montserrat-Bold'),
+    url('../assets/fonts/montserrat-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   POPPINS
+   ============================================================ */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Poppins Regular'),
+    local('Poppins-Regular'),
+    local('Poppins'),
+    url('../assets/fonts/poppins-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src:
+    local('Poppins Bold'),
+    local('Poppins-Bold'),
+    url('../assets/fonts/poppins-600.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   NUNITO SANS
+   ============================================================ */
+@font-face {
+  font-family: 'Nunito Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Nunito Sans Regular'),
+    local('Nunito Sans-Regular'),
+    local('Nunito Sans'),
+    url('../assets/fonts/nunito-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Nunito Sans Bold'),
+    local('Nunito Sans-Bold'),
+    url('../assets/fonts/nunito-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   SOURCE SANS 3
+   ============================================================ */
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Source Sans 3 Regular'),
+    local('Source Sans 3-Regular'),
+    local('Source Sans 3'),
+    url('../assets/fonts/source-sans-3-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Source Sans 3 Bold'),
+    local('Source Sans 3-Bold'),
+    url('../assets/fonts/source-sans-3-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   NOTO SANS
+   ============================================================ */
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Noto Sans Regular'),
+    local('Noto Sans-Regular'),
+    local('Noto Sans'),
+    url('../assets/fonts/noto-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Noto Sans Bold'),
+    local('Noto Sans-Bold'),
+    url('../assets/fonts/noto-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   RALEWAY
+   ============================================================ */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Raleway Regular'),
+    local('Raleway-Regular'),
+    local('Raleway'),
+    url('../assets/fonts/raleway-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Raleway Bold'),
+    local('Raleway-Bold'),
+    url('../assets/fonts/raleway-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   OSWALD
+   ============================================================ */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Oswald Regular'),
+    local('Oswald-Regular'),
+    local('Oswald'),
+    url('../assets/fonts/oswald-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Oswald Bold'),
+    local('Oswald-Bold'),
+    url('../assets/fonts/oswald-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   UBUNTU
+   ============================================================ */
+@font-face {
+  font-family: 'Ubuntu';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Ubuntu Regular'),
+    local('Ubuntu-Regular'),
+    local('Ubuntu'),
+    url('../assets/fonts/ubuntu-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Ubuntu';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Ubuntu Bold'),
+    local('Ubuntu-Bold'),
+    url('../assets/fonts/ubuntu-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   DM SANS
+   ============================================================ */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('DM Sans Regular'),
+    local('DM Sans-Regular'),
+    local('DM Sans'),
+    url('../assets/fonts/dm-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('DM Sans Bold'),
+    local('DM Sans-Bold'),
+    url('../assets/fonts/dm-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   WORK SANS
+   ============================================================ */
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Work Sans Regular'),
+    local('Work Sans-Regular'),
+    local('Work Sans'),
+    url('../assets/fonts/work-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Work Sans Bold'),
+    local('Work Sans-Bold'),
+    url('../assets/fonts/work-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   FIGTREE
+   ============================================================ */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Figtree Regular'),
+    local('Figtree-Regular'),
+    local('Figtree'),
+    url('../assets/fonts/figtree-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Figtree Bold'),
+    local('Figtree-Bold'),
+    url('../assets/fonts/figtree-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   RUBIK
+   ============================================================ */
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Rubik Regular'),
+    local('Rubik-Regular'),
+    local('Rubik'),
+    url('../assets/fonts/rubik-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Rubik Bold'),
+    local('Rubik-Bold'),
+    url('../assets/fonts/rubik-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   QUICKSAND
+   ============================================================ */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Quicksand Regular'),
+    local('Quicksand-Regular'),
+    local('Quicksand'),
+    url('../assets/fonts/quicksand-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Quicksand Bold'),
+    local('Quicksand-Bold'),
+    url('../assets/fonts/quicksand-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   BARLOW
+   ============================================================ */
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Barlow Regular'),
+    local('Barlow-Regular'),
+    local('Barlow'),
+    url('../assets/fonts/barlow-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Barlow Bold'),
+    local('Barlow-Bold'),
+    url('../assets/fonts/barlow-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   ARCHIVO
+   ============================================================ */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Archivo Regular'),
+    local('Archivo-Regular'),
+    local('Archivo'),
+    url('../assets/fonts/archivo-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Archivo Bold'),
+    local('Archivo-Bold'),
+    url('../assets/fonts/archivo-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   IBM PLEX SANS
+   ============================================================ */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('IBM Plex Sans Regular'),
+    local('IBM Plex Sans-Regular'),
+    local('IBM Plex Sans'),
+    url('../assets/fonts/ibm-plex-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('IBM Plex Sans Bold'),
+    local('IBM Plex Sans-Bold'),
+    url('../assets/fonts/ibm-plex-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   JOSEFIN SANS
+   ============================================================ */
+@font-face {
+  font-family: 'Josefin Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Josefin Sans Regular'),
+    local('Josefin Sans-Regular'),
+    local('Josefin Sans'),
+    url('../assets/fonts/josefin-sans-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Josefin Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Josefin Sans Bold'),
+    local('Josefin Sans-Bold'),
+    url('../assets/fonts/josefin-sans-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   TITILLIUM WEB
+   ============================================================ */
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Titillium Web Regular'),
+    local('Titillium Web-Regular'),
+    local('Titillium Web'),
+    url('../assets/fonts/titillium-web-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Titillium Web Bold'),
+    local('Titillium Web-Bold'),
+    url('../assets/fonts/titillium-web-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   KARLA
+   ============================================================ */
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Karla Regular'),
+    local('Karla-Regular'),
+    local('Karla'),
+    url('../assets/fonts/karla-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Karla Bold'),
+    local('Karla-Bold'),
+    url('../assets/fonts/karla-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   CABIN
+   ============================================================ */
+@font-face {
+  font-family: 'Cabin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Cabin Regular'),
+    local('Cabin-Regular'),
+    local('Cabin'),
+    url('../assets/fonts/cabin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cabin';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Cabin Bold'),
+    local('Cabin-Bold'),
+    url('../assets/fonts/cabin-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   LEXEND
+   ============================================================ */
+@font-face {
+  font-family: 'Lexend';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Lexend Regular'),
+    local('Lexend-Regular'),
+    local('Lexend'),
+    url('../assets/fonts/lexend-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lexend';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Lexend Bold'),
+    local('Lexend-Bold'),
+    url('../assets/fonts/lexend-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   EXO 2
+   ============================================================ */
+@font-face {
+  font-family: 'Exo 2';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Exo 2 Regular'),
+    local('Exo 2-Regular'),
+    local('Exo 2'),
+    url('../assets/fonts/exo-2-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Exo 2';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('Exo 2 Bold'),
+    local('Exo 2-Bold'),
+    url('../assets/fonts/exo-2-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   LEAGUE SPARTAN
+   ============================================================ */
+@font-face {
+  font-family: 'League Spartan';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('League Spartan Regular'),
+    local('League Spartan-Regular'),
+    local('League Spartan'),
+    url('../assets/fonts/league-spartan-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'League Spartan';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local('League Spartan Bold'),
+    local('League Spartan-Bold'),
+    url('../assets/fonts/league-spartan-700.woff2') format('woff2');
+}
+
+
+/* ============================================================
+   BEBAS NEUE
+   ============================================================ */
+@font-face {
+  font-family: 'Bebas Neue';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    local('Bebas Neue Regular'),
+    local('Bebas Neue-Regular'),
+    local('Bebas Neue'),
+    url('../assets/fonts/bebas-neue-400.woff2') format('woff2');
 }

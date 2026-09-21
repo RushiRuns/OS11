@@ -350,3 +350,60 @@
   border-radius: var(--radius-sm);
   backdrop-filter: blur(4px);
 }
+
+/* Font preview box */
+.fontPreviewContainer {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fontPreviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--weight-semibold);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-1);
+}
+
+.fontPreviewActiveName {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+
+.fontPreviewBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fontPreviewRegular {
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  color: var(--text-primary);
+  line-height: var(--leading-normal);
+}
+
+.fontPreviewBold {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-normal);
+}
+
+.fontPreviewMeta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+}
+

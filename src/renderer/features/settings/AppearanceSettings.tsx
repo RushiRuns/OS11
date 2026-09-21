@@ -172,21 +172,79 @@ export function AppearanceSettings(): React.ReactElement {
       <div className={styles.settingGroup}>
         <div className={styles.groupTitle}>Typography & UI Density</div>
 
-        <div className={styles.settingRow}>
+          <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
             <div className={styles.settingLabel}>Font Family</div>
-            <div className={styles.settingDescription}>Typeface applied across all tasks and navigation panes</div>
+            <div className={styles.settingDescription}>Typeface applied across all tasks and navigation panes (30 offline fonts)</div>
           </div>
           <select
             className={styles.selectInput}
             value={fontFamily}
             onChange={(e) => handleFontFamilyChange(e.target.value)}
           >
-            <option value="Inter">Inter (Default)</option>
-            <option value="system-ui, -apple-system, sans-serif">System UI</option>
-            <option value="Roboto, sans-serif">Roboto</option>
-            <option value="JetBrains Mono, monospace">JetBrains Mono</option>
+            <optgroup label="Recommended for Productivity">
+              <option value="Inter">Inter (Default)</option>
+              <option value="Manrope">Manrope (Clean & Modern)</option>
+              <option value="Plus Jakarta Sans">Plus Jakarta Sans (Contemporary)</option>
+            </optgroup>
+            <optgroup label="All Sans-Serif Fonts">
+              <option value="Archivo">Archivo</option>
+              <option value="Barlow">Barlow</option>
+              <option value="Bebas Neue">Bebas Neue (Display)</option>
+              <option value="Cabin">Cabin</option>
+              <option value="DM Sans">DM Sans</option>
+              <option value="Exo 2">Exo 2</option>
+              <option value="Figtree">Figtree</option>
+              <option value="IBM Plex Sans">IBM Plex Sans</option>
+              <option value="Josefin Sans">Josefin Sans</option>
+              <option value="Karla">Karla</option>
+              <option value="Lato">Lato</option>
+              <option value="League Spartan">League Spartan</option>
+              <option value="Lexend">Lexend (Readability)</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Noto Sans">Noto Sans</option>
+              <option value="Nunito Sans">Nunito Sans</option>
+              <option value="Open Sans">Open Sans</option>
+              <option value="Oswald">Oswald (Condensed)</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Quicksand">Quicksand (Rounded)</option>
+              <option value="Raleway">Raleway</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Rubik">Rubik</option>
+              <option value="Source Sans 3">Source Sans 3</option>
+              <option value="Titillium Web">Titillium Web</option>
+              <option value="Ubuntu">Ubuntu</option>
+              <option value="Work Sans">Work Sans</option>
+              <option value="JetBrains Mono">JetBrains Mono (Monospace)</option>
+              <option value="system-ui, -apple-system, sans-serif">System UI</option>
+            </optgroup>
           </select>
+        </div>
+
+        {/* Live Font Typography Preview */}
+        <div className={styles.fontPreviewContainer}>
+          <div className={styles.fontPreviewHeader}>
+            <span>Live Typography Preview</span>
+            <span className={styles.fontPreviewActiveName}>{fontFamily}</span>
+          </div>
+          <div
+            className={styles.fontPreviewBody}
+            style={{
+              fontFamily: fontFamily.includes(',') || fontFamily.startsWith("'") || fontFamily.startsWith('"')
+                ? fontFamily
+                : `'${fontFamily}', sans-serif`,
+            }}
+          >
+            <div className={styles.fontPreviewRegular}>
+              The quick brown fox jumps over the lazy dog.
+            </div>
+            <div className={styles.fontPreviewBold}>
+              Sphinx of black quartz, judge my vow.
+            </div>
+            <div className={styles.fontPreviewMeta}>
+              0123456789 &bull; Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn &bull; ( ) [ ] { } &amp; % $ # @
+            </div>
+          </div>
         </div>
 
         <div className={styles.settingRow}>

@@ -156,8 +156,8 @@
      platforms where Inter hasn't loaded yet. Never use
      hardcoded font sizes or weights — always use these tokens.
      ---------------------------------------------------------- */
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-               system-ui, sans-serif;
+  --font-body: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               system-ui, sans-serif);
   --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code',
                'Consolas', monospace;
 
