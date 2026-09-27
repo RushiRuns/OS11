@@ -335,16 +335,9 @@ export function QuickAddBar({
     return tokenizeInlineSyntax(input);
   }, [input]);
 
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-  const shortcutLabel = isMac ? '⌘N' : 'Ctrl+N';
-
   return (
     <div className={styles.container}>
       <div className={styles.inputCard}>
-        <span className={styles.plusIcon} aria-hidden="true">
-          +
-        </span>
-
         {/* Text Input Wrapper with Real-time Syntax Coloring */}
         <div className={styles.inputWrapper}>
           {/* Syntax Highlighter Layer */}
@@ -384,10 +377,6 @@ export function QuickAddBar({
             rows={input.includes('\n') ? Math.min(input.split('\n').length, 4) : 1}
           />
         </div>
-
-        <span className={styles.kbdBadge} title={`Press ${shortcutLabel} to focus`}>
-          {shortcutLabel}
-        </span>
       </div>
 
       {/* Floating Tag Autocomplete Menu */}

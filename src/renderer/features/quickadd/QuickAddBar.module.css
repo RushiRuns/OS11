@@ -24,15 +24,6 @@
   box-shadow: var(--shadow-focus);
 }
 
-.plusIcon {
-  font-size: 20px;
-  color: var(--accent);
-  margin-right: var(--space-3);
-  user-select: none;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
 .inputWrapper {
   position: relative;
   flex: 1;
@@ -100,27 +91,11 @@
   word-break: break-word;
 }
 
-.kbdBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  background-color: var(--surface-base);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xs);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  user-select: none;
-  margin-left: var(--space-2);
-  flex-shrink: 0;
-}
-
 /* Floating Tag Autocomplete Menu */
 .tagMenu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 36px;
+  left: var(--space-4);
   z-index: 1000;
   min-width: 220px;
   max-width: 360px;

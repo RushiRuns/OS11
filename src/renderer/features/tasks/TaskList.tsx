@@ -33,9 +33,13 @@ import { useVimMode } from '../../hooks/useVimMode.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './TaskList.module.css';
 
-interface TaskListProps {
+export interface TaskListProps {
   onSelectTask?: (task: Task | null) => void;
   selectedTaskId?: string | null;
+  isMyDayList?: boolean;
+  isSuggestionsOpen?: boolean;
+  onToggleSuggestions?: () => void;
+  suggestionsCount?: number;
 }
 
 export interface FlattenedTaskItem {
@@ -78,6 +82,10 @@ export function createTaskListVirtualizerOptions<TElement extends Element>(
 export function TaskList({
   onSelectTask,
   selectedTaskId,
+  isMyDayList: propIsMyDayList,
+  isSuggestionsOpen,
+  onToggleSuggestions,
+  suggestionsCount: propSuggestionsCount,
 }: TaskListProps): React.ReactElement {
   const { activeListId } = useAppStore();
   const {
@@ -528,6 +536,20 @@ export function TaskList({
     }
   })();
 
+  const isMyDay = propIsMyDayList ?? (activeListId === 'smart_my_day');
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const calculatedSuggestionsCount = useMemo(() => {
+    if (!isMyDay) return 0;
+    if (propSuggestionsCount !== undefined) return propSuggestionsCount;
+    return Object.values(tasksById).filter((t) => {
+      if (t.is_trashed === 1 || t.is_completed === 1) return false;
+      if (t.my_day_date === todayStr) return false;
+      const isDueTodayOrOverdue = t.due_date && t.due_date <= todayStr;
+      const isHighPriority = t.priority >= 2;
+      return isDueTodayOrOverdue || isHighPriority;
+    }).length;
+  }, [isMyDay, propSuggestionsCount, tasksById, todayStr]);
+
   return (
     <div className={styles.taskListContainer} data-dragging={Boolean(draggingTaskId)}>
       {/* Header with Search/Filter bar */}
@@ -536,6 +558,10 @@ export function TaskList({
         count={filteredIncomplete.length}
         filterConfig={filterConfig}
         onFilterChange={setFilterConfig}
+        isMyDayList={isMyDay}
+        isSuggestionsOpen={isSuggestionsOpen}
+        onToggleSuggestions={onToggleSuggestions}
+        suggestionsCount={calculatedSuggestionsCount}
       />
 
       {/* Inline FTS5 Search View (Ctrl+F or /) */}
@@ -547,11 +573,6 @@ export function TaskList({
           }
         }}
       />
-
-      {/* Quick Add Bar (52px height, 16px radius, Ctrl+N focus, live NLP preview chips) */}
-      <div className={styles.quickAddRow}>
-        <QuickAddBar />
-      </div>
 
       {/* Virtual Scroll Area wrapped in SortableContext */}
       <SortableContext
@@ -671,6 +692,11 @@ export function TaskList({
           )}
         </div>
       </SortableContext>
+
+      {/* Quick Add Bar anchored at bottom with spacing */}
+      <div className={styles.quickAddRow}>
+        <QuickAddBar />
+      </div>
 
       {/* Insertion-point indicator: a thin line at the exact row-gap the
           dragged task would land in, indented to preview the nesting depth
