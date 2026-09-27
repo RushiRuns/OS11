@@ -7,6 +7,7 @@ import { Sidebar } from './features/sidebar/Sidebar.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { DetailPanel } from './features/tasks/DetailPanel.js';
 import { MyDayView } from './features/lists/MyDayView.js';
+import { SuggestionsSidebar } from './features/lists/SuggestionsSidebar.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
 import { MiniTimerView } from './features/pomodoro/MiniTimerView.js';
@@ -81,6 +82,7 @@ export function App(): React.ReactElement {
     setSidebarVisible,
   } = useAppStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
@@ -88,6 +90,10 @@ export function App(): React.ReactElement {
   const isPomodoroFocus = usePomodoroStore((state) => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore((state) => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
+
+  useEffect(() => {
+    setIsSuggestionsOpen(false);
+  }, [activeListId]);
 
   useEffect(() => {
     fetchSystemInfo();
@@ -194,6 +200,13 @@ export function App(): React.ReactElement {
     return <MiniTimerView />;
   }
 
+  const handleSelectTask = (task: Task | null) => {
+    if (task) {
+      setIsSuggestionsOpen(false);
+    }
+    setSelectedTask(task);
+  };
+
   const handleFocusTask = async (taskId: string) => {
     let task = useTaskStore.getState().tasksById[taskId];
     if (!task) {
@@ -204,7 +217,7 @@ export function App(): React.ReactElement {
       }
     }
     if (task) {
-      setSelectedTask(task);
+      handleSelectTask(task);
       if (task.list_id) {
         useAppStore.getState().setActiveListId(task.list_id);
       } else {
@@ -219,7 +232,7 @@ export function App(): React.ReactElement {
       return (
         <TagView
           tagId={tagId}
-          onSelectTask={(task) => setSelectedTask(task)}
+          onSelectTask={handleSelectTask}
           selectedTaskId={selectedTask?.id}
         />
       );
@@ -237,8 +250,16 @@ export function App(): React.ReactElement {
       case 'smart_my_day':
         return (
           <MyDayView
-            onSelectTask={(task) => setSelectedTask(task)}
+            onSelectTask={handleSelectTask}
             selectedTaskId={selectedTask?.id}
+            isSuggestionsOpen={isSuggestionsOpen}
+            onToggleSuggestions={() => {
+              setIsSuggestionsOpen((prev) => {
+                const next = !prev;
+                if (next) setSelectedTask(null);
+                return next;
+              });
+            }}
           />
         );
       case 'view_dashboard':
@@ -274,14 +295,17 @@ export function App(): React.ReactElement {
       default:
         return (
           <TaskList
-            onSelectTask={(task) => setSelectedTask(task)}
+            onSelectTask={handleSelectTask}
             selectedTaskId={selectedTask?.id}
           />
         );
     }
   };
 
-  const isDetailVisible = !activeListId.startsWith('view_') && !activeListId.startsWith('project:') && Boolean(selectedTask);
+  const isDetailVisible =
+    !activeListId.startsWith('view_') &&
+    !activeListId.startsWith('project:') &&
+    (Boolean(selectedTask) || (isSuggestionsOpen && activeListId === 'smart_my_day'));
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, {
@@ -414,9 +438,13 @@ export function App(): React.ReactElement {
               {renderMainContent()}
             </main>
 
-            {/* Column 3: Detail Panel (Critical path) */}
+            {/* Column 3: Detail Panel / Suggestions Sidebar (Critical path) */}
             <div className={layoutStyles.detailCol}>
-              <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+              {isSuggestionsOpen && activeListId === 'smart_my_day' ? (
+                <SuggestionsSidebar onClose={() => setIsSuggestionsOpen(false)} />
+              ) : (
+                <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+              )}
             </div>
           </div>
         </DndContext>
