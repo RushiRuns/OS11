@@ -10,18 +10,16 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: var(--quick-add-height, 52px);
-  padding: var(--space-2) var(--space-4);
-  background-color: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl, 16px);
-  box-shadow: var(--shadow-low);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  width: 100%;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 .inputCard:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
+  border: none;
+  box-shadow: none;
 }
 
 .inputWrapper {
@@ -29,7 +27,16 @@
   flex: 1;
   display: flex;
   align-items: center;
-  min-height: 28px;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--border-strong);
 }
 
 .syntaxOverlay {
@@ -95,7 +102,7 @@
 .tagMenu {
   position: absolute;
   top: calc(100% + 4px);
-  left: var(--space-4);
+  left: 0;
   z-index: 1000;
   min-width: 220px;
   max-width: 360px;

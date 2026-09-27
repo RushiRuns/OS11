@@ -10,7 +10,6 @@
 
 .quickAddRow {
   padding: var(--space-3) var(--space-6) var(--space-4) var(--space-6);
-  border-top: 1px solid var(--border-subtle);
   background: var(--surface-base);
   flex-shrink: 0;
 }

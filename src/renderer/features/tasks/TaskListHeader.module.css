@@ -1,10 +1,9 @@
 .headerContainer {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6) var(--space-2) var(--space-6);
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-6) var(--space-6) var(--space-6);
   background: var(--surface-base);
-  border-bottom: 1px solid var(--border-subtle);
 }
 
 .topRow {
@@ -13,12 +12,33 @@
   justify-content: space-between;
 }
 
+.titleColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .title {
+  display: flex;
+  align-items: baseline;
   font-size: var(--text-2xl);
   font-weight: 700;
   letter-spacing: -0.5px;
   color: var(--text-primary);
   margin: 0;
+}
+
+.countText {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--weight-normal);
+  margin-left: var(--space-2);
+}
+
+.dateSub {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--weight-normal);
 }
 
 .headerControls {

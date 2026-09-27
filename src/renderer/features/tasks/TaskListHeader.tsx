@@ -90,12 +90,28 @@ export function TaskListHeader({
     },
   ];
 
+  const formattedDate = React.useMemo(() => {
+    return new Date().toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+  }, []);
+
   return (
     <div className={styles.headerContainer}>
       <div className={styles.topRow}>
-        <h1 className={styles.title}>
-          {title} <span style={{ fontSize: '16px', color: 'var(--text-tertiary)' }}>({count})</span>
-        </h1>
+        <div className={styles.titleColumn}>
+          <h1 className={styles.title}>
+            {title}
+            {!isMyDayList && title !== 'My Day' && (
+              <span className={styles.countText}>({count})</span>
+            )}
+          </h1>
+          {(isMyDayList || title === 'My Day') && (
+            <div className={styles.dateSub}>{formattedDate}</div>
+          )}
+        </div>
 
         <div className={styles.headerControls}>
           {isMyDayList && (
