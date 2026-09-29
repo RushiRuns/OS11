@@ -1,3 +1,10 @@
+/* Override global html/body background so the Electron transparent window
+   shows no solid rectangle behind the modal and session drawer. */
+:global(html),
+:global(body) {
+  background: transparent !important;
+}
+
 .container {
   display: flex;
   align-items: center;
@@ -19,17 +26,16 @@
 
 .modalCard {
   background: var(--surface-overlay, #ffffff);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border: none;
   border-radius: var(--radius-xl, 16px);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: box-shadow var(--transition-fast);
 }
 
 .modalCard:focus-within {
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--accent);
+  box-shadow: none;
 }
 
 .body {
@@ -216,9 +222,9 @@
 /* Session Task Drawer */
 .sessionDrawer {
   background: var(--surface-overlay, #ffffff);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border: none;
   border-radius: var(--radius-lg, 12px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   padding: var(--space-3) var(--space-4);
   max-height: 140px;
   overflow-y: auto;

@@ -22,7 +22,7 @@ export function createQuickAddModalWindow(): BrowserWindow {
     resizable: false,
     show: false,
     skipTaskbar: true,
-    hasShadow: true,
+    hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
