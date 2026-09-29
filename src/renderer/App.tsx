@@ -11,6 +11,7 @@ import { SuggestionsSidebar } from './features/lists/SuggestionsSidebar.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
 import { MiniTimerView } from './features/pomodoro/MiniTimerView.js';
+import { FloatingQuickAddModal } from './features/quickadd/FloatingQuickAddModal.js';
 import { CommandPalette } from './features/command-palette/CommandPalette.js';
 import { TagView } from './features/tags/TagView.js';
 import { NotificationCenter } from './features/notifications/NotificationCenter.js';
@@ -73,6 +74,7 @@ function ViewSkeleton(): React.ReactElement {
 export function App(): React.ReactElement {
   const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
   const isMiniTimer = typeof window !== 'undefined' && window.location.hash.includes('mini-timer');
+  const isQuickAddModal = typeof window !== 'undefined' && window.location.hash.includes('quickadd-modal');
 
   const {
     activeListId,
@@ -210,6 +212,10 @@ export function App(): React.ReactElement {
 
   if (isMiniTimer) {
     return <MiniTimerView />;
+  }
+
+  if (isQuickAddModal) {
+    return <FloatingQuickAddModal />;
   }
 
   const handleSelectTask = (task: Task | null) => {

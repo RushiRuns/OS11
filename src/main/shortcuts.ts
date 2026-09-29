@@ -7,6 +7,7 @@ import {
   setAlwaysOnTop,
 } from './window/main-window.js';
 import { toggleOmnibarWindow } from './window/omnibar-window.js';
+import { showQuickAddModalWindow } from './window/quickadd-modal-window.js';
 
 export function registerGlobalShortcuts(): void {
   try {
@@ -20,9 +21,14 @@ export function registerGlobalShortcuts(): void {
       toggleOmnibarWindow();
     });
 
-    // 3. Quick-Add in Main Window: Ctrl+N / Cmd+N
+    // 3. Quick-Add: Open Floating Modal if background/hidden, else focus in Main Window
     globalShortcut.register('CommandOrControl+N', () => {
-      focusQuickAdd();
+      const mainWin = getMainWindow();
+      if (!mainWin || mainWin.isDestroyed() || !mainWin.isVisible()) {
+        showQuickAddModalWindow();
+      } else {
+        focusQuickAdd();
+      }
     });
 
     // 4. Toggle App Visibility: Ctrl+Shift+H / Cmd+Shift+H

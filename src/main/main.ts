@@ -10,6 +10,7 @@ import {
 } from './window/main-window.js';
 import { createSplashWindow, destroySplashWindow } from './window/splash-window.js';
 import { createOmnibarWindow } from './window/omnibar-window.js';
+import { createQuickAddModalWindow } from './window/quickadd-modal-window.js';
 import { initTray, updateTrayBadge } from './tray/tray.js';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts.js';
 import { initAutoUpdater } from './services/updater.js';
@@ -47,7 +48,11 @@ export async function bootstrapMainProcess(): Promise<void> {
     console.log('[OS11 Main] Creating OmnibarWindow (hidden)...');
     createOmnibarWindow();
 
-    // 7. Initialize system tray
+    // 7. Create floating quick-add modal window (hidden on create)
+    console.log('[OS11 Main] Creating QuickAddModalWindow (hidden)...');
+    createQuickAddModalWindow();
+
+    // 8. Initialize system tray
     console.log('[OS11 Main] Initializing System Tray...');
     initTray();
 

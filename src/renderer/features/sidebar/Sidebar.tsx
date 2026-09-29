@@ -459,6 +459,8 @@ export function Sidebar(): React.ReactElement {
       if (targetItem.id === 'smart_my_day') {
         const today = new Date().toISOString().split('T')[0];
         await useTaskStore.getState().updateTask({ id: taskId, my_day_date: today });
+      } else if (targetItem.id === 'list_inbox') {
+        await useTaskStore.getState().updateTask({ id: taskId, list_id: 'list_inbox', project_id: null });
       } else if (targetItem.type === 'project') {
         await useTaskStore.getState().updateTask({ id: taskId, project_id: targetItem.rawId });
       } else if (targetItem.type === 'list') {
