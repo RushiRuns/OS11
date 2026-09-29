@@ -522,6 +522,9 @@ export function TaskList({
 
   const headerTitle = (() => {
     switch (activeListId) {
+      case 'list_inbox':
+      case 'smart_inbox':
+        return 'Inbox';
       case 'smart_my_day':
         return 'My Day';
       case 'smart_important':

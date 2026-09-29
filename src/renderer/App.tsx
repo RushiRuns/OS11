@@ -151,10 +151,22 @@ export function App(): React.ReactElement {
       }
     });
 
-    const unsubFocus = ipc.on(IPC.APP.FOCUS_QUICK_ADD, () => {
-      const quickAddInput = document.querySelector('input[placeholder*="Add a task"]') as HTMLInputElement;
-      quickAddInput?.focus();
-    });
+    const unsubFocus = ipc.on(
+      IPC.APP.FOCUS_QUICK_ADD,
+      (_event: unknown, payload?: unknown) => {
+        const data = payload as { navigateToInbox?: boolean } | undefined;
+        if (data?.navigateToInbox) {
+          useAppStore.getState().setActiveListId('list_inbox');
+        }
+        setTimeout(() => {
+          const quickAddInput = document.querySelector(
+            'input[placeholder*="Add a task"], textarea[placeholder*="Add a task"]'
+          ) as HTMLInputElement | HTMLTextAreaElement | null;
+          quickAddInput?.focus();
+          quickAddInput?.select();
+        }, 50);
+      }
+    );
 
     const handleReplayOnboarding = () => {
       setIsOnboardingOpen(true);

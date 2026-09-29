@@ -1,4 +1,5 @@
 export type SmartListType =
+  | 'inbox'
   | 'my_day'
   | 'important'
   | 'planned'

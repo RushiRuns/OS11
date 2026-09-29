@@ -81,6 +81,7 @@ export function ListContextMenu({
             onClose();
             onEdit(list);
           }}
+          disabled={isSmart || list.id === 'list_inbox'}
         >
           <span>✏️</span>
           <span>Rename & Edit</span>

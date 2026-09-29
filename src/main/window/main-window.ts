@@ -6,6 +6,7 @@ import { IPC } from '@shared/ipc-channels.js';
 
 let mainWindow: BrowserWindow | null = null;
 let isAppQuitting = false;
+let wasHidden = false;
 
 export function setAppIsQuitting(quitting: boolean): void {
   isAppQuitting = quitting;
@@ -43,6 +44,7 @@ export function createMainWindow(): BrowserWindow {
   mainWindow.on('close', (e) => {
     if (!isAppQuitting) {
       e.preventDefault();
+      wasHidden = true;
       mainWindow?.hide();
     }
   });
@@ -83,6 +85,7 @@ export function showMainWindow(): void {
 
 export function hideMainWindow(): void {
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+    wasHidden = true;
     mainWindow.hide();
   }
 }
@@ -119,8 +122,12 @@ export function setAlwaysOnTop(pinned: boolean, opacity = 1.0): boolean {
 }
 
 export function focusQuickAdd(): void {
+  const shouldNavigateToInbox = wasHidden || !mainWindow || !mainWindow.isVisible();
   showMainWindow();
+  wasHidden = false;
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(IPC.APP.FOCUS_QUICK_ADD);
+    mainWindow.webContents.send(IPC.APP.FOCUS_QUICK_ADD, {
+      navigateToInbox: shouldNavigateToInbox,
+    });
   }
 }

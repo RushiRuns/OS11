@@ -22,21 +22,6 @@ describe('Domain: List Store & Smart Lists', () => {
     vi.clearAllMocks();
     useListStore.setState({
       listsById: {
-        smart_my_day: {
-          id: 'smart_my_day',
-          name: 'My Day',
-          icon: '☀️',
-          color: null,
-          background_type: 'none',
-          background_value: null,
-          sort_order: 0,
-          is_smart: 1,
-          smart_type: 'my_day',
-          group_id: null,
-          notification_enabled: 1,
-          created_at: '2026-09-13T00:00:00.000Z',
-          updated_at: '2026-09-13T00:00:00.000Z',
-        },
         list_inbox: {
           id: 'list_inbox',
           name: 'Inbox',
@@ -44,28 +29,52 @@ describe('Domain: List Store & Smart Lists', () => {
           color: null,
           background_type: 'none',
           background_value: null,
-          sort_order: 1,
-          is_smart: 0,
-          smart_type: null,
+          sort_order: 0,
+          is_smart: 1,
+          smart_type: 'inbox',
           group_id: null,
           notification_enabled: 1,
+          is_pinned: 1,
+          pinned_sort_order: 0,
+          created_at: '2026-09-13T00:00:00.000Z',
+          updated_at: '2026-09-13T00:00:00.000Z',
+        },
+        smart_my_day: {
+          id: 'smart_my_day',
+          name: 'My Day',
+          icon: '☀️',
+          color: null,
+          background_type: 'none',
+          background_value: null,
+          sort_order: 1,
+          is_smart: 1,
+          smart_type: 'my_day',
+          group_id: null,
+          notification_enabled: 1,
+          is_pinned: 1,
+          pinned_sort_order: 1,
           created_at: '2026-09-13T00:00:00.000Z',
           updated_at: '2026-09-13T00:00:00.000Z',
         },
       },
-      orderedIds: ['smart_my_day', 'list_inbox'],
+      orderedIds: ['list_inbox', 'smart_my_day'],
       activeListId: 'smart_my_day',
       isLoading: false,
       error: null,
     });
   });
 
-  it('should prevent deleting built-in smart lists', async () => {
+  it('should prevent deleting built-in smart lists including list_inbox', async () => {
     const store = useListStore.getState();
     await expect(store.deleteList('smart_my_day')).rejects.toThrow(
       'Cannot delete built-in smart lists.'
     );
     expect(useListStore.getState().listsById['smart_my_day']).toBeDefined();
+
+    await expect(store.deleteList('list_inbox')).rejects.toThrow(
+      'Cannot delete built-in smart lists.'
+    );
+    expect(useListStore.getState().listsById['list_inbox']).toBeDefined();
   });
 
   it('should create a custom user list optimistically', async () => {
@@ -112,15 +121,31 @@ describe('Domain: List Store & Smart Lists', () => {
   });
 
   it('should delete custom user list and switch active list if needed', async () => {
+    const customList: List = {
+      id: 'list_custom',
+      name: 'Custom List',
+      icon: '📝',
+      sort_order: 10,
+      is_smart: 0,
+      background_type: 'none',
+      notification_enabled: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    useListStore.setState({
+      listsById: { ...useListStore.getState().listsById, list_custom: customList },
+      orderedIds: [...useListStore.getState().orderedIds, 'list_custom'],
+      activeListId: 'list_custom',
+    });
+
     vi.mocked(listServiceAdapter.delete).mockResolvedValueOnce(true);
 
-    useListStore.setState({ activeListId: 'list_inbox' });
     const store = useListStore.getState();
-
-    const success = await store.deleteList('list_inbox');
+    const success = await store.deleteList('list_custom');
     expect(success).toBe(true);
-    expect(useListStore.getState().listsById['list_inbox']).toBeUndefined();
-    expect(useListStore.getState().orderedIds).not.toContain('list_inbox');
+    expect(useListStore.getState().listsById['list_custom']).toBeUndefined();
+    expect(useListStore.getState().orderedIds).not.toContain('list_custom');
     // Active list switched back to safe default (smart_my_day)
     expect(useListStore.getState().activeListId).toBe('smart_my_day');
   });
