@@ -23,6 +23,7 @@ export interface ProjectState {
   dependenciesByTaskId: Record<string, string[]>;
   selectedProjectId: string | null;
   activityFeed: NotificationHistoryItem[];
+  projectFolderIds: string[];
   isLoading: boolean;
   isLoaded: boolean;
 
@@ -34,6 +35,8 @@ export interface ProjectState {
   reorderProjects: (updates: Array<{ id: string; sortOrder: number }>) => Promise<void>;
   archiveProject: (id: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+  addProjectFolder: (id: string) => void;
+  removeProjectFolder: (id: string) => void;
 
   loadSections: (projectId: string) => Promise<void>;
   createSection: (payload: CreateSectionPayload) => Promise<Section>;
@@ -56,6 +59,17 @@ export interface ProjectState {
   importTemplate: (template: ProjectTemplate) => Promise<Project>;
 }
 
+const PROJECT_FOLDERS_STORAGE_KEY = 'os11:project_folder_ids';
+
+function loadInitialProjectFolderIds(): string[] {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(PROJECT_FOLDERS_STORAGE_KEY) : null;
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projectsById: {},
   sectionsById: {},
@@ -63,8 +77,38 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   dependenciesByTaskId: {},
   selectedProjectId: null,
   activityFeed: [],
+  projectFolderIds: loadInitialProjectFolderIds(),
   isLoading: false,
   isLoaded: false,
+
+  addProjectFolder: (id: string) => {
+    set((state) => {
+      if (state.projectFolderIds.includes(id)) return state;
+      const next = [...state.projectFolderIds, id];
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(PROJECT_FOLDERS_STORAGE_KEY, JSON.stringify(next));
+        }
+      } catch {
+        // ignore
+      }
+      return { projectFolderIds: next };
+    });
+  },
+
+  removeProjectFolder: (id: string) => {
+    set((state) => {
+      const next = state.projectFolderIds.filter((gid) => gid !== id);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(PROJECT_FOLDERS_STORAGE_KEY, JSON.stringify(next));
+        }
+      } catch {
+        // ignore
+      }
+      return { projectFolderIds: next };
+    });
+  },
 
   setSelectedProjectId: (id: string | null) => {
     set({ selectedProjectId: id });

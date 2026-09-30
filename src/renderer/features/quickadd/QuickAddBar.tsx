@@ -188,7 +188,7 @@ export function QuickAddBar({
       // Parse inline syntax for title, notes, and tags
       const inlineParsed = parseInlineTaskInput(raw);
 
-      let title = inlineParsed.title || raw;
+      const title = inlineParsed.title || raw;
       const notes = inlineParsed.notes;
       const extractedTags = inlineParsed.tags;
 

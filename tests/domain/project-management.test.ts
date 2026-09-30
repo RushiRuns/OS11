@@ -12,6 +12,7 @@ import { NotificationRepository } from '../../src/main/repositories/Notification
 import { MilestoneService } from '../../src/main/services/project/MilestoneService.js';
 import { DependencyService } from '../../src/main/services/project/DependencyService.js';
 import { createProjectTemplate } from '../../src/renderer/features/projects/projectExport.js';
+import { useProjectStore } from '../../src/renderer/stores/projectStore.js';
 
 describe('Phase 10: Project Management Domain & Repositories', () => {
   let db: Database.Database;
@@ -31,6 +32,11 @@ describe('Phase 10: Project Management Domain & Repositories', () => {
     const schemaPath = path.resolve(__dirname, '../../src/main/migrations/0001_initial_schema.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     db.exec(schemaSql);
+
+    const m5Path = path.resolve(__dirname, '../../src/main/migrations/0005_project_group_id.sql');
+    if (fs.existsSync(m5Path)) {
+      db.exec(fs.readFileSync(m5Path, 'utf8'));
+    }
 
     projectRepo = new ProjectRepository(db);
     sectionRepo = new SectionRepository(db);
@@ -175,5 +181,45 @@ describe('Phase 10: Project Management Domain & Repositories', () => {
     expect(template.sections[0].tasks.length).toBe(1);
     expect(template.sections[0].tasks[0].title).toBe('Figma prototypes');
     expect(template.sections[0].tasks[0].estimated_minutes).toBe(180);
+  });
+
+  it('creates projects within a folder/group and updates group_id properly', () => {
+    // 1. Create a group in list_groups
+    const groupId = 'group_work_projects';
+    db.prepare(`
+      INSERT INTO list_groups (id, name, sort_order, is_collapsed, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(groupId, 'Client Projects', 0, 0, new Date().toISOString());
+
+    // 2. Create project assigned to that group
+    const project = projectRepo.create({
+      name: 'Client Redesign',
+      group_id: groupId,
+    });
+    expect(project.id).toBeDefined();
+    expect(project.group_id).toBe(groupId);
+
+    // 3. Verify retrieval by ID
+    const retrieved = projectRepo.getById(project.id);
+    expect(retrieved).not.toBeNull();
+    expect(retrieved?.group_id).toBe(groupId);
+
+    // 4. Update project: move to another folder or remove to root
+    const moved = projectRepo.update(project.id, {
+      group_id: null,
+    });
+    expect(moved.group_id).toBeNull();
+
+    const retrievedAfterMove = projectRepo.getById(project.id);
+    expect(retrievedAfterMove?.group_id).toBeNull();
+  });
+
+  it('manages projectFolderIds in useProjectStore reactively', () => {
+    const { addProjectFolder, removeProjectFolder } = useProjectStore.getState();
+    addProjectFolder('grp_test_folder_1');
+    expect(useProjectStore.getState().projectFolderIds).toContain('grp_test_folder_1');
+
+    removeProjectFolder('grp_test_folder_1');
+    expect(useProjectStore.getState().projectFolderIds).not.toContain('grp_test_folder_1');
   });
 });

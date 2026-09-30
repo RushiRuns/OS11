@@ -54,6 +54,9 @@ export function Sidebar(): React.ReactElement {
     archiveProject,
     updateProject,
     reorderProjects,
+    projectFolderIds,
+    addProjectFolder,
+    removeProjectFolder,
   } = useProjectStore();
 
   const tasksById = useTaskStore((state) => state.tasksById);
@@ -126,6 +129,10 @@ export function Sidebar(): React.ReactElement {
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [contextMenuProject, setContextMenuProject] = useState<Project | null>(null);
   const [contextMenuProjectPos, setContextMenuProjectPos] = useState<ProjectContextMenuPosition | null>(null);
+  const [isCreatingProjectFolder, setIsCreatingProjectFolder] = useState(false);
+  const [projectToMoveToNewGroup, setProjectToMoveToNewGroup] = useState<Project | null>(null);
+  const [initialProjectGroupId, setInitialProjectGroupId] = useState<string | null>(null);
+  const [initialListGroupId, setInitialListGroupId] = useState<string | null>(null);
 
   // Tag context menu and edit modal state
   const [contextMenuTag, setContextMenuTag] = useState<Tag | null>(null);
@@ -883,18 +890,49 @@ export function Sidebar(): React.ReactElement {
           onDrop={handleDropOnRoot}
         >
           <span>Lists</span>
-          <button
-            type="button"
-            className={styles.sectionActionBtn}
-            onClick={(e) => {
-              e.stopPropagation();
-              setListToEdit(null);
-              setIsCreateModalOpen(true);
-            }}
-            title="New list"
-          >
-            +
-          </button>
+          <div className={styles.sectionHeaderActions}>
+            <button
+              type="button"
+              className={styles.sectionActionBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsCreatingProjectFolder(false);
+                setGroupToEdit(null);
+                setIsGroupModalOpen(true);
+              }}
+              title="New folder for lists"
+              aria-label="New folder for lists"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                <line x1="12" y1="11" x2="12" y2="17" />
+                <line x1="9" y1="14" x2="15" y2="14" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={styles.sectionActionBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                setInitialListGroupId(null);
+                setListToEdit(null);
+                setIsCreateModalOpen(true);
+              }}
+              title="New list"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         <div
@@ -925,7 +963,9 @@ export function Sidebar(): React.ReactElement {
             {listGroups.map((group) => {
               const listsInGroup = userLists.filter((l) => l.group_id === group.id);
               const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
-              if (listsInGroup.length === 0 && projectsInGroup.length > 0 && dragOverGroupId !== group.id) {
+              const isProjectOnly = projectsInGroup.length > 0 && listsInGroup.length === 0;
+              const isMarkedForProjects = projectFolderIds.includes(group.id) && listsInGroup.length === 0;
+              if ((isProjectOnly || isMarkedForProjects) && dragOverGroupId !== group.id) {
                 return null;
               }
               const isOpen = isGroupExpanded(group.id);
@@ -1013,18 +1053,49 @@ export function Sidebar(): React.ReactElement {
               onDrop={handleDropOnRootProjects}
             >
               <span>Projects</span>
-              <button
-                type="button"
-                className={styles.sectionActionBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setProjectToEdit(null);
-                  setIsCreateProjectModalOpen(true);
-                }}
-                title="New project"
-              >
-                +
-              </button>
+              <div className={styles.sectionHeaderActions}>
+                <button
+                  type="button"
+                  className={styles.sectionActionBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsCreatingProjectFolder(true);
+                    setGroupToEdit(null);
+                    setIsGroupModalOpen(true);
+                  }}
+                  title="New folder for projects"
+                  aria-label="New folder for projects"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    <line x1="12" y1="11" x2="12" y2="17" />
+                    <line x1="9" y1="14" x2="15" y2="14" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className={styles.sectionActionBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setInitialProjectGroupId(null);
+                    setProjectToEdit(null);
+                    setIsCreateProjectModalOpen(true);
+                  }}
+                  title="New project"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             <div
@@ -1058,7 +1129,8 @@ export function Sidebar(): React.ReactElement {
                 {/* Grouped Projects */}
                 {listGroups.map((group) => {
                   const projectsInGroup = projects.filter((p: Project) => p.group_id === group.id && p.status !== 'archived' && (p.is_pinned ?? 0) === 0);
-                  if (projectsInGroup.length === 0 && dragOverGroupId !== group.id) {
+                  const isProjectFolder = projectsInGroup.length > 0 || projectFolderIds.includes(group.id);
+                  if (!isProjectFolder && dragOverGroupId !== group.id) {
                     return null;
                   }
                   const isOpen = isGroupExpanded(group.id);
@@ -1098,27 +1170,33 @@ export function Sidebar(): React.ReactElement {
 
                       {isOpen && (
                         <div className={styles.groupItems}>
-                          {projectsInGroup.map((project: Project) => (
-                            <ListItem
-                              key={project.id}
-                              droppableId={`project:${project.id}`}
-                              list={projectAsList(project)}
-                              isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
-                              taskCount={getProjectTaskCount(project.id)}
-                              onClick={() => {
-                                setSelectedProjectId(project.id);
-                                setActiveListId(`project:${project.id}`);
-                              }}
-                              onContextMenu={(e) => handleProjectContextMenu(e, project)}
-                              isDraggable
-                              onDragStart={(_e) => setDraggingProjectId(project.id)}
-                              onDragOver={(e) => {
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = 'move';
-                              }}
-                              onDrop={(e) => handleProjectItemDrop(e, project.id)}
-                            />
-                          ))}
+                          {projectsInGroup.length === 0 ? (
+                            <div className={styles.emptyGroupHint}>
+                              Drop projects here
+                            </div>
+                          ) : (
+                            projectsInGroup.map((project: Project) => (
+                              <ListItem
+                                key={project.id}
+                                droppableId={`project:${project.id}`}
+                                list={projectAsList(project)}
+                                isActive={activeListId === `project:${project.id}` || (activeListId === 'view_projects' && selectedProjectId === project.id)}
+                                taskCount={getProjectTaskCount(project.id)}
+                                onClick={() => {
+                                  setSelectedProjectId(project.id);
+                                  setActiveListId(`project:${project.id}`);
+                                }}
+                                onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                                isDraggable
+                                onDragStart={(_e) => setDraggingProjectId(project.id)}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                }}
+                                onDrop={(e) => handleProjectItemDrop(e, project.id)}
+                              />
+                            ))
+                          )}
                         </div>
                       )}
                     </div>
@@ -1316,6 +1394,7 @@ export function Sidebar(): React.ReactElement {
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         listToEdit={listToEdit}
+        initialGroupId={initialListGroupId}
       />
 
       {/* List Group Modal */}
@@ -1323,9 +1402,38 @@ export function Sidebar(): React.ReactElement {
         open={isGroupModalOpen}
         onOpenChange={(open) => {
           setIsGroupModalOpen(open);
-          if (!open) setGroupToEdit(null);
+          if (!open) {
+            setGroupToEdit(null);
+            setIsCreatingProjectFolder(false);
+            setProjectToMoveToNewGroup(null);
+          }
         }}
         groupToEdit={groupToEdit}
+        title={
+          groupToEdit
+            ? 'Edit Folder'
+            : isCreatingProjectFolder
+            ? 'New Folder for Projects'
+            : 'New Folder'
+        }
+        description={
+          isCreatingProjectFolder
+            ? 'Create a folder to group related projects in the sidebar.'
+            : 'Create a folder to organize projects and lists in the sidebar.'
+        }
+        onSaved={async (group) => {
+          if (isCreatingProjectFolder) {
+            addProjectFolder(group.id);
+            setExpandedGroupIds((prev) => ({ ...prev, [group.id]: true }));
+          }
+          if (projectToMoveToNewGroup) {
+            await updateProject(projectToMoveToNewGroup.id, { group_id: group.id });
+            addProjectFolder(group.id);
+            setExpandedGroupIds((prev) => ({ ...prev, [group.id]: true }));
+            setProjectToMoveToNewGroup(null);
+          }
+          setIsCreatingProjectFolder(false);
+        }}
       />
 
       {/* Right-click Context Menu for List Groups / Folders */}
@@ -1341,8 +1449,34 @@ export function Sidebar(): React.ReactElement {
             setGroupToEdit(grp);
             setIsGroupModalOpen(true);
           }}
+          onNewProject={
+            isEnabled('project_management')
+              ? (grp) => {
+                  setInitialProjectGroupId(grp.id);
+                  setProjectToEdit(null);
+                  setIsCreateProjectModalOpen(true);
+                }
+              : undefined
+          }
+          onNewList={(grp) => {
+            setInitialListGroupId(grp.id);
+            setListToEdit(null);
+            setIsCreateModalOpen(true);
+          }}
           onDelete={(grp) => {
             useListStore.getState().deleteGroup(grp.id);
+            removeProjectFolder(grp.id);
+            const projectsMap = useProjectStore.getState().projectsById;
+            for (const pid in projectsMap) {
+              if (projectsMap[pid].group_id === grp.id) {
+                useProjectStore.setState((s) => ({
+                  projectsById: {
+                    ...s.projectsById,
+                    [pid]: { ...s.projectsById[pid], group_id: null },
+                  },
+                }));
+              }
+            }
           }}
         />
       )}
@@ -1377,9 +1511,13 @@ export function Sidebar(): React.ReactElement {
         open={isCreateProjectModalOpen}
         onOpenChange={(open) => {
           setIsCreateProjectModalOpen(open);
-          if (!open) setProjectToEdit(null);
+          if (!open) {
+            setProjectToEdit(null);
+            setInitialProjectGroupId(null);
+          }
         }}
         projectToEdit={projectToEdit}
+        initialGroupId={initialProjectGroupId}
         onCreated={(proj) => {
           setSelectedProjectId(proj.id);
           setActiveListId(`project:${proj.id}`);
@@ -1408,6 +1546,18 @@ export function Sidebar(): React.ReactElement {
             await archiveProject(proj.id);
           }}
           onTogglePin={handleTogglePinProject}
+          onMoveToGroup={async (proj, targetGroupId) => {
+            await updateProject(proj.id, { group_id: targetGroupId });
+            if (targetGroupId) {
+              setExpandedGroupIds((prev) => ({ ...prev, [targetGroupId]: true }));
+            }
+          }}
+          onCreateGroupAndMove={(proj) => {
+            setProjectToMoveToNewGroup(proj);
+            setIsCreatingProjectFolder(true);
+            setGroupToEdit(null);
+            setIsGroupModalOpen(true);
+          }}
           onDelete={async (proj) => {
             await deleteProject(proj.id);
             if (activeListId === `project:${proj.id}`) {

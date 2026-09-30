@@ -101,11 +101,29 @@
   cursor: pointer;
   padding: 0 4px;
   border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .sectionActionBtn:hover {
   color: var(--text-primary);
   background-color: var(--surface-hover);
+}
+
+.sectionHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-5);
+}
+
+.emptyGroupHint {
+  padding: var(--space-1) var(--space-3) var(--space-1) calc(var(--space-4) + 16px);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-style: italic;
+  user-select: none;
 }
 
 .listGroupBlock {

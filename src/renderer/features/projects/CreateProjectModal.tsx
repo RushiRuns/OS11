@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '../../components/primitives/Dialog/Dialog.js';
 import { useProjectStore } from '../../stores/projectStore.js';
+import { useListStore } from '../../stores/listStore.js';
 import type { Project } from '@shared/types/index.js';
 import { EmojiPicker } from '../../components/EmojiPicker/EmojiPicker.js';
 import styles from './CreateProjectModal.module.css';
@@ -11,6 +12,7 @@ interface CreateProjectModalProps {
   onCreated?: (project: Project) => void;
   projectToEdit?: Project | null;
   onSaved?: (project: Project) => void;
+  initialGroupId?: string | null;
 }
 
 const PRESET_COLORS = [
@@ -37,16 +39,21 @@ export function CreateProjectModal({
   onCreated,
   projectToEdit,
   onSaved,
+  initialGroupId,
 }: CreateProjectModalProps): React.ReactElement {
-  const { createProject, updateProject, setSelectedProjectId } = useProjectStore();
+  const { createProject, updateProject, setSelectedProjectId, addProjectFolder } = useProjectStore();
+  const { listGroupsById, orderedGroupIds, createGroup } = useListStore();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('📁');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [defaultView, setDefaultView] = useState<'list' | 'board' | 'timeline' | 'calendar' | 'table'>('list');
+  const [groupId, setGroupId] = useState<string>('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
 
   useEffect(() => {
     if (projectToEdit) {
@@ -55,18 +62,41 @@ export function CreateProjectModal({
       setIcon(projectToEdit.icon ?? '📁');
       setColor(projectToEdit.color ?? PRESET_COLORS[0]);
       setDefaultView(projectToEdit.default_view ?? 'list');
+      setGroupId(projectToEdit.group_id ?? '');
       setShowEmojiPicker(false);
       setIsSubmitting(false);
+      setIsCreatingFolder(false);
+      setNewFolderName('');
     } else if (open) {
       setName('');
       setDescription('');
       setIcon('📁');
       setColor(PRESET_COLORS[0]);
       setDefaultView('list');
+      setGroupId(initialGroupId ?? '');
       setShowEmojiPicker(false);
       setIsSubmitting(false);
+      setIsCreatingFolder(false);
+      setNewFolderName('');
     }
-  }, [open, projectToEdit]);
+  }, [open, projectToEdit, initialGroupId]);
+
+  const handleQuickCreateFolder = async (e: React.FormEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim()) {
+      setIsCreatingFolder(false);
+      return;
+    }
+    try {
+      const created = await createGroup({ name: newFolderName.trim() });
+      addProjectFolder(created.id);
+      setGroupId(created.id);
+      setIsCreatingFolder(false);
+      setNewFolderName('');
+    } catch (err) {
+      console.error('Failed to create folder:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +111,7 @@ export function CreateProjectModal({
           color,
           icon,
           default_view: defaultView,
+          group_id: groupId ? groupId : null,
         });
         onSaved?.(updated);
         onOpenChange(false);
@@ -91,6 +122,7 @@ export function CreateProjectModal({
           color,
           icon,
           default_view: defaultView,
+          group_id: groupId ? groupId : null,
         });
         setSelectedProjectId(created.id);
         onCreated?.(created);
@@ -146,6 +178,71 @@ export function CreateProjectModal({
           </div>
         </div>
 
+        {/* Group / Folder */}
+        <div className={styles.fieldGroup}>
+          <div className={styles.labelRow}>
+            <label className={styles.label}>Folder / Group (Optional)</label>
+            {!isCreatingFolder && (
+              <button
+                type="button"
+                className={styles.inlineActionBtn}
+                onClick={() => setIsCreatingFolder(true)}
+              >
+                + New Folder
+              </button>
+            )}
+          </div>
+          {isCreatingFolder ? (
+            <div className={styles.inlineFolderCreate}>
+              <input
+                type="text"
+                className={styles.textInput}
+                placeholder="Folder name..."
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleQuickCreateFolder(e);
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setIsCreatingFolder(false);
+                  }
+                }}
+                autoFocus
+              />
+              <button
+                type="button"
+                className={styles.inlineConfirmBtn}
+                onClick={handleQuickCreateFolder}
+                disabled={!newFolderName.trim()}
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                className={styles.inlineCancelBtn}
+                onClick={() => setIsCreatingFolder(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <select
+              className={styles.selectInput}
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+            >
+              <option value="">No folder (Root)</option>
+              {orderedGroupIds.map((id) => (
+                <option key={id} value={id}>
+                  📁 {listGroupsById[id]?.name ?? id}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Color</label>
           <div className={styles.colorSwatches}>
@@ -167,7 +264,7 @@ export function CreateProjectModal({
           <select
             className={styles.selectInput}
             value={defaultView}
-            onChange={(e) => setDefaultView(e.target.value as any)}
+            onChange={(e) => setDefaultView(e.target.value as Project['default_view'])}
           >
             {DEFAULT_VIEWS.map((v) => (
               <option key={v.value} value={v.value}>

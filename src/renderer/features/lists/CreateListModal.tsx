@@ -10,6 +10,7 @@ interface CreateListModalProps {
   onOpenChange: (open: boolean) => void;
   listToEdit?: List | null;
   onSaved?: (list: List) => void;
+  initialGroupId?: string | null;
 }
 
 const PRESET_COLORS = [
@@ -27,6 +28,7 @@ export function CreateListModal({
   onOpenChange,
   listToEdit,
   onSaved,
+  initialGroupId,
 }: CreateListModalProps): React.ReactElement {
   const { createList, updateList, listGroupsById, orderedGroupIds } = useListStore();
 
@@ -47,9 +49,9 @@ export function CreateListModal({
       setName('');
       setIcon('📁');
       setColor(PRESET_COLORS[0]);
-      setGroupId('');
+      setGroupId(initialGroupId ?? '');
     }
-  }, [listToEdit, open]);
+  }, [listToEdit, open, initialGroupId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -9,6 +9,8 @@ interface ListGroupModalProps {
   onOpenChange: (open: boolean) => void;
   groupToEdit?: ListGroup | null;
   onSaved?: (group: ListGroup) => void;
+  title?: string;
+  description?: string;
 }
 
 export function ListGroupModal({
@@ -16,6 +18,8 @@ export function ListGroupModal({
   onOpenChange,
   groupToEdit,
   onSaved,
+  title,
+  description,
 }: ListGroupModalProps): React.ReactElement {
   const { createGroup, updateGroup } = useListStore();
   const [name, setName] = useState('');
@@ -50,12 +54,15 @@ export function ListGroupModal({
     }
   };
 
+  const defaultTitle = groupToEdit ? 'Edit Folder' : 'New Folder';
+  const defaultDescription = 'Create a folder to organize projects and lists in the sidebar.';
+
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title={groupToEdit ? 'Edit Folder' : 'New Folder'}
-      description="Create a folder to group related lists together in the sidebar."
+      title={title ?? defaultTitle}
+      description={description ?? defaultDescription}
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.fieldGroup}>

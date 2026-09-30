@@ -10,6 +10,8 @@ export interface ListGroupContextMenuProps {
   onClose: () => void;
   onRename: (group: ListGroup) => void;
   onDelete: (group: ListGroup) => void;
+  onNewProject?: (group: ListGroup) => void;
+  onNewList?: (group: ListGroup) => void;
 }
 
 export function ListGroupContextMenu({
@@ -18,6 +20,8 @@ export function ListGroupContextMenu({
   onClose,
   onRename,
   onDelete,
+  onNewProject,
+  onNewList,
 }: ListGroupContextMenuProps): React.ReactElement | null {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -34,8 +38,8 @@ export function ListGroupContextMenu({
   if (!position) return null;
 
   // Clamping to avoid viewport overflow
-  const menuWidth = 180;
-  const menuHeight = 100;
+  const menuWidth = 190;
+  const menuHeight = 160;
   const posX = Math.min(position.x, window.innerWidth - menuWidth - 8);
   const posY = Math.min(position.y, window.innerHeight - menuHeight - 8);
 
@@ -54,6 +58,36 @@ export function ListGroupContextMenu({
         style={{ left: posX, top: posY }}
         onClick={(e) => e.stopPropagation()}
       >
+        {onNewProject && (
+          <button
+            type="button"
+            className={styles.menuItem}
+            onClick={() => {
+              onClose();
+              onNewProject(group);
+            }}
+          >
+            <span>📁</span>
+            <span>New Project in Folder</span>
+          </button>
+        )}
+
+        {onNewList && (
+          <button
+            type="button"
+            className={styles.menuItem}
+            onClick={() => {
+              onClose();
+              onNewList(group);
+            }}
+          >
+            <span>📝</span>
+            <span>New List in Folder</span>
+          </button>
+        )}
+
+        {(onNewProject || onNewList) && <div className={styles.separator} />}
+
         <button
           type="button"
           className={styles.menuItem}
