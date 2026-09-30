@@ -18,6 +18,7 @@ import { NotificationCenter } from './features/notifications/NotificationCenter.
 import { OnboardingFlow } from './features/onboarding/OnboardingFlow.js';
 import { FocusModeView } from './features/focus/FocusModeView.js';
 import { ReviewManager } from './features/review/ReviewManager.js';
+import { AnimatePresence } from 'framer-motion';
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
@@ -84,6 +85,19 @@ export function App(): React.ReactElement {
     setSidebarVisible,
   } = useAppStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  // Derive live task directly from Zustand store to ensure changes (e.g. priority) reflect instantly in sidebar
+  const liveSelectedTask = useTaskStore((state) =>
+    selectedTask?.id ? state.tasksById[selectedTask.id] ?? selectedTask : null
+  );
+
+  // Auto-close detail sidebar if task is deleted or trashed
+  useEffect(() => {
+    if (selectedTask?.id && (!liveSelectedTask || liveSelectedTask.is_trashed === 1)) {
+      setSelectedTask(null);
+    }
+  }, [selectedTask?.id, liveSelectedTask]);
+
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -206,6 +220,17 @@ export function App(): React.ReactElement {
     };
   }, [fetchSystemInfo, togglePomodoroFocus, isFocusMode, isPomodoroFocus]);
 
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   if (isOmnibar) {
     return <OmnibarView />;
   }
@@ -251,7 +276,7 @@ export function App(): React.ReactElement {
         <TagView
           tagId={tagId}
           onSelectTask={handleSelectTask}
-          selectedTaskId={selectedTask?.id}
+          selectedTaskId={liveSelectedTask?.id}
         />
       );
     }
@@ -269,7 +294,7 @@ export function App(): React.ReactElement {
         return (
           <MyDayView
             onSelectTask={handleSelectTask}
-            selectedTaskId={selectedTask?.id}
+            selectedTaskId={liveSelectedTask?.id}
             isSuggestionsOpen={isSuggestionsOpen}
             onToggleSuggestions={() => {
               setIsSuggestionsOpen((prev) => {
@@ -314,7 +339,7 @@ export function App(): React.ReactElement {
         return (
           <TaskList
             onSelectTask={handleSelectTask}
-            selectedTaskId={selectedTask?.id}
+            selectedTaskId={liveSelectedTask?.id}
           />
         );
     }
@@ -323,18 +348,7 @@ export function App(): React.ReactElement {
   const isDetailVisible =
     !activeListId.startsWith('view_') &&
     !activeListId.startsWith('project:') &&
-    (Boolean(selectedTask) || (isSuggestionsOpen && activeListId === 'smart_my_day'));
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+    (Boolean(liveSelectedTask) || (isSuggestionsOpen && activeListId === 'smart_my_day'));
 
   const handleAppDragStart = (event: DragStartEvent) => {
     console.log('[DragDrop] Drag start:', event.active.id);
@@ -402,7 +416,7 @@ export function App(): React.ReactElement {
       {/* Full-Screen Focus Mode View or Three-Column Grid */}
       {effectiveFocusMode ? (
         <FocusModeView
-          task={selectedTask}
+          task={liveSelectedTask}
           onClose={() => {
             setIsFocusMode(false);
             if (isPomodoroFocus) togglePomodoroFocus();
@@ -461,7 +475,15 @@ export function App(): React.ReactElement {
               {isSuggestionsOpen && activeListId === 'smart_my_day' ? (
                 <SuggestionsSidebar onClose={() => setIsSuggestionsOpen(false)} />
               ) : (
-                <DetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+                <AnimatePresence mode="wait">
+                  {liveSelectedTask && (
+                    <DetailPanel
+                      key={liveSelectedTask.id}
+                      task={liveSelectedTask}
+                      onClose={() => setSelectedTask(null)}
+                    />
+                  )}
+                </AnimatePresence>
               )}
             </div>
           </div>

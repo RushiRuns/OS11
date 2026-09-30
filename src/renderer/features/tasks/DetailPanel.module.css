@@ -1,5 +1,5 @@
 .panelContainer {
-  width: var(--detail-panel-width, 340px);
+  width: var(--detail-panel-width, 360px);
   height: 100%;
   background: var(--surface-raised);
   border-left: 1px solid var(--border-subtle);
@@ -7,51 +7,85 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
   z-index: 20;
 }
 
+/* Header */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-base);
+  min-height: 48px;
+  gap: var(--space-2);
 }
 
-.headerTitle {
-  font-size: var(--text-sm);
-  font-weight: 600;
+.breadcrumbBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--weight-medium);
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  background: var(--surface-hover);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  max-width: 170px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
 }
 
-.closeButton {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
+.headerActions {
   display: flex;
   align-items: center;
+  gap: 4px;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  transition: color 0.15s ease, background 0.15s ease;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.closeButton:hover {
-  color: var(--text-primary);
+.actionBtn:hover {
   background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
 }
 
+.starBtnActive {
+  color: var(--color-star, #F4B942) !important;
+  background: rgba(244, 185, 66, 0.14) !important;
+  border-color: rgba(244, 185, 66, 0.3) !important;
+}
+
+/* Content Area */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-5);
+  overflow-x: hidden;
+  padding: var(--space-4) var(--space-4) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .content::-webkit-scrollbar {
@@ -63,103 +97,463 @@
   border-radius: var(--radius-xs);
 }
 
+/* Hero Section (Title + Complete checkbox) */
+.heroSection {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+.checkboxWrapper {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.titleArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .titleInput {
   width: 100%;
   background: transparent;
   border: none;
   outline: none;
+  font-family: var(--font-body);
   font-size: var(--text-lg);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
   color: var(--text-primary);
-  padding: 4px 0;
+  padding: 2px 0;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .titleInput:focus {
   border-bottom-color: var(--accent);
 }
 
-/* Metadata Fields Grid */
-.metaGrid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-3);
+.titleCompleted {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.statusIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-success);
+  font-weight: var(--weight-medium);
+}
+
+/* Properties Card (Linear / Notion Style) */
+.propertiesCard {
   background: var(--surface-base);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-}
-
-.metaRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: var(--text-xs);
-}
-
-.metaLabel {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.metaInput {
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  padding: 3px 6px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  outline: none;
-}
-
-.metaBtn {
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.metaBtnActive {
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border-color: var(--accent);
-}
-
-/* Sections */
-.sectionBlock {
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  box-shadow: var(--shadow-xs);
 }
 
-.sectionHeader {
+.propertyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  gap: var(--space-2);
+}
+
+.propertyLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--text-xs);
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+  flex-shrink: 0;
+}
+
+.propertyControl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Priority Pill & Dropdown */
+.priorityPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.priorityPill:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-default);
+}
+
+.priorityDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.priorityCriticalPulse {
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.65;
+  }
+}
+
+.priorityCriticalGlow {
+  box-shadow: 0 0 8px rgba(192, 57, 43, 0.28);
+  border-color: rgba(192, 57, 43, 0.4) !important;
+}
+
+.chevron {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+/* Date Badge */
+.datePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.datePill:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-default);
+}
+
+.dateOverdue {
+  color: var(--color-danger) !important;
+  background: var(--color-danger-muted) !important;
+  border-color: rgba(231, 76, 60, 0.3) !important;
+}
+
+.dateToday {
+  color: var(--color-warning) !important;
+  background: var(--color-warning-muted) !important;
+  border-color: rgba(243, 156, 18, 0.3) !important;
+}
+
+.clearMiniBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-fast);
+}
+
+.clearMiniBtn:hover {
+  color: var(--text-primary);
+}
+
+/* Goal & Native Selects */
+.propertySelect {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  outline: none;
+  max-width: 170px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.propertySelect:focus {
+  border-color: var(--accent);
+}
+
+/* Tag Chips */
+.tagsList {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.tagChip:hover {
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.tagDot {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tagRemoveBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.tagRemoveBtn:hover {
+  color: var(--color-danger);
+}
+
+.addTagBtn {
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.addTagBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+/* Quick Action Chips Row */
+.quickTogglesRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.quickToggleChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.quickToggleChip:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.quickToggleStarActive {
+  background: rgba(244, 185, 66, 0.15) !important;
+  border-color: rgba(244, 185, 66, 0.4) !important;
+  color: #D4AC0D !important;
+}
+
+.quickToggleDayActive {
+  background: rgba(243, 156, 18, 0.14) !important;
+  border-color: rgba(243, 156, 18, 0.4) !important;
+  color: var(--color-warning) !important;
+}
+
+.quickToggleHabitActive {
+  background: var(--accent-muted) !important;
+  border-color: var(--accent-border) !important;
+  color: var(--accent) !important;
+}
+
+/* Section Cards (Subtasks, Notes, Reminders, etc.) */
+.sectionCard {
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition-fast);
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-/* TipTap Editor Styling */
-.editorWrapper {
+.subtaskProgressWrapper {
+  width: 90px;
+}
+
+/* Subtasks List */
+.subtasksList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subtaskRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 8px;
+  background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.subtaskRow:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-default);
+}
+
+.subtaskTitle {
+  flex: 1;
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+}
+
+.subtaskCompleted {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.subtaskDeleteBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.subtaskRow:hover .subtaskDeleteBtn {
+  opacity: 1;
+}
+
+.subtaskDeleteBtn:hover {
+  color: var(--color-danger);
+}
+
+.subtaskInputRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.subtaskInput {
+  flex: 1;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 5px 9px;
+  font-size: var(--text-xs);
+  outline: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.subtaskInput:focus {
+  border-color: var(--accent);
   background: var(--surface-base);
-  padding: var(--space-3);
-  min-height: 120px;
+}
+
+/* TipTap Editor */
+.editorWrapper {
+  min-height: 110px;
   font-size: var(--text-sm);
   color: var(--text-primary);
+  line-height: var(--leading-normal);
 }
 
 .editorWrapper :global(.ProseMirror) {
   outline: none;
-  min-height: 100px;
-  line-height: 1.5;
+  min-height: 90px;
+  line-height: 1.55;
 }
 
 .editorWrapper :global(.ProseMirror p) {
@@ -174,45 +568,85 @@
 
 .editorWrapper :global(.ProseMirror code) {
   background: var(--surface-hover);
-  padding: 2px 4px;
+  padding: 2px 5px;
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
+  font-size: 12px;
 }
 
-/* Subtasks List */
-.subtasksList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.editorWrapper :global(.ProseMirror pre) {
+  background: var(--surface-hover);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
 }
 
-.subtaskRow {
+.editorWrapper :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-placeholder);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Dependencies */
+.depItem {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 4px 6px;
-  background: var(--surface-base);
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+
+.depAddRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Version History */
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.historyCard {
+  padding: 8px 10px;
+  background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
+  font-size: 12px;
 }
 
-.subtaskTitle {
-  flex: 1;
-  color: var(--text-primary);
+/* Footer Area */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
 }
 
-.subtaskCompleted {
-  text-decoration: line-through;
+.timestamps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
   color: var(--text-tertiary);
-}
-
-.subtaskInput {
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  padding: 4px 8px;
-  font-size: var(--text-xs);
-  outline: none;
 }

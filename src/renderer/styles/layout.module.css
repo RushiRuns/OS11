@@ -13,16 +13,17 @@
 /* Three-Column CSS Grid Layout */
 .shellGrid {
   display: grid;
-  grid-template-columns: var(--sidebar-width, 224px) 1fr var(--detail-panel-width, 320px);
+  grid-template-columns: var(--sidebar-width, 224px) 1fr var(--detail-panel-width, 360px);
   grid-template-rows: 1fr;
   flex: 1;
   height: 100vh;
   overflow: hidden;
+  transition: grid-template-columns 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Sidebar Position Modes */
 .shellGrid[data-sidebar="hidden"] {
-  grid-template-columns: 0 1fr var(--detail-panel-width, 320px);
+  grid-template-columns: 0 1fr var(--detail-panel-width, 360px);
 }
 
 .shellGrid[data-detail="hidden"] {

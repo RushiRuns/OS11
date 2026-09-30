@@ -98,6 +98,12 @@ export default defineConfig({
             return 'dashboard';
           }
           // Lazy feature chunks
+          if (id.includes('node_modules/chrono-node')) {
+            return 'chrono';
+          }
+          if (id.includes('DropdownMenu') || id.includes('@radix-ui/react-dropdown-menu')) {
+            return 'DropdownMenu';
+          }
           if (id.includes('src/renderer/features/dashboard')) {
             return 'dashboard';
           }
