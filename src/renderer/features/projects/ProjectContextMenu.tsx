@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Project } from '@shared/types/index.js';
 import { useListStore } from '../../stores/listStore.js';
+import { ipc } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import styles from '../lists/ListContextMenu.module.css';
 
 export interface ProjectContextMenuPosition {
@@ -129,6 +131,21 @@ export function ProjectContextMenu({
         >
           <span>📦</span>
           <span>{project.status === 'archived' ? 'Unarchive Project' : 'Archive Project'}</span>
+        </button>
+
+        <div className={styles.separator} />
+
+        <button
+          type="button"
+          className={styles.menuItem}
+          onMouseEnter={() => setShowFolderSubmenu(false)}
+          onClick={() => {
+            onClose();
+            ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
+          }}
+        >
+          <span>🛠️</span>
+          <span>Developer Tools</span>
         </button>
 
         <div className={styles.separator} />

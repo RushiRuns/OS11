@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { List } from '@shared/types/List.js';
+import { ipc } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import styles from './ListContextMenu.module.css';
 
 export interface ListContextMenuPosition {
@@ -110,6 +112,20 @@ export function ListContextMenu({
         >
           <span>📤</span>
           <span>Export List</span>
+        </button>
+
+        <div className={styles.separator} />
+
+        <button
+          type="button"
+          className={styles.menuItem}
+          onClick={() => {
+            onClose();
+            ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
+          }}
+        >
+          <span>🛠️</span>
+          <span>Developer Tools</span>
         </button>
 
         {isDeletable && (

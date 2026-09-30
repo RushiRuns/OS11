@@ -46,6 +46,18 @@ export function useKeyboardShortcuts({
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
       // Global hotkeys (work even inside inputs)
+      // 0. F12 or Ctrl+Shift+I / Cmd+Option+I -> Toggle Developer Tools
+      if (
+        e.key === 'F12' ||
+        (isMac
+          ? modKey && e.altKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c')
+          : modKey && e.shiftKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c'))
+      ) {
+        e.preventDefault();
+        ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
+        return;
+      }
+
       // 1. Ctrl+K -> Command Palette
       if (modKey && e.key.toLowerCase() === 'k' && !e.shiftKey) {
         e.preventDefault();

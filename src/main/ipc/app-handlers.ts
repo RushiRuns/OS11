@@ -6,6 +6,7 @@ import { showOmnibarWindow, hideOmnibarWindow } from '../window/omnibar-window.j
 import { checkForUpdates } from '../services/updater.js';
 import { SettingsRepository } from '../repositories/SettingsRepository.js';
 import { ThemeService } from '../services/settings/ThemeService.js';
+import { toggleDevTools, openDevTools } from '../devtools.js';
 
 export function registerAppHandlers(): void {
   ipcMain.handle(IPC.APP.GET_STARTUP_DATA, async () => {
@@ -174,6 +175,32 @@ export function registerAppHandlers(): void {
       const service = new ThemeService();
       const result = service.applyAccentColor(payload.hex);
       return { ok: true, data: result };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.APP.TOGGLE_DEV_TOOLS, async (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win && !win.isDestroyed()) {
+        toggleDevTools(win);
+        return { ok: true, data: win.webContents.isDevToolsOpened() };
+      }
+      return { ok: false, error: 'Target window not found' };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.APP.OPEN_DEV_TOOLS, async (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win && !win.isDestroyed()) {
+        openDevTools(win);
+        return { ok: true, data: true };
+      }
+      return { ok: false, error: 'Target window not found' };
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

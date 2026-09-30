@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Tag } from '@shared/types/Tag.js';
+import { ipc } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import styles from '../lists/ListContextMenu.module.css';
 
 export interface TagContextMenuPosition {
@@ -67,6 +69,20 @@ export function TagContextMenu({
         >
           <span>✏️</span>
           <span>Edit Tag</span>
+        </button>
+
+        <div className={styles.separator} />
+
+        <button
+          type="button"
+          className={styles.menuItem}
+          onClick={() => {
+            onClose();
+            ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
+          }}
+        >
+          <span>🛠️</span>
+          <span>Developer Tools</span>
         </button>
 
         <div className={styles.separator} />

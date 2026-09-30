@@ -127,6 +127,21 @@ export function CommandPalette({
       onSelect: () => setActiveListId('view_settings'),
     });
 
+    items.push({
+      id: 'action_dev_tools',
+      title: 'Toggle Developer Tools (DevTools)',
+      category: 'Action',
+      icon: '🛠️',
+      shortcut: 'F12 / Ctrl+Shift+I',
+      onSelect: async () => {
+        try {
+          await ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS);
+        } catch {
+          // ignore
+        }
+      },
+    });
+
     // Lists
     Object.values(listsById).forEach((list) => {
       items.push({

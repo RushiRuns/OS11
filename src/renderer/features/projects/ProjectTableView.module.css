@@ -10,6 +10,7 @@
   min-height: 500px;
 }
 
+/* Toolbar */
 .tableToolbar {
   padding: var(--space-2) var(--space-4);
   display: flex;
@@ -17,10 +18,49 @@
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
   background-color: var(--surface-raised);
+  gap: var(--space-3);
+  user-select: none;
 }
 
-.columnPickerBtn {
-  padding: var(--space-1) var(--space-3);
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.metricsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background-color: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-medium);
+}
+
+.metricsDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent);
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.toolbarBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   background-color: var(--surface-base);
@@ -28,28 +68,39 @@
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 
-.columnPickerBtn:hover {
+.toolbarBtn:hover {
   color: var(--text-primary);
   background-color: var(--surface-hover);
+  border-color: var(--border-strong, rgba(0, 0, 0, 0.15));
 }
 
 .columnPickerPopover {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background-color: var(--surface-overlay);
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--surface-overlay, #ffffff);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   padding: var(--space-2);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  z-index: 20;
-  min-width: 160px;
+  min-width: 170px;
+  animation: fadeIn 100ms var(--ease-out, ease-out);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .columnPickerItem {
@@ -59,12 +110,22 @@
   font-size: var(--text-xs);
   color: var(--text-primary);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+  user-select: none;
 }
 
+.columnPickerItem:hover {
+  background-color: var(--surface-hover);
+}
+
+/* Scroll Wrapper & Table */
 .scrollWrap {
   flex: 1;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
 }
 
 .table {
@@ -72,12 +133,16 @@
   border-collapse: collapse;
   font-size: var(--text-xs);
   text-align: left;
+  table-layout: fixed;
 }
 
+/* Header */
 .th {
   background-color: var(--surface-raised);
   color: var(--text-secondary);
   font-weight: var(--weight-semibold);
+  font-size: 11px;
+  letter-spacing: 0.02em;
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
   border-right: 1px solid var(--border-subtle);
@@ -86,6 +151,7 @@
   top: 0;
   z-index: 5;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .thContent {
@@ -93,10 +159,16 @@
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  gap: 4px;
 }
 
 .thContent:hover {
   color: var(--text-primary);
+}
+
+.sortArrow {
+  font-size: 10px;
+  color: var(--accent);
 }
 
 .resizer {
@@ -104,18 +176,23 @@
   right: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 5px;
   cursor: col-resize;
   user-select: none;
+  z-index: 6;
 }
 
-.resizer:hover {
+.resizer:hover,
+.resizerActive {
   background-color: var(--accent);
 }
 
+/* Rows & Cells */
 .tr {
   border-bottom: 1px solid var(--border-subtle);
-  transition: background-color var(--transition-fast);
+  height: 38px;
+  transition: background-color var(--transition-fast), opacity var(--transition-fast);
+  cursor: pointer;
 }
 
 .tr:hover {
@@ -126,25 +203,52 @@
   background-color: var(--surface-selected) !important;
 }
 
+.trCompleted {
+  opacity: 0.6;
+}
+
 .td {
-  padding: var(--space-2) var(--space-3);
+  padding: 4px var(--space-3);
   border-right: 1px solid var(--border-subtle);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
+.tdCenter {
+  composes: td;
+  text-align: center;
+  padding: 4px 6px;
+  width: 44px;
+}
+
+/* Checkbox inside table */
+.checkboxWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Inline Title input */
 .inlineInput {
   width: 100%;
-  background: none;
+  background: transparent;
   border: 1px solid transparent;
-  padding: 2px 4px;
+  padding: 4px 6px;
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-xs);
   outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.inlineInput:hover {
+  border-color: var(--border-subtle);
 }
 
 .inlineInput:focus {
@@ -152,17 +256,251 @@
   border-color: var(--accent);
 }
 
-.selectInput {
-  background: none;
-  border: 1px solid transparent;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: var(--text-xs);
-  outline: none;
+.titleCompleted {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
 }
 
-.selectInput:focus {
+/* Priority Cell */
+.priorityPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  user-select: none;
+}
+
+.priorityPill:hover {
+  border-color: var(--border-strong, rgba(0, 0, 0, 0.2));
+}
+
+.priorityDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.priorityPill1 .priorityDot {
+  background-color: var(--priority-low);
+}
+
+.priorityPill2 .priorityDot {
+  background-color: var(--priority-medium);
+}
+
+.priorityPill3 .priorityDot {
+  background-color: var(--priority-high);
+}
+
+.priorityPill4 .priorityDot {
+  background-color: var(--priority-critical);
+}
+
+.prioritySelect {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+}
+
+.prioritySelect option {
+  background-color: var(--surface-base);
+  color: var(--text-primary);
+}
+
+/* Due Date Cell */
+.dueChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background-color: var(--surface-hover);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color var(--transition-fast);
+}
+
+.dueChip:hover {
+  border-color: var(--border-subtle);
+}
+
+.overdueChip {
+  background-color: var(--color-danger-muted);
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.datePickerInput {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+
+.datePickerInput:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-subtle);
+}
+
+.datePickerInput:focus {
+  border-color: var(--accent);
+  background-color: var(--surface-base);
+  color: var(--text-primary);
+}
+
+/* Tags Cell */
+.tagsWrap {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background-color: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tagDot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.emptyPill {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+/* Section Cell */
+.sectionSelect {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  max-width: 100%;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.sectionSelect:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.sectionSelect:focus {
   background-color: var(--surface-base);
   border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.sectionSelect option {
+  background-color: var(--surface-base);
+  color: var(--text-primary);
+}
+
+/* Numeric / Estimate Input */
+.numberInput {
+  width: 60px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.numberInput:hover {
+  border-color: var(--border-subtle);
+  background-color: var(--surface-hover);
+}
+
+.numberInput:focus {
+  background-color: var(--surface-base);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* Persistent Add Row */
+.addRow {
+  height: 38px;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--surface-base);
+}
+
+.addRow:hover {
+  background-color: var(--surface-hover);
+}
+
+.addIcon {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  line-height: 1;
+}
+
+.addRowInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+}
+
+.addRowInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Empty State */
+.emptyStateContainer {
+  padding: var(--space-8) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

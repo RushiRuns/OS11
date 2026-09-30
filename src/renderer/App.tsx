@@ -193,6 +193,17 @@ export function App(): React.ReactElement {
       const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
+      if (
+        e.key === 'F12' ||
+        (isMac
+          ? modKey && e.altKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c')
+          : modKey && e.shiftKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c'))
+      ) {
+        e.preventDefault();
+        ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
+        return;
+      }
+
       if (e.key === 'Escape' && (isFocusMode || isPomodoroFocus)) {
         e.preventDefault();
         setIsFocusMode(false);

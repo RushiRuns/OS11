@@ -16,6 +16,7 @@ import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts.
 import { initAutoUpdater } from './services/updater.js';
 import { SettingsRepository } from './repositories/SettingsRepository.js';
 import { TaskRepository } from './repositories/TaskRepository.js';
+import { setupGlobalDevTools } from './devtools.js';
 import { IPC } from '@shared/ipc-channels.js';
 
 export async function bootstrapMainProcess(): Promise<void> {
@@ -39,6 +40,10 @@ export async function bootstrapMainProcess(): Promise<void> {
     // 4. Register IPC handlers across all 16 domains
     console.log('[OS11 Main] Registering IPC handlers...');
     registerIpcHandlers();
+
+    // 4b. Setup universal DevTools access across all current and future windows
+    console.log('[OS11 Main] Setting up universal DevTools access...');
+    setupGlobalDevTools();
 
     // 5. Create main window (hidden on create per PERFORMANCE.md §1)
     console.log('[OS11 Main] Creating MainWindow (hidden)...');

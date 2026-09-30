@@ -22,6 +22,7 @@ const SHORTCUTS: ShortcutItem[] = [
   { category: 'Tasks', action: 'Duplicate Selected Task', keys: ['Ctrl', 'D'] },
   { category: 'Editing', action: 'Undo Last Action', keys: ['Ctrl', 'Z'] },
   { category: 'Editing', action: 'Redo Last Action', keys: ['Ctrl', 'Shift', 'Z'] },
+  { category: 'Developer', action: 'Toggle Developer Tools', keys: ['F12', 'or', 'Ctrl', 'Shift', 'I'] },
 ];
 
 export function KeyboardSettings(): React.ReactElement {

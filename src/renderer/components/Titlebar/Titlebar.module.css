@@ -153,6 +153,31 @@
   fill: currentColor;
 }
 
+.devToolsButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  padding: 0;
+}
+
+.devToolsButton:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.devToolsIcon {
+  width: 13px;
+  height: 13px;
+}
+
 .unreadBadge {
   position: absolute;
   top: -2px;

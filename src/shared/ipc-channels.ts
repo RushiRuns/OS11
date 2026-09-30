@@ -18,6 +18,8 @@ export const IPC = {
     UPDATE_DOWNLOADED: 'app:update-downloaded',
     SET_THEME: 'app:set-theme',
     SET_ACCENT_COLOR: 'app:set-accent-color',
+    TOGGLE_DEV_TOOLS: 'app:toggle-dev-tools',
+    OPEN_DEV_TOOLS: 'app:open-dev-tools',
   },
   SYSTEM: {
     GET_INFO: 'system:get-info',

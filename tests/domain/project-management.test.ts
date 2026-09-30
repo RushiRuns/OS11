@@ -13,6 +13,7 @@ import { MilestoneService } from '../../src/main/services/project/MilestoneServi
 import { DependencyService } from '../../src/main/services/project/DependencyService.js';
 import { createProjectTemplate } from '../../src/renderer/features/projects/projectExport.js';
 import { useProjectStore } from '../../src/renderer/stores/projectStore.js';
+import { between } from '../../src/shared/utils/fractional-index.js';
 
 describe('Phase 10: Project Management Domain & Repositories', () => {
   let db: Database.Database;
@@ -307,5 +308,150 @@ describe('Phase 10: Project Management Domain & Repositories', () => {
     projectRepo.delete(project.id);
     const deleted = projectRepo.getById(project.id);
     expect(deleted).toBeNull();
+  });
+
+  it('moves task between kanban sections and maintains fractional sort order', () => {
+    const project = projectRepo.create({ name: 'Kanban Move Project' });
+    const todoCol = sectionRepo.create({ project_id: project.id, name: 'To Do', sort_order: 0 });
+    const inProgCol = sectionRepo.create({ project_id: project.id, name: 'In Progress', sort_order: 1 });
+
+    const t1 = taskRepo.create({
+      title: 'Task 1',
+      project_id: project.id,
+      section_id: todoCol.id,
+      list_id: 'smart_all',
+      sort_order: 1000,
+    });
+    const t2 = taskRepo.create({
+      title: 'Task 2',
+      project_id: project.id,
+      section_id: todoCol.id,
+      list_id: 'smart_all',
+      sort_order: 2000,
+    });
+    const t3 = taskRepo.create({
+      title: 'Task 3',
+      project_id: project.id,
+      section_id: inProgCol.id,
+      list_id: 'smart_all',
+      sort_order: 1000,
+    });
+
+    // Move t1 from To Do to In Progress before t3
+    const orderBeforeT3 = between(null, t3.sort_order);
+    taskRepo.update(t1.id, { section_id: inProgCol.id, sort_order: orderBeforeT3 });
+
+    const updatedT1 = taskRepo.getById(t1.id);
+    expect(updatedT1?.section_id).toBe(inProgCol.id);
+    expect(updatedT1!.sort_order).toBeLessThan(t3.sort_order);
+
+    // Move t2 from To Do to In Progress between updated t1 and t3
+    const orderBetweenT1AndT3 = between(updatedT1!.sort_order, t3.sort_order);
+    taskRepo.update(t2.id, { section_id: inProgCol.id, sort_order: orderBetweenT1AndT3 });
+
+    const updatedT2 = taskRepo.getById(t2.id);
+    expect(updatedT2?.section_id).toBe(inProgCol.id);
+    expect(updatedT2!.sort_order).toBeGreaterThan(updatedT1!.sort_order);
+    expect(updatedT2!.sort_order).toBeLessThan(t3.sort_order);
+
+    // All In Progress tasks ordered by sort_order
+    const inProgTasks = taskRepo.getByProjectId(project.id)
+      .filter((t) => t.section_id === inProgCol.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    expect(inProgTasks.map((t) => t.id)).toEqual([t1.id, t2.id, t3.id]);
+  });
+
+  it('calculates fractional indices consistently when reordering within a kanban column', () => {
+    // Dropping into an empty column
+    const emptyDrop = between(null, null);
+    expect(emptyDrop).toBe(1000);
+
+    // Dropping at the very start of a column
+    const atStartDrop = between(null, 1000);
+    expect(atStartDrop).toBe(0);
+
+    // Dropping at the end of a column
+    const atEndDrop = between(2000, null);
+    expect(atEndDrop).toBe(3000);
+
+    // Dropping between two cards
+    const betweenDrop = between(1000, 2000);
+    expect(betweenDrop).toBe(1500);
+
+    // Consecutive drops produce strictly increasing orders
+    const first = between(null, null); // 1000
+    const second = between(first, null); // 2000
+    const middle = between(first, second); // 1500
+    expect(middle).toBeGreaterThan(first);
+    expect(middle).toBeLessThan(second);
+  });
+
+  it('supports table multi-column sorting across title, priority, due date, and status', () => {
+    const project = projectRepo.create({ name: 'Table Sort Project' });
+    const listId = 'smart_all';
+
+    const t1 = taskRepo.create({
+      title: 'Alpha Spec',
+      priority: 1,
+      due_date: '2026-10-10',
+      project_id: project.id,
+      list_id: listId,
+    });
+    const t2 = taskRepo.create({
+      title: 'Beta Code',
+      priority: 3,
+      due_date: '2026-10-05',
+      project_id: project.id,
+      list_id: listId,
+    });
+    const t3 = taskRepo.create({
+      title: 'Gamma Deploy',
+      priority: 2,
+      due_date: '2026-10-15',
+      project_id: project.id,
+      list_id: listId,
+    });
+    taskRepo.complete(t2.id);
+
+    const projectTasks = taskRepo.getByProjectId(project.id);
+
+    // Sort by priority desc
+    const byPriorityDesc = [...projectTasks].sort((a, b) => b.priority - a.priority);
+    expect(byPriorityDesc.map((t) => t.id)).toEqual([t2.id, t3.id, t1.id]);
+
+    // Sort by due date asc
+    const byDueDateAsc = [...projectTasks].sort((a, b) =>
+      (a.due_date || '').localeCompare(b.due_date || '')
+    );
+    expect(byDueDateAsc.map((t) => t.id)).toEqual([t2.id, t1.id, t3.id]);
+
+    // Sort by title asc
+    const byTitleAsc = [...projectTasks].sort((a, b) => a.title.localeCompare(b.title));
+    expect(byTitleAsc.map((t) => t.id)).toEqual([t1.id, t2.id, t3.id]);
+
+    // Sort by status asc (incomplete first)
+    const byStatusAsc = [...projectTasks].sort((a, b) => a.is_completed - b.is_completed);
+    expect(byStatusAsc[2].id).toBe(t2.id); // completed task is last
+  });
+
+  it('supports table inline fast task creation with project and section defaults', () => {
+    const project = projectRepo.create({ name: 'Table Add Project' });
+    const section = sectionRepo.create({ project_id: project.id, name: 'Sprint 1', sort_order: 0 });
+
+    const newTask = taskRepo.create({
+      title: 'Rapid entry task from table row',
+      project_id: project.id,
+      section_id: section.id,
+      list_id: 'smart_all',
+    });
+
+    expect(newTask.id).toBeDefined();
+    expect(newTask.project_id).toBe(project.id);
+    expect(newTask.section_id).toBe(section.id);
+    expect(newTask.is_completed).toBe(0);
+
+    const fetched = taskRepo.getById(newTask.id);
+    expect(fetched?.title).toBe('Rapid entry task from table row');
   });
 });

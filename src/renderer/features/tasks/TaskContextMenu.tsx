@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useListStore } from '../../stores/listStore.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
+import { ipc } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './TaskContextMenu.module.css';
 
@@ -223,6 +225,21 @@ export function TaskContextMenu({
           >
             <span className={styles.itemIcon}>ℹ️</span>
             <span>Open Details</span>
+          </button>
+
+          <div className={styles.divider} />
+
+          {/* Inspect / DevTools */}
+          <button
+            type="button"
+            className={styles.item}
+            onClick={() => {
+              ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
+              onClose();
+            }}
+          >
+            <span className={styles.itemIcon}>🛠️</span>
+            <span>Developer Tools</span>
           </button>
 
           <div className={styles.divider} />

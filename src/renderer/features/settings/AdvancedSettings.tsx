@@ -93,6 +93,32 @@ export function AdvancedSettings(): React.ReactElement {
           </div>
         )}
       </div>
+
+      <div className={styles.settingGroup}>
+        <div className={styles.groupTitle}>Developer & Diagnostics</div>
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>Developer Tools</div>
+            <div className={styles.settingDescription}>
+              Inspect elements, debug state, and profile performance (Shortcut: F12 or Ctrl+Shift+I)
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              try {
+                await invoke(IPC.APP.TOGGLE_DEV_TOOLS);
+              } catch {
+                // ignore
+              }
+            }}
+          >
+            Toggle DevTools
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
