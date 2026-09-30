@@ -222,4 +222,90 @@ describe('Phase 10: Project Management Domain & Repositories', () => {
     removeProjectFolder('grp_test_folder_1');
     expect(useProjectStore.getState().projectFolderIds).not.toContain('grp_test_folder_1');
   });
+
+  it('creates tasks directly within project list without sections (flat list view)', () => {
+    const project = projectRepo.create({ name: 'Flat List Project' });
+    const task = taskRepo.create({
+      title: 'Flat Task In Project',
+      project_id: project.id,
+      list_id: 'smart_all',
+    });
+
+    expect(task.id).toBeDefined();
+    expect(task.project_id).toBe(project.id);
+    expect(task.section_id).toBeNull();
+
+    const tasksInProject = taskRepo.getByProjectId(project.id);
+    expect(tasksInProject.length).toBe(1);
+    expect(tasksInProject[0].title).toBe('Flat Task In Project');
+  });
+
+  it('calculates project progress metrics accurately for progress pill and hover tooltip', () => {
+    const project = projectRepo.create({ name: 'Metrics Project' });
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    // 4 tasks: 2 completed, 1 pending tomorrow, 1 overdue yesterday
+    const t1 = taskRepo.create({
+      title: 'Done 1',
+      project_id: project.id,
+      list_id: 'smart_all',
+    });
+    taskRepo.complete(t1.id);
+
+    const t2 = taskRepo.create({
+      title: 'Done 2',
+      project_id: project.id,
+      list_id: 'smart_all',
+    });
+    taskRepo.complete(t2.id);
+    taskRepo.create({
+      title: 'Future Task',
+      project_id: project.id,
+      list_id: 'smart_all',
+      is_completed: 0,
+      due_date: tomorrow,
+    });
+    taskRepo.create({
+      title: 'Overdue Task',
+      project_id: project.id,
+      list_id: 'smart_all',
+      is_completed: 0,
+      due_date: yesterday,
+    });
+
+    const projectTasks = taskRepo.getByProjectId(project.id);
+    const total = projectTasks.length;
+    const completed = projectTasks.filter((t) => t.is_completed === 1).length;
+    const overdue = projectTasks.filter(
+      (t) => t.is_completed === 0 && t.due_date && t.due_date < today
+    ).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    expect(total).toBe(4);
+    expect(completed).toBe(2);
+    expect(overdue).toBe(1);
+    expect(percentage).toBe(50);
+  });
+
+  it('supports archiving, unarchiving, and deleting projects', () => {
+    const project = projectRepo.create({ name: 'Lifecycle Project' });
+    expect(project.status).toBe('active');
+
+    // Archive
+    projectRepo.archive(project.id);
+    const archived = projectRepo.getById(project.id);
+    expect(archived?.status).toBe('archived');
+
+    // Unarchive
+    projectRepo.update(project.id, { status: 'active' });
+    const unarchived = projectRepo.getById(project.id);
+    expect(unarchived?.status).toBe('active');
+
+    // Delete
+    projectRepo.delete(project.id);
+    const deleted = projectRepo.getById(project.id);
+    expect(deleted).toBeNull();
+  });
 });

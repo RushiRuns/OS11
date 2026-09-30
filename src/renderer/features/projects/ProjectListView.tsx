@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -7,44 +7,57 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import type { Project, Section, Task } from '@shared/types/index.js';
+import { between } from '@shared/utils/fractional-index.js';
 import { TaskCard } from '../tasks/TaskCard.js';
+import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
+import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { useTaskStore } from '../../stores/taskStore.js';
-import { useProjectStore } from '../../stores/projectStore.js';
 import styles from './ProjectListView.module.css';
 
 interface ProjectListViewProps {
   project: Project;
-  sections: Section[];
+  sections?: Section[];
   tasks: Task[];
   onSelectTask: (task: Task) => void;
-  selectedTaskId?: string;
+  selectedTaskId?: string | null;
+}
+
+function arrayMove<T>(array: T[], from: number, to: number): T[] {
+  const newArray = array.slice();
+  const [removed] = newArray.splice(from, 1);
+  newArray.splice(to, 0, removed);
+  return newArray;
 }
 
 export function ProjectListView({
   project,
-  sections,
   tasks,
   onSelectTask,
   selectedTaskId,
 }: ProjectListViewProps): React.ReactElement {
-  const { createTask, updateTask } = useTaskStore();
-  const { createSection, updateSection, deleteSection, activityFeed } = useProjectStore();
+  const {
+    createTask,
+    updateTask,
+    toggleComplete,
+    toggleStar,
+    deleteTask,
+    duplicateTask,
+    makeSubtask,
+    reorderTask,
+  } = useTaskStore();
 
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const [inlineTitles, setInlineTitles] = useState<Record<string, string>>({});
-  const [isAddingSection, setIsAddingSection] = useState(false);
-  const [newSectionName, setNewSectionName] = useState('');
-  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
-  const [editingSectionName, setEditingSectionName] = useState<string>('');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
-  const handleSaveSectionName = async (sectionId: string) => {
-    const trimmed = editingSectionName.trim();
-    if (trimmed) {
-      await updateSection(sectionId, { name: trimmed });
-    }
-    setEditingSectionId(null);
-  };
+  // Context menu state
+  const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -52,310 +65,201 @@ export function ProjectListView({
     })
   );
 
-  const toggleCollapse = (sectionId: string) => {
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [sectionId]: !prev[sectionId],
-    }));
-  };
+  // Filter tasks into active and completed
+  const activeTasks = useMemo(() => {
+    return tasks
+      .filter((t) => t.is_completed === 0 && t.is_trashed === 0)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [tasks]);
 
-  const handleInlineKeyDown = async (e: React.KeyboardEvent, sectionId: string) => {
+  const completedTasks = useMemo(() => {
+    return tasks
+      .filter((t) => t.is_completed === 1 && t.is_trashed === 0)
+      .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || '') || a.sort_order - b.sort_order);
+  }, [tasks]);
+
+  const allActiveTaskIds = useMemo(() => activeTasks.map((t) => t.id), [activeTasks]);
+  const allCompletedTaskIds = useMemo(() => completedTasks.map((t) => t.id), [completedTasks]);
+
+  const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      const val = inlineTitles[sectionId]?.trim();
-      if (!val) return;
+      e.preventDefault();
+      const title = newTaskTitle.trim();
+      if (!title) return;
 
       await createTask({
-        title: val,
+        title,
         project_id: project.id,
-        section_id: sectionId,
         list_id: 'smart_all',
       });
-
-      setInlineTitles((prev) => ({ ...prev, [sectionId]: '' }));
+      setNewTaskTitle('');
     }
-  };
-
-  const handleAddSectionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSectionName.trim()) return;
-
-    await createSection({
-      project_id: project.id,
-      name: newSectionName.trim(),
-      sort_order: sections.length,
-    });
-    setNewSectionName('');
-    setIsAddingSection(false);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
-    const taskId = String(active.id);
-    const overId = String(over.id);
+    const oldIndex = activeTasks.findIndex((t) => t.id === active.id);
+    const newIndex = activeTasks.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    // If dropped onto a section block or a task in another section
-    let targetSectionId: string | null = null;
-    if (overId.startsWith('sec_drop_')) {
-      targetSectionId = overId.replace('sec_drop_', '');
-    } else {
-      const overTask = tasks.find((t) => t.id === overId);
-      if (overTask) {
-        targetSectionId = overTask.section_id ?? null;
-      }
-    }
+    const reordered = arrayMove(activeTasks, oldIndex, newIndex);
+    const prevSibling = newIndex > 0 ? reordered[newIndex - 1] : null;
+    const nextSibling = newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
 
-    if (targetSectionId !== null) {
-      const activeTask = tasks.find((t) => t.id === taskId);
-      if (activeTask && activeTask.section_id !== targetSectionId) {
-        await updateTask({
-          id: taskId,
-          section_id: targetSectionId,
-        });
-      }
-    }
+    const newSortOrder = between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null);
+    await reorderTask(String(active.id), newSortOrder);
   };
 
-  // Group tasks by section
-  const tasksBySection = new Map<string, Task[]>();
-  for (const s of sections) {
-    tasksBySection.set(s.id, []);
-  }
-  const unsectionedTasks: Task[] = [];
-
-  for (const t of tasks) {
-    if (t.section_id && tasksBySection.has(t.section_id)) {
-      tasksBySection.get(t.section_id)!.push(t);
-    } else {
-      unsectionedTasks.push(t);
-    }
-  }
-
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className={styles.listContainer}>
-        <div className={styles.sectionsList}>
-          {sections.map((sec) => {
-            const secTasks = tasksBySection.get(sec.id) ?? [];
-            const completedCount = secTasks.filter((t) => t.is_completed === 1).length;
-            const isCollapsed = Boolean(collapsedSections[sec.id]);
+    <div className={styles.listContainer}>
+      {/* Quick Add Input Bar */}
+      <div className={styles.quickAddRow}>
+        <span className={styles.quickAddIcon} aria-hidden="true">
+          +
+        </span>
+        <input
+          type="text"
+          className={styles.quickAddInput}
+          placeholder={`Add a task to ${project.name}... (Press Enter)`}
+          aria-label="Add a task to project"
+          value={newTaskTitle}
+          onChange={(e) => setNewTaskTitle(e.target.value)}
+          onKeyDown={handleInputKeyDown}
+        />
+      </div>
 
-            return (
-              <div key={sec.id} className={styles.sectionBlock} id={`sec_drop_${sec.id}`}>
-                {/* Collapsible Section Header */}
-                <div
-                  className={styles.sectionHeader}
-                  onClick={() => toggleCollapse(sec.id)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className={styles.sectionHeaderLeft}>
-                    <span
-                      className={`${styles.collapseArrow} ${
-                        isCollapsed ? styles.collapseArrowCollapsed : ''
-                      }`}
-                    >
-                      ▼
-                    </span>
-                    {editingSectionId === sec.id ? (
-                      <input
-                        type="text"
-                        className={styles.inlineRenameInput}
-                        value={editingSectionName}
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setEditingSectionName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleSaveSectionName(sec.id);
-                          } else if (e.key === 'Escape') {
-                            setEditingSectionId(null);
-                          }
-                        }}
-                        onBlur={() => handleSaveSectionName(sec.id)}
-                      />
-                    ) : (
-                      <span className={styles.sectionTitle}>{sec.name}</span>
-                    )}
-                    <span className={styles.taskCountBadge}>
-                      {completedCount}/{secTasks.length}
-                    </span>
-                  </div>
+      {/* Active Tasks Reorderable Stream */}
+      {activeTasks.length > 0 ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
+            <div className={styles.tasksList} role="list" aria-label="Active tasks">
+              {activeTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                  allTaskIds={allActiveTaskIds}
+                  onSelect={(t) => {
+                    setFocusedTaskId(t.id);
+                    onSelectTask(t);
+                  }}
+                  onOpenDetail={(t) => onSelectTask(t)}
+                  onToggleComplete={toggleComplete}
+                  onToggleStar={toggleStar}
+                  onUpdateTitle={(id, title) => updateTask({ id, title })}
+                  onDelete={(id) => deleteTask(id)}
+                  onDuplicate={duplicateTask}
+                  onContextMenu={(e, t) => {
+                    e.preventDefault();
+                    setContextMenuTask(t);
+                    setContextMenuPos({ x: e.clientX, y: e.clientY });
+                  }}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      ) : completedTasks.length === 0 ? (
+        <div className={styles.emptyContainer}>
+          <EmptyState
+            title="No tasks in this project"
+            description="Type a task name in the input above and press Enter to get started."
+          />
+        </div>
+      ) : null}
 
-                  <div className={styles.sectionActions} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className={styles.sectionActionBtn}
-                      onClick={() => {
-                        setEditingSectionId(sec.id);
-                        setEditingSectionName(sec.name);
-                      }}
-                      title="Rename section"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.sectionActionBtn}
-                      onClick={() => {
-                        if (window.confirm(`Delete section "${sec.name}"? Tasks will become unsectioned.`)) {
-                          deleteSection(sec.id);
-                        }
-                      }}
-                      title="Delete section"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
+      {/* Collapsible Completed Section */}
+      {completedTasks.length > 0 && (
+        <div className={styles.completedSection}>
+          <div
+            className={styles.completedHeader}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isCompletedOpen}
+            aria-label={`Completed tasks (${completedTasks.length})`}
+            onClick={() => setIsCompletedOpen((prev) => !prev)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsCompletedOpen((prev) => !prev);
+              }
+            }}
+          >
+            <span
+              className={`${styles.completedCaret} ${
+                isCompletedOpen ? styles.completedCaretOpen : ''
+              }`}
+              aria-hidden="true"
+            >
+              ▶
+            </span>
+            <span>Completed ({completedTasks.length})</span>
+          </div>
 
-                {/* Tasks Body */}
-                {!isCollapsed && (
-                  <div className={styles.tasksBody}>
-                    {secTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        variant="project"
-                        isSelected={selectedTaskId === task.id}
-                        onSelect={() => onSelectTask(task)}
-                      />
-                    ))}
-
-                    {/* Inline Task Add */}
-                    <div className={styles.inlineAddRow}>
-                      <input
-                        type="text"
-                        className={styles.inlineAddInput}
-                        placeholder={`+ Add task to ${sec.name} (Press Enter)...`}
-                        value={inlineTitles[sec.id] ?? ''}
-                        onChange={(e) =>
-                          setInlineTitles((prev) => ({ ...prev, [sec.id]: e.target.value }))
-                        }
-                        onKeyDown={(e) => handleInlineKeyDown(e, sec.id)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Unsectioned Tasks (if any) */}
-          {unsectionedTasks.length > 0 && (
-            <div className={styles.sectionBlock}>
-              <div className={styles.sectionHeader}>
-                <div className={styles.sectionHeaderLeft}>
-                  <span className={styles.sectionTitle}>General Tasks</span>
-                  <span className={styles.taskCountBadge}>{unsectionedTasks.length}</span>
-                </div>
-              </div>
-              <div className={styles.tasksBody}>
-                {unsectionedTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    variant="project"
-                    isSelected={selectedTaskId === task.id}
-                    onSelect={() => onSelectTask(task)}
-                  />
-                ))}
-              </div>
+          {isCompletedOpen && (
+            <div className={styles.completedList} role="list" aria-label="Completed tasks">
+              {completedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                  allTaskIds={allCompletedTaskIds}
+                  onSelect={(t) => {
+                    setFocusedTaskId(t.id);
+                    onSelectTask(t);
+                  }}
+                  onOpenDetail={(t) => onSelectTask(t)}
+                  onToggleComplete={toggleComplete}
+                  onToggleStar={toggleStar}
+                  onUpdateTitle={(id, title) => updateTask({ id, title })}
+                  onDelete={(id) => deleteTask(id)}
+                  onDuplicate={duplicateTask}
+                  onContextMenu={(e, t) => {
+                    e.preventDefault();
+                    setContextMenuTask(t);
+                    setContextMenuPos({ x: e.clientX, y: e.clientY });
+                  }}
+                />
+              ))}
             </div>
           )}
-
-          {/* Add Section Button / Form */}
-          {isAddingSection ? (
-            <form onSubmit={handleAddSectionSubmit} style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                autoFocus
-                className={styles.inlineAddInput}
-                style={{
-                  padding: '8px 12px',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--surface-base)',
-                }}
-                placeholder="Section name (e.g. Backlog, Review)..."
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-              />
-              <button
-                type="submit"
-                style={{
-                  padding: '8px 14px',
-                  backgroundColor: 'var(--accent)',
-                  color: 'var(--text-on-accent)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  fontWeight: 'var(--weight-medium)',
-                }}
-              >
-                Add Section
-              </button>
-              <button
-                type="button"
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'var(--surface-raised)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                }}
-                onClick={() => setIsAddingSection(false)}
-              >
-                Cancel
-              </button>
-            </form>
-          ) : (
-            <button
-              type="button"
-              className={styles.addSectionBtn}
-              onClick={() => setIsAddingSection(true)}
-            >
-              <span>+</span>
-              <span>Add Section</span>
-            </button>
-          )}
         </div>
+      )}
 
-        {/* Activity Feed */}
-        <div className={styles.activitySection}>
-          <div className={styles.activityHeading}>
-            <span>🕒</span>
-            <span>Project Activity Log</span>
-          </div>
-
-          <div className={styles.activityList}>
-            {activityFeed.length === 0 ? (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                No recorded activity events yet.
-              </span>
-            ) : (
-              activityFeed.map((item) => (
-                <div key={item.id} className={styles.activityItem}>
-                  <div>
-                    <span className={styles.activityItemTitle}>{item.title}</span>
-                    {item.body && <span className={styles.activityItemBody}>— {item.body}</span>}
-                  </div>
-                  <span className={styles.activityItemDate}>
-                    {new Date(item.created_at).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </DndContext>
+      {/* Task Context Menu */}
+      <TaskContextMenu
+        task={contextMenuTask}
+        position={contextMenuPos}
+        onClose={() => {
+          setContextMenuTask(null);
+          setContextMenuPos(null);
+        }}
+        onToggleComplete={toggleComplete}
+        onToggleStar={toggleStar}
+        onSetPriority={(id, priority) => updateTask({ id, priority })}
+        onSetDueDate={(id, date, time, allDay) =>
+          updateTask({
+            id,
+            due_date: date,
+            due_time: time,
+            all_day: allDay ? 1 : 0,
+          })
+        }
+        onToggleMyDay={(id) => {
+          const today = new Date().toISOString().split('T')[0];
+          const target = tasks.find((t) => t.id === id);
+          const next = target?.my_day_date === today ? null : today;
+          updateTask({ id, my_day_date: next });
+        }}
+        onMoveToList={(id, listId) => updateTask({ id, list_id: listId })}
+        onDuplicate={duplicateTask}
+        onCreateSubtask={(parentId) => makeSubtask(`task-${Date.now()}`, parentId)}
+        onOpenDetail={(t) => onSelectTask(t)}
+        onDelete={(id) => deleteTask(id)}
+      />
+    </div>
   );
 }
 

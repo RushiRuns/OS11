@@ -7,36 +7,6 @@
   overflow: hidden;
 }
 
-.topBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-  gap: var(--space-4);
-}
-
-.projectSelectorGroup {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.projectSelect {
-  padding: var(--space-2) var(--space-3);
-  background-color: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  outline: none;
-  cursor: pointer;
-}
-
-.projectSelect:focus {
-  border-color: var(--accent);
-}
-
 .newProjectBtn {
   display: inline-flex;
   align-items: center;

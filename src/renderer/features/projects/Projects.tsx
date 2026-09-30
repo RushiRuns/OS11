@@ -117,36 +117,6 @@ export function Projects(): React.ReactElement {
 
   return (
     <div className={styles.container}>
-      {/* Top Project Switcher Bar */}
-      <div className={styles.topBar}>
-        <div className={styles.projectSelectorGroup}>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            Active Project:
-          </span>
-          <select
-            className={styles.projectSelect}
-            value={selectedProjectId ?? ''}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.icon || '📁'} {p.name} {p.status === 'archived' ? '(Archived)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button
-          type="button"
-          className={styles.newProjectBtn}
-          onClick={handleCreateNewProject}
-          title="Create a new project"
-        >
-          <span>+</span>
-          <span>New Project</span>
-        </button>
-      </div>
-
       {currentProject && (
         <>
           {/* Project Header Overview */}
