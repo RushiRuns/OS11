@@ -91,8 +91,9 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       id: tempId,
       title: payload.title,
       notes: payload.notes ?? null,
-      list_id: payload.list_id ?? 'list_inbox',
+      list_id: payload.list_id ?? null,
       project_id: payload.project_id ?? null,
+      area_id: payload.area_id ?? null,
       section_id: payload.section_id ?? null,
       parent_task_id: null,
       due_date: payload.due_date ?? null,
@@ -415,8 +416,31 @@ export function useTask(id: string): Task | undefined {
 export function useTasksByList(listId: string): Task[] {
   return useTaskStore((state) => {
     const tasks = Object.values(state.tasksById);
+    if (listId === 'list_inbox') {
+      return tasks
+        .filter((t) => !t.area_id && !t.project_id && t.is_trashed === 0 && t.parent_task_id === null)
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }
     return tasks
-      .filter((t) => t.list_id === listId && t.is_trashed === 0 && t.parent_task_id === null)
+      .filter((t) => (t.list_id === listId || t.project_id === listId) && t.is_trashed === 0 && t.parent_task_id === null)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+export function useTasksByArea(areaId: string): Task[] {
+  return useTaskStore((state) => {
+    const tasks = Object.values(state.tasksById);
+    return tasks
+      .filter((t) => t.area_id === areaId && !t.project_id && t.is_trashed === 0 && t.parent_task_id === null)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+export function useInboxTasks(): Task[] {
+  return useTaskStore((state) => {
+    const tasks = Object.values(state.tasksById);
+    return tasks
+      .filter((t) => !t.area_id && !t.project_id && t.is_trashed === 0 && t.parent_task_id === null)
       .sort((a, b) => a.sort_order - b.sort_order);
   });
 }
@@ -459,13 +483,22 @@ export function useSubtasks(parentId: string): Task[] {
   });
 }
 
-export function useCompletedTasks(listId?: string): Task[] {
+export function useCompletedTasks(containerId?: string): Task[] {
   return useTaskStore((state) => {
     return Object.values(state.tasksById)
       .filter((t) => {
         if (t.is_trashed === 1 || t.is_completed === 0) return false;
-        if (listId && listId !== 'smart_all' && listId !== 'smart_completed') {
-          return t.list_id === listId;
+        if (containerId && containerId !== 'smart_all' && containerId !== 'smart_completed') {
+          if (containerId.startsWith('project:')) {
+            return t.project_id === containerId.slice(8);
+          }
+          if (containerId.startsWith('area:')) {
+            return t.area_id === containerId.slice(5) && !t.project_id;
+          }
+          if (containerId === 'list_inbox') {
+            return !t.area_id && !t.project_id;
+          }
+          return t.list_id === containerId || t.project_id === containerId;
         }
         return true;
       })

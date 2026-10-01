@@ -1,0 +1,92 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: flex-start;
+}
+
+.iconBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-subtle, #333);
+  background: var(--surface-raised, #222);
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast, 150ms);
+}
+
+.iconBtn:hover {
+  border-color: var(--accent, #1B88FF);
+}
+
+.inputGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--weight-medium, 500);
+  color: var(--text-secondary, #aaa);
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 var(--space-3, 12px);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-subtle, #333);
+  background: var(--surface-base, #18181b);
+  color: var(--text-primary, #fff);
+  font-size: var(--text-sm, 14px);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--accent, #1B88FF);
+}
+
+.colorPicker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.colorSwatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transition-fast, 150ms);
+}
+
+.colorSwatch:hover {
+  transform: scale(1.15);
+}
+
+.colorSwatchSelected {
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-2, 8px);
+}

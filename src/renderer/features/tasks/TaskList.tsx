@@ -17,6 +17,8 @@ import {
   useCompletedTasks,
 } from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
+import { useAreaStore } from '../../stores/areaStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
 import { TaskCard } from './TaskCard.js';
 import { TaskListHeader } from './TaskListHeader.js';
@@ -175,9 +177,30 @@ export function TaskList({
           case 'smart_all_tasks':
             return tasks
               .sort((a, b) => a.sort_order - b.sort_order);
-          default:
+          case 'smart_completed':
             return tasks
-              .filter((t) => t.list_id === activeListId)
+              .filter((t) => t.is_completed === 1)
+              .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
+          default:
+            if (activeListId.startsWith('project:')) {
+              const projId = activeListId.slice(8);
+              return tasks
+                .filter((t) => t.project_id === projId)
+                .sort((a, b) => a.sort_order - b.sort_order);
+            }
+            if (activeListId.startsWith('area:')) {
+              const areaId = activeListId.slice(5);
+              return tasks
+                .filter((t) => t.area_id === areaId && !t.project_id)
+                .sort((a, b) => a.sort_order - b.sort_order);
+            }
+            if (activeListId === 'list_inbox') {
+              return tasks
+                .filter((t) => !t.area_id && !t.project_id)
+                .sort((a, b) => a.sort_order - b.sort_order);
+            }
+            return tasks
+              .filter((t) => t.list_id === activeListId || t.project_id === activeListId)
               .sort((a, b) => a.sort_order - b.sort_order);
         }
       },
@@ -534,8 +557,18 @@ export function TaskList({
       case 'smart_all':
       case 'smart_all_tasks':
         return 'All Tasks';
+      case 'smart_completed':
+        return 'Completed';
       default:
-        return activeListId.startsWith('list_') ? 'Tasks' : 'Tasks';
+        if (activeListId.startsWith('project:')) {
+          const proj = useProjectStore.getState().projectsById[activeListId.slice(8)];
+          return proj?.name ?? 'Project';
+        }
+        if (activeListId.startsWith('area:')) {
+          const area = useAreaStore.getState().areasById[activeListId.slice(5)];
+          return area ? `${area.name} — Tasks` : 'Area Tasks';
+        }
+        return 'Tasks';
     }
   })();
 

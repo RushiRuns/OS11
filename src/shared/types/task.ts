@@ -4,8 +4,9 @@ export interface Task {
   id: string;
   title: string;
   notes?: string | null;
-  list_id: string;
+  list_id?: string | null;
   project_id?: string | null;
+  area_id?: string | null;
   section_id?: string | null;
   parent_task_id?: string | null;
   due_date?: string | null;
@@ -35,8 +36,9 @@ export interface CreateTaskPayload {
   id?: string;
   title: string;
   notes?: string | null;
-  list_id?: string;
+  list_id?: string | null;
   project_id?: string | null;
+  area_id?: string | null;
   section_id?: string | null;
   parent_task_id?: string | null;
   due_date?: string | null;
@@ -56,8 +58,9 @@ export interface UpdateTaskPayload {
   id: string;
   title?: string;
   notes?: string | null;
-  list_id?: string;
+  list_id?: string | null;
   project_id?: string | null;
+  area_id?: string | null;
   section_id?: string | null;
   parent_task_id?: string | null;
   priority?: number;

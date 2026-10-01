@@ -22,6 +22,24 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
     }
   });
 
+  ipcMain.handle(IPC.TASKS.GET_BY_AREA, async (_event, areaId: string) => {
+    try {
+      const data = taskService.getByAreaId(areaId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.TASKS.GET_INBOX, async () => {
+    try {
+      const data = taskService.getInbox();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(IPC.TASKS.CREATE, async (_event, payload: CreateTaskPayload) => {
     try {
       const data = taskService.create(payload);

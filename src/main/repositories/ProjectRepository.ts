@@ -21,6 +21,7 @@ export class ProjectRepository extends BaseRepository {
 
   private hasGroupIdCol: boolean | null = null;
   private hasPinnedColsState: boolean | null = null;
+  private hasAreaIdCol: boolean | null = null;
 
   private hasGroupId(): boolean {
     if (this.hasGroupIdCol === null) {
@@ -46,6 +47,36 @@ export class ProjectRepository extends BaseRepository {
     return this.hasPinnedColsState;
   }
 
+  private hasAreaId(): boolean {
+    if (this.hasAreaIdCol === null) {
+      try {
+        const cols = this.db.pragma('table_info(projects)') as Array<{ name: string }>;
+        this.hasAreaIdCol = cols.some((c) => c.name === 'area_id');
+      } catch {
+        this.hasAreaIdCol = false;
+      }
+    }
+    return this.hasAreaIdCol;
+  }
+
+  public getByAreaId(areaId: string): Project[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM projects
+      WHERE area_id = ?
+      ORDER BY sort_order ASC, created_at ASC
+    `);
+    return stmt.all(areaId) as Project[];
+  }
+
+  public countByAreaId(areaId: string): number {
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count FROM projects
+      WHERE area_id = ?
+    `);
+    const res = stmt.get(areaId) as { count: number };
+    return res?.count ?? 0;
+  }
+
   public create(payload: CreateProjectPayload): Project {
     const id = uuidv4();
     const now = new Date().toISOString();
@@ -68,6 +99,7 @@ export class ProjectRepository extends BaseRepository {
       default_view: payload.default_view ?? 'list',
       sort_order: payload.sort_order ?? Date.now(),
       group_id: payload.group_id ?? null,
+      area_id: payload.area_id ?? 'area_default',
       is_pinned: isPinnedVal,
       pinned_sort_order: payload.pinned_sort_order ?? 0,
       created_at: now,
@@ -88,6 +120,10 @@ export class ProjectRepository extends BaseRepository {
     if (this.hasGroupId()) {
       sql += ', group_id';
       values += ', @group_id';
+    }
+    if (this.hasAreaId()) {
+      sql += ', area_id';
+      values += ', @area_id';
     }
     if (this.hasPinnedCols()) {
       sql += ', is_pinned, pinned_sort_order';
@@ -123,6 +159,7 @@ export class ProjectRepository extends BaseRepository {
       ...fields,
       id,
       group_id: fields.group_id !== undefined ? fields.group_id : current.group_id,
+      area_id: fields.area_id !== undefined ? fields.area_id : current.area_id,
       is_pinned: isPinnedVal,
       pinned_sort_order: pinnedSortOrderVal,
       updated_at: new Date().toISOString(),
@@ -142,6 +179,9 @@ export class ProjectRepository extends BaseRepository {
 
     if (this.hasGroupId()) {
       setClauses += ', group_id = @group_id';
+    }
+    if (this.hasAreaId()) {
+      setClauses += ', area_id = @area_id';
     }
     if (this.hasPinnedCols()) {
       setClauses += ', is_pinned = @is_pinned, pinned_sort_order = @pinned_sort_order';

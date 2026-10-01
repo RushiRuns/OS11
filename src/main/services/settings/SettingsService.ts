@@ -99,6 +99,8 @@ export class SettingsService {
       last_monthly_review_month: '',
       ambient_sound_volume: 0.5,
       ambient_sound_track: 'rain',
+      sidebar_show_all_tasks: false,
+      sidebar_show_completed: false,
     };
 
     for (const [key, value] of Object.entries(defaults)) {

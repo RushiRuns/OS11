@@ -9,6 +9,7 @@ export interface Project {
   default_view: 'list' | 'board' | 'timeline' | 'calendar' | 'table';
   sort_order: number;
   group_id?: string | null;
+  area_id?: string | null;
   is_pinned?: number;
   pinned_sort_order?: number;
   created_at: string;
@@ -25,6 +26,7 @@ export interface CreateProjectPayload {
   default_view?: 'list' | 'board' | 'timeline' | 'calendar' | 'table';
   sort_order?: number;
   group_id?: string | null;
+  area_id?: string | null;
   is_pinned?: boolean | number;
   pinned_sort_order?: number;
 }
@@ -39,6 +41,7 @@ export interface UpdateProjectPayload {
   default_view?: 'list' | 'board' | 'timeline' | 'calendar' | 'table';
   sort_order?: number;
   group_id?: string | null;
+  area_id?: string | null;
   is_pinned?: boolean | number;
   pinned_sort_order?: number;
 }

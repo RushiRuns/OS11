@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '../../components/primitives/Dialog/Dialog.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useListStore } from '../../stores/listStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
 import type { Project } from '@shared/types/index.js';
 import { EmojiPicker } from '../../components/EmojiPicker/EmojiPicker.js';
 import styles from './CreateProjectModal.module.css';
@@ -13,6 +14,7 @@ interface CreateProjectModalProps {
   projectToEdit?: Project | null;
   onSaved?: (project: Project) => void;
   initialGroupId?: string | null;
+  initialAreaId?: string | null;
 }
 
 const PRESET_COLORS = [
@@ -40,9 +42,11 @@ export function CreateProjectModal({
   projectToEdit,
   onSaved,
   initialGroupId,
+  initialAreaId,
 }: CreateProjectModalProps): React.ReactElement {
   const { createProject, updateProject, setSelectedProjectId, addProjectFolder } = useProjectStore();
   const { listGroupsById, orderedGroupIds, createGroup } = useListStore();
+  const { areasById, orderedAreaIds } = useAreaStore();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -50,6 +54,7 @@ export function CreateProjectModal({
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [defaultView, setDefaultView] = useState<'list' | 'board' | 'timeline' | 'calendar' | 'table'>('list');
   const [groupId, setGroupId] = useState<string>('');
+  const [areaId, setAreaId] = useState<string>('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -63,6 +68,7 @@ export function CreateProjectModal({
       setColor(projectToEdit.color ?? PRESET_COLORS[0]);
       setDefaultView(projectToEdit.default_view ?? 'list');
       setGroupId(projectToEdit.group_id ?? '');
+      setAreaId(projectToEdit.area_id ?? orderedAreaIds[0] ?? 'area_default');
       setShowEmojiPicker(false);
       setIsSubmitting(false);
       setIsCreatingFolder(false);
@@ -74,12 +80,13 @@ export function CreateProjectModal({
       setColor(PRESET_COLORS[0]);
       setDefaultView('list');
       setGroupId(initialGroupId ?? '');
+      setAreaId(initialAreaId ?? orderedAreaIds[0] ?? 'area_default');
       setShowEmojiPicker(false);
       setIsSubmitting(false);
       setIsCreatingFolder(false);
       setNewFolderName('');
     }
-  }, [open, projectToEdit, initialGroupId]);
+  }, [open, projectToEdit, initialGroupId, initialAreaId, orderedAreaIds]);
 
   const handleQuickCreateFolder = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -111,6 +118,7 @@ export function CreateProjectModal({
           color,
           icon,
           default_view: defaultView,
+          area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
         });
         onSaved?.(updated);
@@ -122,6 +130,7 @@ export function CreateProjectModal({
           color,
           icon,
           default_view: defaultView,
+          area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
         });
         setSelectedProjectId(created.id);
@@ -242,6 +251,23 @@ export function CreateProjectModal({
             </select>
           )}
         </div>
+
+        {orderedAreaIds.length >= 2 && (
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Area</label>
+            <select
+              className={styles.selectInput}
+              value={areaId}
+              onChange={(e) => setAreaId(e.target.value)}
+            >
+              {orderedAreaIds.map((id) => (
+                <option key={id} value={id}>
+                  {areasById[id]?.icon || '📁'} {areasById[id]?.name ?? id}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Color</label>

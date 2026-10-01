@@ -1,5 +1,5 @@
-import type Database from 'better-sqlite3';
 import { TaskRepository } from '../../repositories/TaskRepository.js';
+import { ProjectRepository } from '../../repositories/ProjectRepository.js';
 import { IdentityRepository } from '../../repositories/IdentityRepository.js';
 import { ReminderRepository } from '../../repositories/ReminderRepository.js';
 import { SettingsRepository } from '../../repositories/SettingsRepository.js';
@@ -11,6 +11,7 @@ import { wouldCreateCycle } from '../../domain/dependency-check.js';
 import { workerManager } from '../worker-manager.js';
 import { AttachmentService } from '../attachment/AttachmentService.js';
 import type { Task, CreateTaskPayload, UpdateTaskPayload, TaskHistoryRecord } from '@shared/types/index.js';
+import type Database from 'better-sqlite3';
 import DOMPurify from 'dompurify';
 
 function sanitizeHtml(html: string): string {
@@ -33,6 +34,7 @@ function sanitizeHtml(html: string): string {
 
 export class TaskService {
   private taskRepo: TaskRepository;
+  private projectRepo: ProjectRepository;
   private identityRepo: IdentityRepository;
   private reminderRepo: ReminderRepository;
   private settingsRepo: SettingsRepository;
@@ -47,9 +49,11 @@ export class TaskService {
     settingsRepo?: SettingsRepository,
     tagRepo?: TagRepository,
     historyRepo?: TaskHistoryRepository,
-    attachmentService?: AttachmentService
+    attachmentService?: AttachmentService,
+    projectRepo?: ProjectRepository
   ) {
     this.taskRepo = taskRepo ?? new TaskRepository();
+    this.projectRepo = projectRepo ?? new ProjectRepository();
     this.identityRepo = identityRepo ?? new IdentityRepository();
     this.reminderRepo = reminderRepo ?? new ReminderRepository();
     this.settingsRepo = settingsRepo ?? new SettingsRepository();
@@ -104,14 +108,35 @@ export class TaskService {
     return this.taskRepo.getSubtasks(parentId);
   }
 
+  public getByAreaId(areaId: string): Task[] {
+    return this.taskRepo.getByAreaId(areaId);
+  }
+
+  public getInbox(): Task[] {
+    return this.taskRepo.getInbox();
+  }
+
   public create(payload: CreateTaskPayload): Task {
     validateCreate(payload);
+
+    let area_id = payload.area_id ?? null;
+    if (payload.project_id && !area_id) {
+      try {
+        const proj = this.projectRepo.getById(payload.project_id);
+        if (proj?.area_id) {
+          area_id = proj.area_id;
+        }
+      } catch {
+        // fallback
+      }
+    }
 
     const identity = this.identityRepo.get();
     const sanitizedNotes = payload.notes ? sanitizeHtml(payload.notes) : null;
 
     const task = this.taskRepo.create({
       ...payload,
+      area_id,
       notes: sanitizedNotes,
       assignee_device_id: identity.id,
     });
@@ -143,6 +168,17 @@ export class TaskService {
     const actualFields = (typeof idOrPayload === 'string' ? fields : idOrPayload) ?? { id };
 
     validateUpdate({ ...actualFields, id });
+
+    if (actualFields.project_id !== undefined && actualFields.project_id !== null && !actualFields.area_id) {
+      try {
+        const proj = this.projectRepo.getById(actualFields.project_id);
+        if (proj?.area_id) {
+          actualFields.area_id = proj.area_id;
+        }
+      } catch {
+        // fallback
+      }
+    }
 
     if (actualFields.notes) {
       actualFields.notes = sanitizeHtml(actualFields.notes);

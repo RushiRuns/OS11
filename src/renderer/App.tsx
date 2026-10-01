@@ -43,6 +43,7 @@ import type { Task } from '../shared/types/task.js';
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard.js'));
 const Agenda = lazy(() => import('./features/agenda/Agenda.js'));
 const Projects = lazy(() => import('./features/projects/Projects.js'));
+const AreaView = lazy(() => import('./features/areas/AreaView.js'));
 const Settings = lazy(() => import('./features/settings/Settings.js'));
 const Pomodoro = lazy(() => import('./features/pomodoro/PomodoroView.js'));
 
@@ -289,6 +290,19 @@ export function App(): React.ReactElement {
           onSelectTask={handleSelectTask}
           selectedTaskId={liveSelectedTask?.id}
         />
+      );
+    }
+
+    if (activeListId.startsWith('area:')) {
+      const areaId = activeListId.slice(5);
+      return (
+        <Suspense fallback={<ViewSkeleton />}>
+          <AreaView
+            areaId={areaId}
+            onSelectTask={handleSelectTask}
+            selectedTaskId={liveSelectedTask?.id}
+          />
+        </Suspense>
       );
     }
 

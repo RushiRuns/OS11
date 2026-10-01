@@ -34,7 +34,7 @@ export interface ProjectState {
   updateProject: (id: string, fields: UpdateProjectPayload) => Promise<Project>;
   reorderProjects: (updates: Array<{ id: string; sortOrder: number }>) => Promise<void>;
   archiveProject: (id: string) => Promise<void>;
-  deleteProject: (id: string) => Promise<void>;
+  deleteProject: (id: string) => Promise<{ trashedTaskIds?: string[]; trashedCount?: number } | void>;
   addProjectFolder: (id: string) => void;
   removeProjectFolder: (id: string) => void;
 
@@ -307,7 +307,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
 
     try {
-      await ipc.invoke(IPC.PROJECTS.DELETE, id);
+      const result = await ipc.invoke<{ trashedTaskIds: string[]; trashedCount: number }>(IPC.PROJECTS.DELETE, id);
+      return result;
     } catch (err) {
       set((state) => ({
         projectsById: { ...state.projectsById, [id]: existing },

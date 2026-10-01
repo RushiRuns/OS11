@@ -54,6 +54,16 @@ export const IPC = {
     INCREMENT_POMODORO: 'tasks:increment-pomodoro',
     GET_HISTORY: 'tasks:get-history',
     RESTORE_VERSION: 'tasks:restore-version',
+    GET_BY_AREA: 'tasks:get-by-area',
+    GET_INBOX: 'tasks:get-inbox',
+  },
+  AREAS: {
+    GET_ALL: 'areas:get-all',
+    GET_BY_ID: 'areas:get-by-id',
+    CREATE: 'areas:create',
+    UPDATE: 'areas:update',
+    DELETE: 'areas:delete',
+    REORDER: 'areas:reorder',
   },
   LISTS: {
     GET_ALL: 'lists:get-all',
@@ -73,6 +83,7 @@ export const IPC = {
   PROJECTS: {
     GET_ALL: 'projects:get-all',
     GET_BY_ID: 'projects:get-by-id',
+    GET_BY_AREA: 'projects:get-by-area',
     CREATE: 'projects:create',
     UPDATE: 'projects:update',
     DELETE: 'projects:delete',

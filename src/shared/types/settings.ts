@@ -45,6 +45,9 @@ export interface SettingsMap {
   last_monthly_review_month: string;
   ambient_sound_volume: number;
   ambient_sound_track: string;
+  // Sidebar Smart Lists
+  sidebar_show_all_tasks: boolean;
+  sidebar_show_completed: boolean;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -59,5 +62,7 @@ export interface AppSettings {
   sidebar_position?: 'left' | 'right' | 'hidden';
   density?: 'compact' | 'comfortable' | 'spacious';
   font_size?: 'sm' | 'md' | 'lg' | string;
+  sidebar_show_all_tasks?: boolean;
+  sidebar_show_completed?: boolean;
 }
 

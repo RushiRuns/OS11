@@ -1,6 +1,7 @@
 export * from './task.js';
 export * from './List.js';
 export * from './ListGroup.js';
+export * from './Area.js';
 export * from './Project.js';
 export * from './Section.js';
 export * from './Milestone.js';

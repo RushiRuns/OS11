@@ -22,6 +22,15 @@ export function registerProjectHandlers(service = new ProjectService()): void {
     }
   });
 
+  ipcMain.handle(IPC.PROJECTS.GET_BY_AREA, async (_event, areaId: string) => {
+    try {
+      const data = service.getByAreaId(areaId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(IPC.PROJECTS.CREATE, async (_event, payload: CreateProjectPayload) => {
     try {
       const data = service.create(payload);
@@ -42,8 +51,8 @@ export function registerProjectHandlers(service = new ProjectService()): void {
 
   ipcMain.handle(IPC.PROJECTS.DELETE, async (_event, id: string) => {
     try {
-      service.delete(id);
-      return { ok: true, data: true };
+      const result = service.delete(id);
+      return { ok: true, data: result };
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

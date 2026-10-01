@@ -1,11 +1,14 @@
 import { ProjectRepository } from '../../repositories/ProjectRepository.js';
+import { TaskRepository } from '../../repositories/TaskRepository.js';
 import type { Project, CreateProjectPayload, UpdateProjectPayload, NotificationHistoryItem } from '@shared/types/index.js';
 
 export class ProjectService {
   private repository: ProjectRepository;
+  private taskRepo: TaskRepository;
 
-  constructor(repository?: ProjectRepository) {
+  constructor(repository?: ProjectRepository, taskRepo?: TaskRepository) {
     this.repository = repository ?? new ProjectRepository();
+    this.taskRepo = taskRepo ?? new TaskRepository();
   }
 
   public getAll(): Project[] {
@@ -18,6 +21,10 @@ export class ProjectService {
       throw new Error(`Project with id "${id}" not found.`);
     }
     return project;
+  }
+
+  public getByAreaId(areaId: string): Project[] {
+    return this.repository.getByAreaId(areaId);
   }
 
   public create(payload: CreateProjectPayload): Project {
@@ -48,8 +55,14 @@ export class ProjectService {
     return this.repository.getActivity(id);
   }
 
-  public delete(id: string): void {
+  public delete(id: string): { trashedTaskIds: string[]; trashedCount: number } {
+    const tasks = this.taskRepo.getByProjectId(id);
+    const now = new Date().toISOString();
+    for (const t of tasks) {
+      this.taskRepo.trash(t.id, now);
+    }
     this.repository.delete(id);
+    return { trashedTaskIds: tasks.map(t => t.id), trashedCount: tasks.length };
   }
 }
 

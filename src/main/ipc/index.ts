@@ -1,5 +1,6 @@
 import { registerAppHandlers } from './app-handlers.js';
 import { registerTaskHandlers } from './task-handlers.js';
+import { registerAreaHandlers } from './area-handlers.js';
 import { registerListHandlers } from './list-handlers.js';
 import { registerListGroupHandlers } from './list-group-handlers.js';
 import { registerProjectHandlers } from './project-handlers.js';
@@ -27,6 +28,7 @@ import { registerBackupHandlers } from './backup-handlers.js';
 export function registerIpcHandlers(): void {
   registerAppHandlers();
   registerTaskHandlers();
+  registerAreaHandlers();
   registerListHandlers();
   registerListGroupHandlers();
   registerProjectHandlers();

@@ -44,6 +44,33 @@ export class TaskRepository extends BaseRepository {
     return stmt.all(projectId) as Task[];
   }
 
+  public getByAreaId(areaId: string): Task[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM tasks
+      WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0
+      ORDER BY sort_order ASC, created_at DESC
+    `);
+    return stmt.all(areaId) as Task[];
+  }
+
+  public countLooseByAreaId(areaId: string): number {
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count FROM tasks
+      WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0
+    `);
+    const res = stmt.get(areaId) as { count: number };
+    return res?.count ?? 0;
+  }
+
+  public getInbox(): Task[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM tasks
+      WHERE area_id IS NULL AND project_id IS NULL AND is_trashed = 0
+      ORDER BY sort_order ASC, created_at DESC
+    `);
+    return stmt.all() as Task[];
+  }
+
   public getById(id: string): Task | null {
     const stmt = this.db.prepare(`
       SELECT * FROM tasks
@@ -116,21 +143,76 @@ export class TaskRepository extends BaseRepository {
     return stmt.all() as Task[];
   }
 
+  private hasAreaIdCol: boolean | null = null;
+  private hasAreaId(): boolean {
+    if (this.hasAreaIdCol === null) {
+      try {
+        const cols = this.db.pragma('table_info(tasks)') as Array<{ name: string }>;
+        this.hasAreaIdCol = cols.some((c) => c.name === 'area_id');
+      } catch {
+        this.hasAreaIdCol = false;
+      }
+    }
+    return this.hasAreaIdCol;
+  }
+
+  private isListIdNotNullState: boolean | null = null;
+  private isListIdNotNull(): boolean {
+    if (this.isListIdNotNullState === null) {
+      try {
+        const cols = this.db.pragma('table_info(tasks)') as Array<{ name: string; notnull: number }>;
+        const col = cols.find((c) => c.name === 'list_id');
+        this.isListIdNotNullState = col ? col.notnull === 1 : false;
+      } catch {
+        this.isListIdNotNullState = false;
+      }
+    }
+    return this.isListIdNotNullState;
+  }
+
   public create(payload: CreateTaskPayload | (Partial<Task> & { title: string })): Task {
     const id = ('id' in payload && payload.id) ? payload.id : uuidv4();
     const now = new Date().toISOString();
 
-    let listId = payload.list_id ?? 'list_inbox';
-    const checkStmt = this.db.prepare<[string], { id: string }>('SELECT id FROM lists WHERE id = ?');
-    if (!checkStmt.get(listId)) {
-      const inbox = checkStmt.get('list_inbox');
-      if (inbox) {
-        listId = 'list_inbox';
-      } else {
-        const fallback = this.db.prepare<[], { id: string }>('SELECT id FROM lists ORDER BY sort_order ASC LIMIT 1').get();
-        if (fallback) {
-          listId = fallback.id;
+    let listId = payload.list_id ?? null;
+    if (listId) {
+      try {
+        const checkStmt = this.db.prepare<[string], { id: string }>('SELECT id FROM lists WHERE id = ?');
+        if (!checkStmt.get(listId)) {
+          const inbox = checkStmt.get('list_inbox');
+          if (inbox) {
+            listId = 'list_inbox';
+          } else {
+            const fallback = this.db.prepare<[], { id: string }>('SELECT id FROM lists ORDER BY sort_order ASC LIMIT 1').get();
+            listId = fallback ? fallback.id : null;
+          }
         }
+      } catch {
+        // table might not exist
+      }
+    } else if (this.isListIdNotNull()) {
+      try {
+        const inbox = this.db.prepare<[string], { id: string }>('SELECT id FROM lists WHERE id = ?').get('list_inbox');
+        if (inbox) {
+          listId = 'list_inbox';
+        } else {
+          const fallback = this.db.prepare<[], { id: string }>('SELECT id FROM lists ORDER BY sort_order ASC LIMIT 1').get();
+          listId = fallback ? fallback.id : null;
+        }
+      } catch {
+        listId = 'list_inbox';
+      }
+    }
+
+    let areaId = payload.area_id ?? null;
+    if (payload.project_id && !areaId) {
+      try {
+        const proj = this.db.prepare<[string], { area_id: string }>('SELECT area_id FROM projects WHERE id = ?').get(payload.project_id);
+        if (proj?.area_id) {
+          areaId = proj.area_id;
+        }
+      } catch {
+        // fallback
       }
     }
 
@@ -140,6 +222,7 @@ export class TaskRepository extends BaseRepository {
       notes: payload.notes ?? null,
       list_id: listId,
       project_id: payload.project_id ?? null,
+      area_id: areaId,
       section_id: payload.section_id ?? null,
       parent_task_id: payload.parent_task_id ?? null,
       due_date: payload.due_date ?? null,
@@ -164,24 +247,32 @@ export class TaskRepository extends BaseRepository {
       updated_at: now,
     };
 
+    let sqlCols = `
+      id, title, notes, list_id, project_id, section_id,
+      parent_task_id, due_date, due_time, all_day,
+      recurrence_rule, recurrence_basis, priority,
+      is_starred, is_completed, completed_at, estimated_minutes,
+      assignee_device_id, created_by_device, sort_order,
+      my_day_date, pomodoro_count, is_habit, is_trashed, trashed_at,
+      created_at, updated_at
+    `;
+    let sqlVals = `
+      @id, @title, @notes, @list_id, @project_id, @section_id,
+      @parent_task_id, @due_date, @due_time, @all_day,
+      @recurrence_rule, @recurrence_basis, @priority,
+      @is_starred, @is_completed, @completed_at, @estimated_minutes,
+      @assignee_device_id, @created_by_device, @sort_order,
+      @my_day_date, @pomodoro_count, @is_habit, @is_trashed, @trashed_at,
+      @created_at, @updated_at
+    `;
+
+    if (this.hasAreaId()) {
+      sqlCols += ', area_id';
+      sqlVals += ', @area_id';
+    }
+
     const stmt = this.db.prepare(`
-      INSERT INTO tasks (
-        id, title, notes, list_id, project_id, section_id,
-        parent_task_id, due_date, due_time, all_day,
-        recurrence_rule, recurrence_basis, priority,
-        is_starred, is_completed, completed_at, estimated_minutes,
-        assignee_device_id, created_by_device, sort_order,
-        my_day_date, pomodoro_count, is_habit, is_trashed, trashed_at,
-        created_at, updated_at
-      ) VALUES (
-        @id, @title, @notes, @list_id, @project_id, @section_id,
-        @parent_task_id, @due_date, @due_time, @all_day,
-        @recurrence_rule, @recurrence_basis, @priority,
-        @is_starred, @is_completed, @completed_at, @estimated_minutes,
-        @assignee_device_id, @created_by_device, @sort_order,
-        @my_day_date, @pomodoro_count, @is_habit, @is_trashed, @trashed_at,
-        @created_at, @updated_at
-      )
+      INSERT INTO tasks (${sqlCols}) VALUES (${sqlVals})
     `);
 
     stmt.run(record);
@@ -194,6 +285,17 @@ export class TaskRepository extends BaseRepository {
     const current = this.getById(id);
     if (!current) {
       throw new Error(`Task not found: ${id}`);
+    }
+
+    if (actualFields.project_id !== undefined && actualFields.project_id !== null && actualFields.area_id === undefined) {
+      try {
+        const proj = this.db.prepare<[string], { area_id: string }>('SELECT area_id FROM projects WHERE id = ?').get(actualFields.project_id);
+        if (proj?.area_id) {
+          actualFields.area_id = proj.area_id;
+        }
+      } catch {
+        // fallback
+      }
     }
 
     const isCompleted = actualFields.is_completed !== undefined
@@ -213,6 +315,7 @@ export class TaskRepository extends BaseRepository {
       ...current,
       ...actualFields,
       id, // Preserve id
+      area_id: actualFields.area_id !== undefined ? actualFields.area_id : current.area_id,
       all_day: actualFields.all_day !== undefined
         ? (typeof actualFields.all_day === 'boolean' ? (actualFields.all_day ? 1 : 0) : actualFields.all_day)
         : current.all_day,
@@ -227,32 +330,38 @@ export class TaskRepository extends BaseRepository {
       updated_at: new Date().toISOString(),
     };
 
+    let setClauses = `
+      title = @title,
+      notes = @notes,
+      list_id = @list_id,
+      project_id = @project_id,
+      section_id = @section_id,
+      parent_task_id = @parent_task_id,
+      due_date = @due_date,
+      due_time = @due_time,
+      all_day = @all_day,
+      recurrence_rule = @recurrence_rule,
+      recurrence_basis = @recurrence_basis,
+      priority = @priority,
+      is_starred = @is_starred,
+      is_completed = @is_completed,
+      completed_at = @completed_at,
+      estimated_minutes = @estimated_minutes,
+      sort_order = @sort_order,
+      my_day_date = @my_day_date,
+      pomodoro_count = @pomodoro_count,
+      is_habit = @is_habit,
+      is_trashed = @is_trashed,
+      trashed_at = @trashed_at,
+      updated_at = @updated_at
+    `;
+
+    if (this.hasAreaId()) {
+      setClauses += ', area_id = @area_id';
+    }
+
     const stmt = this.db.prepare(`
-      UPDATE tasks SET
-        title = @title,
-        notes = @notes,
-        list_id = @list_id,
-        project_id = @project_id,
-        section_id = @section_id,
-        parent_task_id = @parent_task_id,
-        due_date = @due_date,
-        due_time = @due_time,
-        all_day = @all_day,
-        recurrence_rule = @recurrence_rule,
-        recurrence_basis = @recurrence_basis,
-        priority = @priority,
-        is_starred = @is_starred,
-        is_completed = @is_completed,
-        completed_at = @completed_at,
-        estimated_minutes = @estimated_minutes,
-        sort_order = @sort_order,
-        my_day_date = @my_day_date,
-        pomodoro_count = @pomodoro_count,
-        is_habit = @is_habit,
-        is_trashed = @is_trashed,
-        trashed_at = @trashed_at,
-        updated_at = @updated_at
-      WHERE id = @id
+      UPDATE tasks SET ${setClauses} WHERE id = @id
     `);
 
     stmt.run(updated);

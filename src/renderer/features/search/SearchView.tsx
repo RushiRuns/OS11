@@ -52,13 +52,22 @@ export function SearchView({ onSelectTask }: SearchViewProps): React.ReactElemen
       e.preventDefault();
       const target = results[selectedIndex];
       if (target) {
-        handleSelect(target.id, target.listId);
+        handleSelect(target.id, target.listId, target.projectId, target.areaId);
       }
     }
   };
 
-  const handleSelect = (taskId: string, listId?: string) => {
-    if (listId) {
+  const handleSelect = (
+    taskId: string,
+    listId?: string | null,
+    projectId?: string | null,
+    areaId?: string | null
+  ) => {
+    if (projectId) {
+      setActiveListId(`project:${projectId}`);
+    } else if (areaId) {
+      setActiveListId(`area:${areaId}`);
+    } else if (listId) {
       setActiveListId(listId);
     }
     setSelectedTaskId(taskId);
@@ -121,7 +130,7 @@ export function SearchView({ onSelectTask }: SearchViewProps): React.ReactElemen
                 className={`${styles.resultItem} ${
                   idx === selectedIndex ? styles.resultActive : ''
                 }`}
-                onClick={() => handleSelect(item.id, item.listId)}
+                onClick={() => handleSelect(item.id, item.listId, item.projectId, item.areaId)}
               >
                 <div className={styles.resultRow}>
                   <span className={styles.resultTitle}>{item.title}</span>

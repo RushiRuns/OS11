@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
-import { useListStore } from '../../stores/listStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { ipc } from '../../services/ipc.js';
@@ -41,7 +42,6 @@ export function QuickAddBar({
 
   const { activeListId } = useAppStore();
   const { createTask } = useTaskStore();
-  const listsById = useListStore((state) => state.listsById);
   const isNlpEnabled = useModuleStore((state) => state.isEnabled('nlp_parsing'));
 
   const { tagsById, loadTags, createTag, addTagToTask } = useTagStore();
@@ -192,10 +192,43 @@ export function QuickAddBar({
       const notes = inlineParsed.notes;
       const extractedTags = inlineParsed.tags;
 
-      let targetListId = 'list_inbox';
-      if (!activeListId.startsWith('smart_') && listsById[activeListId]) {
-        targetListId = activeListId;
+      let targetAreaId: string | null = null;
+      let targetProjectId: string | null = null;
+
+      if (activeListId.startsWith('project:')) {
+        targetProjectId = activeListId.slice(8);
+        const proj = useProjectStore.getState().projectsById[targetProjectId];
+        targetAreaId = proj?.area_id ?? null;
+      } else if (activeListId.startsWith('area:')) {
+        targetAreaId = activeListId.slice(5);
+        targetProjectId = null;
+      } else {
+        targetAreaId = null;
+        targetProjectId = null;
       }
+
+      // Inline syntax override: @Area
+      if (inlineParsed.areaName) {
+        const lowerArea = inlineParsed.areaName.toLowerCase();
+        const areas = Object.values(useAreaStore.getState().areasById);
+        const matched = areas.find((a) => a.name.toLowerCase() === lowerArea);
+        if (matched) {
+          targetAreaId = matched.id;
+          targetProjectId = null;
+        }
+      }
+
+      // Inline syntax override: /Project
+      if (inlineParsed.projectName) {
+        const lowerProj = inlineParsed.projectName.toLowerCase();
+        const projects = Object.values(useProjectStore.getState().projectsById);
+        const matched = projects.find((p) => p.name.toLowerCase() === lowerProj);
+        if (matched) {
+          targetProjectId = matched.id;
+          targetAreaId = matched.area_id ?? targetAreaId;
+        }
+      }
+
       let priority = 0;
       let dueDate: string | null = null;
       let dueTime: string | null = null;
@@ -210,38 +243,19 @@ export function QuickAddBar({
         dueTime = parsed.dueTime;
         allDay = parsed.allDay;
         recurrenceRule = parsed.recurrenceRule;
-
-        if (parsed.listName) {
-          const targetName = parsed.listName.toLowerCase();
-          const matched = Object.values(listsById).find(
-            (l) => l.name.toLowerCase() === targetName
-          );
-          if (matched) {
-            targetListId = matched.id;
-          }
-        }
-      }
-
-      if (!listsById[targetListId]) {
-        if (listsById['list_inbox']) {
-          targetListId = 'list_inbox';
-        } else {
-          const firstAvailable = Object.keys(listsById)[0];
-          if (firstAvailable) {
-            targetListId = firstAvailable;
-          }
-        }
       }
 
       if (activeListId === 'smart_my_day') {
         myDayDate = new Date().toISOString().split('T')[0];
       }
 
-      // Create the task with parsed title and notes
+      // Create the task with contextual and parsed fields
       const createdTask = await createTask({
         title,
         notes,
-        list_id: targetListId,
+        area_id: targetAreaId,
+        project_id: targetProjectId,
+        list_id: targetProjectId ?? (!targetAreaId ? 'list_inbox' : undefined),
         priority,
         due_date: dueDate,
         due_time: dueTime,

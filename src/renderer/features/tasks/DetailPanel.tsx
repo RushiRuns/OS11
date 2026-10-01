@@ -6,7 +6,7 @@ import DOMPurify from 'dompurify';
 import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
-import { useListStore } from '../../stores/listStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
 import { useGoalStore } from '../../stores/goalStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { RecurrencePicker } from './RecurrencePicker.js';
@@ -74,7 +74,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const { dependenciesByTaskId, loadDependenciesForTask, addDependency, removeDependency } =
     useProjectStore();
   const projectsById = useProjectStore((state) => state.projectsById);
-  const listsById = useListStore((state) => state.listsById);
+  const areasById = useAreaStore((state) => state.areasById);
 
   const [selectedDepId, setSelectedDepId] = useState('');
   const [depError, setDepError] = useState<string | null>(null);
@@ -160,18 +160,23 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, isDatePickerOpen, isTagPickerOpen, isRecurrencePickerOpen]);
 
-  // Breadcrumb information (Project or List name)
+  // Breadcrumb information (Area / Project name)
   const breadcrumbName = useMemo(() => {
-    if (!currentTask) return '📋 Inbox';
-    if (currentTask.project_id && projectsById[currentTask.project_id]) {
-      return `📁 ${projectsById[currentTask.project_id].name}`;
+    if (!currentTask) return '📥 Inbox';
+    const area = currentTask.area_id ? areasById[currentTask.area_id] : null;
+    const project = currentTask.project_id ? projectsById[currentTask.project_id] : null;
+
+    if (area && project) {
+      return `${area.icon || '📁'} ${area.name} / ${project.icon || '📁'} ${project.name}`;
     }
-    if (currentTask.list_id && listsById[currentTask.list_id]) {
-      const l = listsById[currentTask.list_id];
-      return `${l.icon ?? '📋'} ${l.name}`;
+    if (project) {
+      return `${project.icon || '📁'} ${project.name}`;
     }
-    return '📋 Inbox';
-  }, [currentTask, projectsById, listsById]);
+    if (area) {
+      return `${area.icon || '📁'} ${area.name} (Loose)`;
+    }
+    return '📥 Inbox';
+  }, [currentTask, projectsById, areasById]);
 
   // Due date status formatting
   const dueDateInfo = useMemo(() => {
@@ -244,8 +249,9 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     if (e.key === 'Enter' && newSubtaskTitle.trim()) {
       await createTask({
         title: newSubtaskTitle.trim(),
-        list_id: currentTask.list_id,
+        area_id: currentTask.area_id,
         project_id: currentTask.project_id,
+        list_id: currentTask.list_id,
         parent_task_id: currentTask.id,
       });
       setNewSubtaskTitle('');

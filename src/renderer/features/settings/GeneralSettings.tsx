@@ -13,6 +13,8 @@ export function GeneralSettings(): React.ReactElement {
   const [weeklyReviewEnabled, setWeeklyReviewEnabled] = useState(true);
   const [weeklyReviewTime, setWeeklyReviewTime] = useState('17:00');
   const [monthlyReviewEnabled, setMonthlyReviewEnabled] = useState(true);
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const userLists = useUserLists();
 
@@ -28,6 +30,8 @@ export function GeneralSettings(): React.ReactElement {
           if (typeof res.weekly_review_enabled === 'boolean') setWeeklyReviewEnabled(res.weekly_review_enabled);
           if (typeof res.weekly_review_time === 'string') setWeeklyReviewTime(res.weekly_review_time);
           if (typeof res.monthly_review_enabled === 'boolean') setMonthlyReviewEnabled(res.monthly_review_enabled);
+          if (typeof res.sidebar_show_all_tasks === 'boolean') setShowAllTasks(res.sidebar_show_all_tasks);
+          if (typeof res.sidebar_show_completed === 'boolean') setShowCompleted(res.sidebar_show_completed);
         }
       } catch {
         // Defaults
@@ -72,6 +76,20 @@ export function GeneralSettings(): React.ReactElement {
     const next = !monthlyReviewEnabled;
     setMonthlyReviewEnabled(next);
     await invoke(IPC.SETTINGS.SET, { key: 'monthly_review_enabled', value: next });
+  };
+
+  const handleShowAllTasksToggle = async () => {
+    const next = !showAllTasks;
+    setShowAllTasks(next);
+    await invoke(IPC.SETTINGS.SET, { key: 'sidebar_show_all_tasks', value: next });
+    window.dispatchEvent(new CustomEvent('os11:settings-changed', { detail: { key: 'sidebar_show_all_tasks', value: next } }));
+  };
+
+  const handleShowCompletedToggle = async () => {
+    const next = !showCompleted;
+    setShowCompleted(next);
+    await invoke(IPC.SETTINGS.SET, { key: 'sidebar_show_completed', value: next });
+    window.dispatchEvent(new CustomEvent('os11:settings-changed', { detail: { key: 'sidebar_show_completed', value: next } }));
   };
 
   const handleTriggerWeeklyReview = () => {
@@ -147,6 +165,39 @@ export function GeneralSettings(): React.ReactElement {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Sidebar Smart Lists */}
+      <div className={styles.settingGroup}>
+        <div className={styles.groupTitle}>Sidebar Smart Lists</div>
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>Show &quot;All Tasks&quot;</div>
+            <div className={styles.settingDescription}>Display the All Tasks view in the sidebar navigation</div>
+          </div>
+          <Button
+            variant={showAllTasks ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={handleShowAllTasksToggle}
+          >
+            {showAllTasks ? 'Shown' : 'Hidden'}
+          </Button>
+        </div>
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>Show &quot;Completed&quot;</div>
+            <div className={styles.settingDescription}>Display the Completed tasks view in the sidebar navigation</div>
+          </div>
+          <Button
+            variant={showCompleted ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={handleShowCompletedToggle}
+          >
+            {showCompleted ? 'Shown' : 'Hidden'}
+          </Button>
         </div>
       </div>
 
