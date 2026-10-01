@@ -23,7 +23,7 @@
      Think of it as: 0 is the brightest (whitest) surface.
      ---------------------------------------------------------- */
   --surface-base:     #FFFFFF;           /* Main content area */
-  --surface-sidebar:  #F0EFEC;           /* Sidebar, secondary panes */
+  --surface-sidebar:  #f6f6f6;           /* Sidebar, secondary panes */
   --surface-raised:   #FAFAF8;           /* Cards hovering above base */
   --surface-overlay:  #FFFFFF;           /* Dropdowns, popovers, modals */
   --surface-hover:    rgba(0,0,0,0.04);  /* Generic hover background */
@@ -266,8 +266,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --surface-base:     #201F22;
-    --surface-sidebar:  #181719;
+    --surface-base:     #23272a;
+    --surface-sidebar:  #1e1d22;
     --surface-raised:   #252427;
     --surface-overlay:  #2A2930;
     --surface-hover:    rgba(255,255,255,0.05);
@@ -329,8 +329,8 @@
 }
 
 [data-theme="dark"] {
-  --surface-base:     #201F22;
-  --surface-sidebar:  #181719;
+  --surface-base:     #23272a;
+  --surface-sidebar:  #1e1d22;
   --surface-raised:   #252427;
   --surface-overlay:  #2A2930;
   --surface-hover:    rgba(255,255,255,0.05);
