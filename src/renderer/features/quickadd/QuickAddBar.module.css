@@ -133,7 +133,9 @@
   cursor: pointer;
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .tagMenuItem:hover,
@@ -173,3 +175,44 @@
   color: var(--accent);
 }
 
+.defaultChipRow {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+}
+
+.defaultDateChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background-color: var(--accent-muted);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  user-select: none;
+}
+
+.chipRemoveBtn {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0 2px;
+  margin-left: 2px;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
+}
+
+.chipRemoveBtn:hover {
+  opacity: 1;
+}

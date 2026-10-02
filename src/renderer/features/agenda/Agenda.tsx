@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { DailyAgenda } from './DailyAgenda.js';
-import { WeeklyAgenda } from './WeeklyAgenda.js';
 import { GoalsView } from './GoalsView.js';
 import { HabitTracker } from './HabitTracker.js';
 import styles from './Agenda.module.css';
 
-export type AgendaSubView = 'daily' | 'weekly' | 'goals' | 'habits';
+export type AgendaSubView = 'daily' | 'goals' | 'habits';
 
 export function Agenda(): React.ReactElement {
   const [activeSubView, setActiveSubView] = useState<AgendaSubView>('daily');
@@ -24,17 +23,6 @@ export function Agenda(): React.ReactElement {
           >
             <span>📅</span>
             <span>Daily Agenda</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeSubView === 'weekly'}
-            className={`${styles.tabItem} ${activeSubView === 'weekly' ? styles.tabItemActive : ''}`}
-            onClick={() => setActiveSubView('weekly')}
-          >
-            <span>📆</span>
-            <span>Weekly Agenda</span>
           </button>
 
           <button
@@ -64,7 +52,6 @@ export function Agenda(): React.ReactElement {
       {/* Subview Content */}
       <div className={styles.viewContent}>
         {activeSubView === 'daily' && <DailyAgenda />}
-        {activeSubView === 'weekly' && <WeeklyAgenda />}
         {activeSubView === 'goals' && <GoalsView />}
         {activeSubView === 'habits' && <HabitTracker />}
       </div>

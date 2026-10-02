@@ -1,0 +1,49 @@
+.timelinePanel {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.virtualContainer {
+  width: 100%;
+  position: relative;
+}
+
+.virtualItem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.emptyWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+}
+
+.taskRowDroppable {
+  width: 100%;
+  border-radius: var(--radius-md);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+/* Valid drop highlight when dragging over a task row */
+.dropActiveRow {
+  background-color: var(--accent-muted);
+  border-color: var(--accent-border);
+}
+
+/* Invalid drop (Overdue) hover on task row */
+.invalidDropRow {
+  cursor: not-allowed !important;
+}

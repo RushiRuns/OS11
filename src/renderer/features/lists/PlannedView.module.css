@@ -1,0 +1,71 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--surface-base);
+  position: relative;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--toolbar-height, 52px);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold, 700);
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: 10px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold, 600);
+  background-color: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+.contentSplit {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.quickAddRow {
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--surface-base);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}

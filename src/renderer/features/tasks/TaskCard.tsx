@@ -31,6 +31,8 @@ export interface TaskCardProps {
   onDuplicate?: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, task: Task) => void;
   onFileDrop?: (taskId: string, files: FileList) => void;
+  parentTitle?: string;
+  disableDrag?: boolean;
 }
 
 export function formatDateTime(
@@ -108,6 +110,8 @@ export const TaskCard = memo(function TaskCard({
   onDuplicate,
   onContextMenu,
   onFileDrop,
+  parentTitle,
+  disableDrag = false,
 }: TaskCardProps): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -118,9 +122,9 @@ export const TaskCard = memo(function TaskCard({
   const { selectedIds, isMultiSelectActive, toggleSelect, selectRange } = useSelectionStore();
   const isMultiSelected = selectedIds.has(task.id);
 
-  const taskTags = useTagStore((state) => state.getTagsForTask(task.id));
-  const loadTagsForTask = useTagStore((state) => state.loadTagsForTask);
-  const attachmentCount = useAttachmentStore((state) => state.countsByTaskId[task.id] ?? 0);
+  const taskTags = useTagStore(state => state.getTagsForTask(task.id));
+  const loadTagsForTask = useTagStore(state => state.loadTagsForTask);
+  const attachmentCount = useAttachmentStore(state => state.countsByTaskId[task.id] ?? 0);
 
   const formattedDueDate = useMemo(() => {
     return formatDateTime(task.due_date, task.due_time, task.all_day);
@@ -133,12 +137,10 @@ export const TaskCard = memo(function TaskCard({
     loadTagsForTask(task.id);
   }, [task.id, loadTagsForTask]);
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    isDragging,
-  } = useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
+    id: task.id,
+    disabled: disableDrag,
+  });
 
   // No transform/transition here on purpose: TaskList now shows a floating
   // DragOverlay preview that follows the pointer plus a separate drop-line
@@ -260,11 +262,11 @@ export const TaskCard = memo(function TaskCard({
       data-dragging={isDragging ? 'true' : 'false'}
       data-filedrop={fileOver ? 'true' : 'false'}
       onClick={handleClick}
-      onContextMenu={(e) => {
+      onContextMenu={e => {
         e.preventDefault();
         onContextMenu?.(e, task);
       }}
-      onDragOver={(e) => {
+      onDragOver={e => {
         // Only react to real OS file drags here. Internal task-card drags are
         // handled by dnd-kit and must never be intercepted by this handler.
         if (e.dataTransfer.types.includes('Files')) {
@@ -273,7 +275,7 @@ export const TaskCard = memo(function TaskCard({
         }
       }}
       onDragLeave={() => setFileOver(false)}
-      onDrop={async (e) => {
+      onDrop={async e => {
         setFileOver(false);
         // Only real OS files are handled here now. Task-to-task nesting is
         // handled by dnd-kit's onDragEnd in TaskList.tsx, not here.
@@ -287,7 +289,10 @@ export const TaskCard = memo(function TaskCard({
               const filePath = (e.dataTransfer.files[i] as unknown as { path?: string }).path;
               if (filePath) {
                 try {
-                  await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, { taskId: task.id, sourcePath: filePath });
+                  await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, {
+                    taskId: task.id,
+                    sourcePath: filePath,
+                  });
                 } catch {
                   // ignore
                 }
@@ -305,8 +310,8 @@ export const TaskCard = memo(function TaskCard({
       {(isMultiSelectActive || isMultiSelected) && (
         <div
           className={styles.multiSelectCheckboxWrap}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
             e.stopPropagation();
             if (e.shiftKey) {
               selectRange(allTaskIds || [], task.id);
@@ -330,8 +335,8 @@ export const TaskCard = memo(function TaskCard({
         <button
           type="button"
           className={`${styles.subtaskChevronBtn} ${isExpanded ? styles.subtaskChevronExpanded : ''}`}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
             e.stopPropagation();
             onToggleExpand?.(task.id);
           }}
@@ -358,8 +363,8 @@ export const TaskCard = memo(function TaskCard({
       {/* Checkbox */}
       <div
         className={`${styles.checkboxWrap} ${variant !== 'project' ? styles.circularCheckbox : ''}`}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => {
           e.stopPropagation();
           onToggleComplete?.(task.id);
         }}
@@ -374,6 +379,14 @@ export const TaskCard = memo(function TaskCard({
       {variant !== 'project' ? (
         /* Standard View: Multi-Layer Apple Reminders Layout */
         <div className={styles.contentColumn}>
+          {/* Optional parent task meta line for dated subtasks */}
+          {parentTitle && (
+            <div className={styles.parentMetaLine} title={`Subtask of ${parentTitle}`}>
+              <span className={styles.parentMetaIcon}>↳</span>
+              <span className={styles.parentMetaText}>{parentTitle}</span>
+            </div>
+          )}
+
           {/* Row 1: Title */}
           <div className={styles.titleArea}>
             {isEditing ? (
@@ -382,11 +395,11 @@ export const TaskCard = memo(function TaskCard({
                 type="text"
                 className={styles.titleInput}
                 value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
+                onChange={e => setEditTitle(e.target.value)}
                 onBlur={handleSaveTitle}
                 onKeyDown={handleKeyDown}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
                 aria-label={`Edit title for ${task.title}`}
               />
             ) : (
@@ -394,7 +407,7 @@ export const TaskCard = memo(function TaskCard({
                 className={`${styles.titleText} ${
                   task.is_completed === 1 ? styles.completedTitle : ''
                 }`}
-                onDoubleClick={(e) => {
+                onDoubleClick={e => {
                   e.stopPropagation();
                   setIsEditing(true);
                 }}
@@ -417,9 +430,7 @@ export const TaskCard = memo(function TaskCard({
             <div className={styles.metadataRow}>
               {formattedDueDate && (
                 <span
-                  className={`${styles.metaDate} ${
-                    isOverdue ? styles.metaDateOverdue : ''
-                  }`}
+                  className={`${styles.metaDate} ${isOverdue ? styles.metaDateOverdue : ''}`}
                   title={`Due: ${formattedDueDate}`}
                 >
                   {formattedDueDate}
@@ -434,18 +445,18 @@ export const TaskCard = memo(function TaskCard({
 
               {taskTags.length > 0 && (
                 <div className={styles.tagsGroup}>
-                  {taskTags.map((tag) => (
+                  {taskTags.map(tag => (
                     <span
                       key={tag.id}
                       className={styles.inlineTagPill}
                       role="button"
                       tabIndex={0}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={e => {
                         e.stopPropagation();
                         useAppStore.getState().setActiveListId(`tag:${tag.id}`);
                       }}
-                      onKeyDown={(e) => {
+                      onKeyDown={e => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.stopPropagation();
                           useAppStore.getState().setActiveListId(`tag:${tag.id}`);
@@ -504,11 +515,11 @@ export const TaskCard = memo(function TaskCard({
               type="text"
               className={styles.titleInput}
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
+              onChange={e => setEditTitle(e.target.value)}
               onBlur={handleSaveTitle}
               onKeyDown={handleKeyDown}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
               aria-label={`Edit title for ${task.title}`}
             />
           ) : (
@@ -516,7 +527,7 @@ export const TaskCard = memo(function TaskCard({
               className={`${styles.titleText} ${
                 task.is_completed === 1 ? styles.completedTitle : ''
               }`}
-              onDoubleClick={(e) => {
+              onDoubleClick={e => {
                 e.stopPropagation();
                 setIsEditing(true);
               }}
@@ -536,8 +547,8 @@ export const TaskCard = memo(function TaskCard({
               isOverdueAndCritical
                 ? styles.dueDateOverdueCritical
                 : isOverdue
-                ? styles.dueDateOverdue
-                : ''
+                  ? styles.dueDateOverdue
+                  : ''
             }`}
           >
             {formattedDueDate || task.due_date}
@@ -545,19 +556,19 @@ export const TaskCard = memo(function TaskCard({
         )}
 
         {variant === 'project' &&
-          taskTags.map((tag) => (
+          taskTags.map(tag => (
             <span
               key={tag.id}
               className={styles.tagDotPill}
               role="button"
               tabIndex={0}
               aria-label={`Filter by tag ${tag.name}`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => {
                 e.stopPropagation();
                 useAppStore.getState().setActiveListId(`tag:${tag.id}`);
               }}
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.stopPropagation();
                   useAppStore.getState().setActiveListId(`tag:${tag.id}`);
@@ -587,7 +598,10 @@ export const TaskCard = memo(function TaskCard({
         )}
 
         {attachmentCount > 0 && (
-          <span className={styles.badgePill} title={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}>
+          <span
+            className={styles.badgePill}
+            title={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}
+          >
             📎 ×{attachmentCount}
           </span>
         )}
@@ -597,13 +611,13 @@ export const TaskCard = memo(function TaskCard({
       {variant === 'project' && (
         <div
           className={styles.actionsRow}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
         >
           <button
             type="button"
             className={styles.iconButton}
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               setIsTagPickerOpen(true);
             }}
@@ -652,8 +666,8 @@ export const TaskCard = memo(function TaskCard({
         <button
           type="button"
           className={styles.sidebarTriggerBtn}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
             e.stopPropagation();
             onOpenDetail?.(task);
           }}
@@ -679,7 +693,7 @@ export const TaskCard = memo(function TaskCard({
       {isTagPickerOpen && (
         <TagPicker
           taskId={task.id}
-          selectedTagIds={taskTags.map((t) => t.id)}
+          selectedTagIds={taskTags.map(t => t.id)}
           onClose={() => setIsTagPickerOpen(false)}
         />
       )}

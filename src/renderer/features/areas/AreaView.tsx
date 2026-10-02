@@ -102,7 +102,7 @@ export function AreaView({
 
         {looseTasks.length === 0 ? (
           <div className={styles.emptyNotice}>
-            No loose tasks in this Area. Tasks created here don't belong to any project.
+            No loose tasks in this Area. Tasks created here don&apos;t belong to any project.
           </div>
         ) : (
           <div className={styles.taskList} role="list">

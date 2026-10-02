@@ -7,6 +7,9 @@ import { Sidebar } from './features/sidebar/Sidebar.js';
 import { TaskList } from './features/tasks/TaskList.js';
 import { DetailPanel } from './features/tasks/DetailPanel.js';
 import { MyDayView } from './features/lists/MyDayView.js';
+import { PlannedView } from './features/lists/PlannedView.js';
+import { useUndoRedoStore } from './hooks/useUndoRedo.js';
+import { formatForDisplay } from '@shared/utils/date.js';
 import { SuggestionsSidebar } from './features/lists/SuggestionsSidebar.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
@@ -76,20 +79,16 @@ function ViewSkeleton(): React.ReactElement {
 export function App(): React.ReactElement {
   const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
   const isMiniTimer = typeof window !== 'undefined' && window.location.hash.includes('mini-timer');
-  const isQuickAddModal = typeof window !== 'undefined' && window.location.hash.includes('quickadd-modal');
+  const isQuickAddModal =
+    typeof window !== 'undefined' && window.location.hash.includes('quickadd-modal');
 
-  const {
-    activeListId,
-    systemInfo,
-    fetchSystemInfo,
-    isSidebarVisible,
-    setSidebarVisible,
-  } = useAppStore();
+  const { activeListId, systemInfo, fetchSystemInfo, isSidebarVisible, setSidebarVisible } =
+    useAppStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Derive live task directly from Zustand store to ensure changes (e.g. priority) reflect instantly in sidebar
-  const liveSelectedTask = useTaskStore((state) =>
-    selectedTask?.id ? state.tasksById[selectedTask.id] ?? selectedTask : null
+  const liveSelectedTask = useTaskStore(state =>
+    selectedTask?.id ? (state.tasksById[selectedTask.id] ?? selectedTask) : null
   );
 
   // Auto-close detail sidebar if task is deleted or trashed
@@ -104,8 +103,8 @@ export function App(): React.ReactElement {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const isPomodoroFocus = usePomodoroStore((state) => state.isFocusMode);
-  const togglePomodoroFocus = usePomodoroStore((state) => state.toggleFocusMode);
+  const isPomodoroFocus = usePomodoroStore(state => state.isFocusMode);
+  const togglePomodoroFocus = usePomodoroStore(state => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
 
   useEffect(() => {
@@ -118,7 +117,7 @@ export function App(): React.ReactElement {
 
     // Check lock status
     invoke<{ isEnabled: boolean; isLocked: boolean }>(IPC.SECURITY.GET_STATUS)
-      .then((status) => {
+      .then(status => {
         if (status?.isLocked) {
           setIsLocked(true);
         }
@@ -127,9 +126,12 @@ export function App(): React.ReactElement {
 
     // Load initial settings and apply tokens
     invoke<Record<string, unknown>>(IPC.SETTINGS.GET_ALL)
-      .then((settings) => {
+      .then(settings => {
         if (settings) {
-          if (settings.onboarding_completed === false || settings.onboarding_completed === undefined) {
+          if (
+            settings.onboarding_completed === false ||
+            settings.onboarding_completed === undefined
+          ) {
             setIsOnboardingOpen(true);
           }
           if (settings.theme) applyTheme(settings.theme as 'auto');
@@ -143,7 +145,10 @@ export function App(): React.ReactElement {
 
     // Listen to theme and accent IPC events
     const unsubTheme = ipc.on(IPC.APP.SET_THEME, (data: unknown) => {
-      const payload = data as { theme?: 'auto' | 'dark' | 'light'; effectiveTheme?: 'dark' | 'light' };
+      const payload = data as {
+        theme?: 'auto' | 'dark' | 'light';
+        effectiveTheme?: 'dark' | 'light';
+      };
       if (payload) {
         applyTheme(payload.theme ?? 'auto', payload.effectiveTheme);
       }
@@ -168,22 +173,19 @@ export function App(): React.ReactElement {
       }
     });
 
-    const unsubFocus = ipc.on(
-      IPC.APP.FOCUS_QUICK_ADD,
-      (_event: unknown, payload?: unknown) => {
-        const data = payload as { navigateToInbox?: boolean } | undefined;
-        if (data?.navigateToInbox) {
-          useAppStore.getState().setActiveListId('list_inbox');
-        }
-        setTimeout(() => {
-          const quickAddInput = document.querySelector(
-            'input[placeholder*="Add a task"], textarea[placeholder*="Add a task"]'
-          ) as HTMLInputElement | HTMLTextAreaElement | null;
-          quickAddInput?.focus();
-          quickAddInput?.select();
-        }, 50);
+    const unsubFocus = ipc.on(IPC.APP.FOCUS_QUICK_ADD, (_event: unknown, payload?: unknown) => {
+      const data = payload as { navigateToInbox?: boolean } | undefined;
+      if (data?.navigateToInbox) {
+        useAppStore.getState().setActiveListId('list_inbox');
       }
-    );
+      setTimeout(() => {
+        const quickAddInput = document.querySelector(
+          'input[placeholder*="Add a task"], textarea[placeholder*="Add a task"]'
+        ) as HTMLInputElement | HTMLTextAreaElement | null;
+        quickAddInput?.focus();
+        quickAddInput?.select();
+      }, 50);
+    });
 
     const handleReplayOnboarding = () => {
       setIsOnboardingOpen(true);
@@ -191,7 +193,8 @@ export function App(): React.ReactElement {
     window.addEventListener('os11:replay-onboarding', handleReplayOnboarding);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const isMac =
+        typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
       if (
@@ -211,10 +214,10 @@ export function App(): React.ReactElement {
         if (isPomodoroFocus) togglePomodoroFocus();
       } else if (modKey && e.key.toLowerCase() === 'k' && !e.shiftKey) {
         e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
+        setIsCommandPaletteOpen(prev => !prev);
       } else if (modKey && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        setIsFocusMode((prev) => !prev);
+        setIsFocusMode(prev => !prev);
         togglePomodoroFocus();
       }
     };
@@ -322,13 +325,17 @@ export function App(): React.ReactElement {
             selectedTaskId={liveSelectedTask?.id}
             isSuggestionsOpen={isSuggestionsOpen}
             onToggleSuggestions={() => {
-              setIsSuggestionsOpen((prev) => {
+              setIsSuggestionsOpen(prev => {
                 const next = !prev;
                 if (next) setSelectedTask(null);
                 return next;
               });
             }}
           />
+        );
+      case 'smart_planned':
+        return (
+          <PlannedView onSelectTask={handleSelectTask} selectedTaskId={liveSelectedTask?.id} />
         );
       case 'view_dashboard':
         return (
@@ -361,12 +368,7 @@ export function App(): React.ReactElement {
           </Suspense>
         );
       default:
-        return (
-          <TaskList
-            onSelectTask={handleSelectTask}
-            selectedTaskId={liveSelectedTask?.id}
-          />
-        );
+        return <TaskList onSelectTask={handleSelectTask} selectedTaskId={liveSelectedTask?.id} />;
     }
   };
 
@@ -396,22 +398,60 @@ export function App(): React.ReactElement {
 
     if (overIdStr.startsWith('list:')) {
       const targetListId = overIdStr.slice(5);
-      console.log('[DragDrop] Drop commit on list:', targetListId, 'with payload:', { taskId: activeTaskId, target: overIdStr });
+      console.log('[DragDrop] Drop commit on list:', targetListId, 'with payload:', {
+        taskId: activeTaskId,
+        target: overIdStr,
+      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
       return;
     }
 
     if (overIdStr.startsWith('project:')) {
       const targetProjectId = overIdStr.slice(8);
-      console.log('[DragDrop] Drop commit on project:', targetProjectId, 'with payload:', { taskId: activeTaskId, target: overIdStr });
+      console.log('[DragDrop] Drop commit on project:', targetProjectId, 'with payload:', {
+        taskId: activeTaskId,
+        target: overIdStr,
+      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, project_id: targetProjectId });
       return;
     }
 
     if (overIdStr.startsWith('tag:')) {
       const targetTagId = overIdStr.slice(4);
-      console.log('[DragDrop] Drop commit on tag:', targetTagId, 'with payload:', { taskId: activeTaskId, target: overIdStr });
+      console.log('[DragDrop] Drop commit on tag:', targetTagId, 'with payload:', {
+        taskId: activeTaskId,
+        target: overIdStr,
+      });
       await useTagStore.getState().addTagToTask(activeTaskId, targetTagId);
+      return;
+    }
+
+    const overData = over.data?.current as
+      { type?: string; targetDropDateISO?: string; kind?: string } | undefined;
+
+    if (overData?.type === 'planned-group') {
+      if (overData.kind === 'overdue' || !overData.targetDropDateISO) {
+        // Overdue groups are not drop targets (no-op)
+        return;
+      }
+
+      const targetDate = overData.targetDropDateISO;
+      const target = useTaskStore.getState().tasksById[activeTaskId];
+      if (!target) return;
+      const prevDueDate = target.due_date;
+
+      await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: targetDate });
+
+      const displayDate = formatForDisplay(targetDate);
+      useUndoRedoStore.getState().pushAction({
+        description: `Moved to ${displayDate}`,
+        undoFn: async () => {
+          await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: prevDueDate });
+        },
+        redoFn: async () => {
+          await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: targetDate });
+        },
+      });
       return;
     }
   };
@@ -422,9 +462,7 @@ export function App(): React.ReactElement {
       {isLocked && <AppLockScreen onUnlock={() => setIsLocked(false)} />}
 
       {/* Onboarding Flow for First Launch or Replay */}
-      {isOnboardingOpen && (
-        <OnboardingFlow onComplete={() => setIsOnboardingOpen(false)} />
-      )}
+      {isOnboardingOpen && <OnboardingFlow onComplete={() => setIsOnboardingOpen(false)} />}
 
       {/* Recurring Review Manager */}
       <ReviewManager />
@@ -433,7 +471,7 @@ export function App(): React.ReactElement {
       <Titlebar
         title="OS11"
         version={systemInfo?.version}
-        onToggleAlwaysOnTop={(pinned) => {
+        onToggleAlwaysOnTop={pinned => {
           ipc.invoke(IPC.APP.SET_ALWAYS_ON_TOP, { pinned }).catch(console.error);
         }}
       />
@@ -446,7 +484,7 @@ export function App(): React.ReactElement {
             setIsFocusMode(false);
             if (isPomodoroFocus) togglePomodoroFocus();
           }}
-          onSelectTask={(task) => setSelectedTask(task)}
+          onSelectTask={task => setSelectedTask(task)}
         />
       ) : (
         <DndContext
@@ -468,7 +506,9 @@ export function App(): React.ReactElement {
             </div>
 
             {/* Column 2: Center Main Content (TaskList, MyDayView, or Lazy View) */}
-            <main className={`${layoutStyles.mainCol} ${!isSidebarVisible ? layoutStyles.mainColSidebarHidden : ''}`}>
+            <main
+              className={`${layoutStyles.mainCol} ${!isSidebarVisible ? layoutStyles.mainColSidebarHidden : ''}`}
+            >
               {!isSidebarVisible && !effectiveFocusMode && (
                 <button
                   type="button"
@@ -523,7 +563,7 @@ export function App(): React.ReactElement {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onToggleFocusMode={() => {
-          setIsFocusMode((prev) => !prev);
+          setIsFocusMode(prev => !prev);
           togglePomodoroFocus();
         }}
       />

@@ -419,7 +419,7 @@ Each task supports:
 Inspired by Microsoft To Do:
 - **My Day** — User curates daily focus tasks.
 - **Important** — All starred/flagged tasks.
-- **Planned** — Tasks with a due date.
+- **Planned** — Synchronized two-panel layout: a grouped, virtualized Timeline (Overdue, Today, Tomorrow, This Week by weekday, Next Week, Later by month) on the left and a persistent month grid Mini-Calendar with task density heatmap dots on the right, supporting drag-to-reschedule.
 - **Assigned to Me** — Tasks assigned to this device's user (Phase 2).
 - **All Tasks** — Everything.
 - **Completed** — Finished tasks, grouped by date.
@@ -514,12 +514,7 @@ Switch between views per project:
 
 > **Extreme Convenience:** Dragging an unscheduled task from the sidebar onto a time slot in the Agenda sets both the due time and creates a time block in one gesture.
 
-### 10.2 Weekly Agenda
-- 7-day scrollable timeline view.
-- Blocked time visible (work hours, meetings imported from calendar integration).
-- "Load balancing" indicator — warns if a day is over-packed.
-
-### 10.3 Goals
+### 10.2 Goals
 - **Goal** → set a high-level objective with a target date.
 - Link tasks and projects to a goal.
 - **Progress bar** calculated from completion of linked tasks.
@@ -527,7 +522,7 @@ Switch between views per project:
 - **Goal streaks** — tracks consecutive days of progress.
 - Weekly review prompt: "How's your goal going? Any blockers?"
 
-### 10.4 Habit Tracker (Optional Module)
+### 10.3 Habit Tracker (Optional Module)
 - Mark specific tasks as habits.
 - Visual streak calendar (GitHub contributions-style heatmap).
 - Habit chain view showing all habits and today's check-off status.

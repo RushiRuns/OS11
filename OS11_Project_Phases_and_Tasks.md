@@ -1214,11 +1214,6 @@ One service per domain. Validation happens in domain functions called from here.
   - Drag unscheduled task onto a time slot → sets `due_time` for that task
   - "Load balancing" indicator: color-coded header (green < 5 tasks / amber 5–10 / red > 10)
   - Morning summary desktop notification sent at user-configured time via `ReminderService`
-- [x] Create `src/renderer/features/agenda/WeeklyAgenda.tsx` + `.module.css`
-  - 7-day scrollable column view
-  - Calendar events shown alongside tasks (if calendar integration enabled)
-  - Load balancing indicator per day
-  - Drag tasks between days to reschedule due dates
 
 ### Goals
 

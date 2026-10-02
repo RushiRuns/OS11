@@ -1,0 +1,66 @@
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--planned-header-height, 32px);
+  padding: 0 var(--space-3);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  user-select: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.labelWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.groupLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold, 600);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.overdueLabel {
+  color: var(--color-danger, #e74c3c);
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  background-color: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+.overdueBadge {
+  background-color: rgba(231, 76, 60, 0.12);
+  color: var(--color-danger, #e74c3c);
+}
+
+/* Valid drop target hover */
+.dropActive {
+  background-color: var(--accent-muted);
+  border-color: var(--accent-border);
+}
+
+/* Invalid drop target (Overdue) hover */
+.invalidDropActive {
+  background-color: rgba(231, 76, 60, 0.08);
+  border-color: rgba(231, 76, 60, 0.25);
+  cursor: not-allowed !important;
+  opacity: 0.8;
+}

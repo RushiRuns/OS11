@@ -141,7 +141,9 @@ export function Sidebar(): React.ReactElement {
       const next = { ...prev, [areaId]: prev[areaId] === undefined ? false : !prev[areaId] };
       try {
         localStorage.setItem('os11:sidebar_expanded_areas', JSON.stringify(next));
-      } catch {}
+      } catch {
+        // ignore storage errors
+      }
       return next;
     });
   };

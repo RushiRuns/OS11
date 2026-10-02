@@ -30,6 +30,10 @@
 | `usePomodoroStore` | `src/renderer/stores/pomodoroStore.ts` | Zustand store for active focus session countdown, cycle progression, sound alerts, and tray/window sync | Renderer global |
 | `useGoalStore` | `src/renderer/stores/goalStore.ts` | Normalized Zustand goal store (`goalsById`, `linksByGoalId`) with progress tracking and task-goal link management | Renderer global |
 | `useAttachmentStore` | `src/renderer/stores/attachmentStore.ts` | Attachment counts and global attachment index store for task cards and command palette search | Renderer global |
+| `useToday` | `src/renderer/hooks/useToday.ts` | Returns today's ISO date string (`YYYY-MM-DD`); auto-updates at midnight and on focus/resume | Component scope |
+| `useMonthGrid` | `src/renderer/hooks/useMonthGrid.ts` | Shared 42-cell Monday–Sunday month grid builder with keyboard navigation | Component scope |
+| `usePlannedGroups` | `src/renderer/hooks/usePlannedGroups.ts` | Memoized partitioning of dated incomplete tasks into chronological buckets | Component scope |
+| `useCalendarDots` | `src/renderer/hooks/useCalendarDots.ts` | Computes incomplete dated task density map per visible calendar date cell | Component scope |
 
 ---
 
@@ -82,9 +86,13 @@
 | `RecurrencePicker` | `src/renderer/features/tasks/RecurrencePicker.tsx` | No | No (CSS transitions) | Recurrence rule modal with presets, custom interval/frequency builder, natural language preview, after-completion toggle, and skip occurrence |
 | `ReminderEditor` | `src/renderer/features/tasks/ReminderEditor.tsx` | No | No (CSS transitions) | Multi-reminder editor in DetailPanel with presets (at due, 1h before, 1d before), custom picker, and delete controls |
 | `ProgressBar` | `src/renderer/components/ProgressBar/ProgressBar.tsx` | No | No (CSS transitions) | Dynamic progress bar with `thin` (4px) and `standard` (8px) heights and semantic tokenized fills (`primary`, `success`, `warning`) |
-| `Agenda` | `src/renderer/features/agenda/Agenda.tsx` | No | No (CSS transitions) | Lazy-loaded top-level view with 4-tab segmented switcher (`Daily Agenda`, `Weekly Agenda`, `Goals`, `Habits`) |
+| `Agenda` | `src/renderer/features/agenda/Agenda.tsx` | No | No (CSS transitions) | Lazy-loaded top-level view with 3-tab segmented switcher (`Daily Agenda`, `Goals`, `Habits`) |
 | `DailyAgenda` | `src/renderer/features/agenda/DailyAgenda.tsx` | No | No (CSS transitions) | Daily timeline view (8 AM – 9 PM) with overdue task pinning, time-block slots, drag rescheduling, and load balancing indicator |
-| `WeeklyAgenda` | `src/renderer/features/agenda/WeeklyAgenda.tsx` | No | No (CSS transitions) | 7-day horizontal scrollable column view with calendar event overlays, load balancing, and cross-day drag-rescheduling |
+| `WeeklyAgenda` | *(Retired)* | — | — | *Retired: Dropped in favor of PlannedView cross-project grouped timeline* |
+| `PlannedView` | `src/renderer/features/lists/PlannedView.tsx` | No | No (CSS transitions) | Planned smart list container orchestrating grouped timeline, mini-calendar, and QuickAdd |
+| `PlannedTimeline` | `src/renderer/features/lists/PlannedTimeline.tsx` | No | No (CSS transitions) | Virtualized flat list of date group headers and task cards with instant drag rescheduling |
+| `PlannedDateGroup` | `src/renderer/features/lists/PlannedDateGroup.tsx` | No | No (CSS transitions) | Date group header row acting as droppable target for date rescheduling (disabled on overdue) |
+| `PlannedMiniCalendar` | `src/renderer/features/lists/PlannedMiniCalendar.tsx` | Uses `Button`, `Tooltip` | No (CSS transitions) | 240px persistent month grid with task density dots, jump navigation, and DetailPanel auto-fade |
 | `GoalsView` | `src/renderer/features/agenda/GoalsView.tsx` | Uses `ProgressBar` | No (CSS transitions) | Goals dashboard with type categorization (Habit, Milestone, Outcome), progress bars, streak flame counters, and Friday check-in banner |
 | `HabitTracker` | `src/renderer/features/agenda/HabitTracker.tsx` | No | No (CSS transitions) | 52-week × 7-day GitHub-style completion heatmap with 5 tokenized intensity levels and interactive habit chain check-off cards |
 | `Dashboard` | `src/renderer/features/dashboard/Dashboard.tsx` | No | No (CSS transitions) | Performance metrics dashboard with 4 hero cards, date range selector, PDF/CSV exports, and 5 Recharts visualizations |

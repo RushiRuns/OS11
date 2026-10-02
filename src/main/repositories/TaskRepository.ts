@@ -118,7 +118,7 @@ export class TaskRepository extends BaseRepository {
   public getPlanned(): Task[] {
     const stmt = this.db.prepare(`
       SELECT * FROM tasks
-      WHERE due_date IS NOT NULL AND is_trashed = 0
+      WHERE due_date IS NOT NULL AND is_trashed = 0 AND is_completed = 0
       ORDER BY due_date ASC, due_time ASC, sort_order ASC
     `);
     return stmt.all() as Task[];

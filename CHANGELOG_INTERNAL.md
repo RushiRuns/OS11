@@ -3,6 +3,24 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-03] — Planned view rebuilt: grouped timeline + persistent mini-calendar, replaces flat due-date list; WeeklyAgenda dropped from Phase 13 scope.
+- **What was built:**
+  - `src/renderer/features/lists/PlannedView.tsx` + `PlannedView.module.css`: Split-panel layout container orchestrating the chronological timeline on the left and persistent month grid on the right with QuickAdd and Undo Toast.
+  - `src/renderer/features/lists/PlannedTimeline.tsx` + `PlannedTimeline.module.css`: High-performance flat virtualized list combining date headers and task rows in a single `@tanstack/react-virtual` list; supports jump navigation to nearest populated groups.
+  - `src/renderer/features/lists/PlannedDateGroup.tsx` + `PlannedDateGroup.module.css`: Group header row and `@dnd-kit/core` droppable target for date rescheduling (disabled on overdue).
+  - `src/renderer/features/lists/PlannedMiniCalendar.tsx` + `PlannedMiniCalendar.module.css`: 240px month grid with task density dots, keyboard navigation, and smooth auto-fade transition when DetailPanel opens.
+  - `src/renderer/hooks/useToday.ts`: Auto-refreshing today ISO string hook that re-ticks at midnight and on window focus/resume.
+  - `src/renderer/hooks/useMonthGrid.ts`: Shared 42-cell Monday–Sunday month grid builder with keyboard navigation.
+  - `src/renderer/hooks/usePlannedGroups.ts`: Pure memoized chronological partitioner (Overdue, Today, Tomorrow, This Week, Next Week, Later).
+  - `src/renderer/hooks/useCalendarDots.ts`: Task density map aggregator per visible calendar cell.
+- **What changed architecturally:**
+  - Updated `TaskRepository.getPlanned()` SQL query to add `AND is_completed = 0` to exclude completed tasks at the query level.
+  - Updated `TaskCard.tsx` with optional `parentTitle` prop for standalone dated subtask rows and `disableDrag` prop.
+  - Updated `QuickAddBar.tsx` with optional `defaultDueDate` prop rendering a removable "Due <date>" chip when adding tasks in Planned view.
+  - Retired standalone `WeeklyAgenda.tsx` and removed its tab from `Agenda.tsx` to prevent maintaining duplicate schedule views.
+
+---
+
 ### [2026-09-14] — Phase 19 complete: Testing, QA, performance verified, release build v1.0.0
 - **What was built:**
   - Complete Unit & Domain Test Suites (100% domain coverage target):

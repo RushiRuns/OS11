@@ -59,7 +59,7 @@ describe('Minimalist ViewSwitcher Feature Tests', () => {
 
     expect(element.props.onUpdateViews).toBeDefined();
     // Simulate updating views to include calendar
-    element.props.onUpdateViews(['list', 'board', 'calendar']);
+    element.props.onUpdateViews?.(['list', 'board', 'calendar']);
     expect(onUpdateViews).toHaveBeenCalledWith(['list', 'board', 'calendar']);
   });
 });

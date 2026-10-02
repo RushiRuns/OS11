@@ -9,13 +9,19 @@ import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { ParsedQuickAddResult } from '@shared/types/nlp.js';
 import type { Tag } from '@shared/types/Tag.js';
-import { parseInlineTaskInput, tokenizeInlineSyntax, type InlineSyntaxToken } from '@shared/utils/inline-task-parser.js';
+import {
+  parseInlineTaskInput,
+  tokenizeInlineSyntax,
+  type InlineSyntaxToken,
+} from '@shared/utils/inline-task-parser.js';
+import { formatForDisplay } from '@shared/utils/date.js';
 import { ParsePreviewChip } from './ParsePreviewChip.js';
 import styles from './QuickAddBar.module.css';
 
 interface QuickAddBarProps {
   placeholder?: string;
   onAdded?: () => void;
+  defaultDueDate?: string | null;
 }
 
 interface AutocompleteMenuOption {
@@ -36,10 +42,18 @@ interface MenuState {
 export function QuickAddBar({
   placeholder = "Add a task (e.g. 'my first task :notes description: #work')...",
   onAdded,
+  defaultDueDate,
 }: QuickAddBarProps): React.ReactElement {
   const [input, setInput] = useState('');
   const [parsed, setParsed] = useState<ParsedQuickAddResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeDefaultDueDate, setActiveDefaultDueDate] = useState<string | null>(
+    defaultDueDate ?? null
+  );
+
+  useEffect(() => {
+    setActiveDefaultDueDate(defaultDueDate ?? null);
+  }, [defaultDueDate]);
 
   // Floating Autocomplete Menu state (# tags, @ areas, / projects)
   const [menuState, setMenuState] = useState<MenuState | null>(null);
@@ -50,7 +64,7 @@ export function QuickAddBar({
 
   const { activeListId } = useAppStore();
   const { createTask } = useTaskStore();
-  const isNlpEnabled = useModuleStore((state) => state.isEnabled('nlp_parsing'));
+  const isNlpEnabled = useModuleStore(state => state.isEnabled('nlp_parsing'));
 
   const { areasById, loadAreas } = useAreaStore();
   const { projectsById, loadProjects } = useProjectStore();
@@ -151,12 +165,10 @@ export function QuickAddBar({
     const q = query.toLowerCase();
 
     if (prefix === '#') {
-      const existing = Object.values(tagsById).filter((t) =>
-        t.name.toLowerCase().startsWith(q)
-      );
+      const existing = Object.values(tagsById).filter(t => t.name.toLowerCase().startsWith(q));
 
-      const exactMatch = existing.find((t) => t.name.toLowerCase() === q);
-      const options: AutocompleteMenuOption[] = existing.map((t) => ({
+      const exactMatch = existing.find(t => t.name.toLowerCase() === q);
+      const options: AutocompleteMenuOption[] = existing.map(t => ({
         type: 'tag',
         prefix: '#',
         name: t.name,
@@ -177,10 +189,8 @@ export function QuickAddBar({
     }
 
     if (prefix === '@') {
-      const existing = Object.values(areasById).filter((a) =>
-        a.name.toLowerCase().includes(q)
-      );
-      return existing.map((a) => ({
+      const existing = Object.values(areasById).filter(a => a.name.toLowerCase().includes(q));
+      return existing.map(a => ({
         type: 'area',
         prefix: '@',
         name: a.name,
@@ -191,9 +201,9 @@ export function QuickAddBar({
 
     if (prefix === '/') {
       const existing = Object.values(projectsById).filter(
-        (p) => p.status !== 'archived' && p.name.toLowerCase().includes(q)
+        p => p.status !== 'archived' && p.name.toLowerCase().includes(q)
       );
-      return existing.map((p) => ({
+      return existing.map(p => ({
         type: 'project',
         prefix: '/',
         name: p.name,
@@ -272,7 +282,7 @@ export function QuickAddBar({
       if (inlineParsed.areaName) {
         const lowerArea = inlineParsed.areaName.toLowerCase();
         const areas = Object.values(useAreaStore.getState().areasById);
-        const matched = areas.find((a) => a.name.toLowerCase() === lowerArea);
+        const matched = areas.find(a => a.name.toLowerCase() === lowerArea);
         if (matched) {
           targetAreaId = matched.id;
           targetProjectId = null;
@@ -283,7 +293,7 @@ export function QuickAddBar({
       if (inlineParsed.projectName) {
         const lowerProj = inlineParsed.projectName.toLowerCase();
         const projects = Object.values(useProjectStore.getState().projectsById);
-        const matched = projects.find((p) => p.name.toLowerCase() === lowerProj);
+        const matched = projects.find(p => p.name.toLowerCase() === lowerProj);
         if (matched) {
           targetProjectId = matched.id;
           if (matched.area_id) {
@@ -312,6 +322,16 @@ export function QuickAddBar({
         myDayDate = new Date().toISOString().split('T')[0];
       }
 
+      if (activeListId === 'smart_planned') {
+        targetAreaId = null;
+        targetProjectId = null;
+        if (!dueDate && activeDefaultDueDate) {
+          dueDate = activeDefaultDueDate;
+        }
+      } else if (!dueDate && activeDefaultDueDate) {
+        dueDate = activeDefaultDueDate;
+      }
+
       // Create the task with contextual and parsed fields
       const createdTask = await createTask({
         title,
@@ -330,7 +350,7 @@ export function QuickAddBar({
       // Link or create all extracted tags
       for (const tagName of extractedTags) {
         const lower = tagName.toLowerCase();
-        let tag = Object.values(tagsById).find((t) => t.name.toLowerCase() === lower);
+        let tag = Object.values(tagsById).find(t => t.name.toLowerCase() === lower);
         if (!tag) {
           try {
             tag = await createTag({
@@ -367,17 +387,17 @@ export function QuickAddBar({
     if (menuState && menuOptions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlightedMenuIndex((prev) => (prev + 1) % menuOptions.length);
+        setHighlightedMenuIndex(prev => (prev + 1) % menuOptions.length);
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlightedMenuIndex((prev) => (prev - 1 + menuOptions.length) % menuOptions.length);
+        setHighlightedMenuIndex(prev => (prev - 1 + menuOptions.length) % menuOptions.length);
         return;
       }
       if (e.key === 'Tab') {
         e.preventDefault();
-        setHighlightedMenuIndex((prev) => (prev + 1) % menuOptions.length);
+        setHighlightedMenuIndex(prev => (prev + 1) % menuOptions.length);
         return;
       }
       if (e.key === 'Enter') {
@@ -477,7 +497,7 @@ export function QuickAddBar({
                 className={`${styles.tagMenuItem} ${idx === highlightedMenuIndex ? styles.tagMenuItemActive : ''}`}
                 role="option"
                 aria-selected={idx === highlightedMenuIndex}
-                onMouseDown={(e) => {
+                onMouseDown={e => {
                   e.preventDefault();
                   applyOption(opt);
                 }}
@@ -487,9 +507,7 @@ export function QuickAddBar({
                 <span className={styles.tagMenuName}>
                   {opt.type === 'tag-create' ? `Create this tag #${opt.name}` : opt.name}
                 </span>
-                {opt.badge && (
-                  <span className={badgeClass}>{opt.badge}</span>
-                )}
+                {opt.badge && <span className={badgeClass}>{opt.badge}</span>}
               </div>
             );
           })}
@@ -497,12 +515,26 @@ export function QuickAddBar({
       )}
 
       {/* Dynamic NLP preview chips */}
-      {isNlpEnabled && parsed && (
-        <ParsePreviewChip parsed={parsed} />
+      {isNlpEnabled && parsed && <ParsePreviewChip parsed={parsed} />}
+
+      {/* Removable default due date chip (e.g. Planned view date context) */}
+      {activeDefaultDueDate && !parsed?.dueDate && (
+        <div className={styles.defaultChipRow}>
+          <span className={styles.defaultDateChip}>
+            <span>📅 Due {formatForDisplay(activeDefaultDueDate)}</span>
+            <button
+              type="button"
+              className={styles.chipRemoveBtn}
+              onClick={() => setActiveDefaultDueDate(null)}
+              aria-label="Remove default due date"
+            >
+              ✕
+            </button>
+          </span>
+        </div>
       )}
     </div>
   );
 }
 
 export default QuickAddBar;
-
