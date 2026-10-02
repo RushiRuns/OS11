@@ -164,6 +164,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       status: payload.status ?? 'active',
       due_date: payload.due_date ?? null,
       default_view: payload.default_view ?? 'list',
+      views: payload.views && payload.views.length > 0 ? payload.views : [payload.default_view ?? 'list'],
       sort_order: payload.sort_order ?? Date.now(),
       group_id: payload.group_id ?? null,
       is_pinned:

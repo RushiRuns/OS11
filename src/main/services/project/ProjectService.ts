@@ -31,9 +31,19 @@ export class ProjectService {
     if (!payload.name || payload.name.trim().length === 0) {
       throw new Error('Project name is required.');
     }
+    if (payload.views !== undefined && payload.views.length === 0) {
+      throw new Error('A project must have at least one view enabled.');
+    }
+    let defaultView = payload.default_view;
+    if (payload.views && payload.views.length > 0) {
+      if (!defaultView || !payload.views.includes(defaultView)) {
+        defaultView = payload.views[0];
+      }
+    }
     return this.repository.create({
       ...payload,
       name: payload.name.trim(),
+      ...(defaultView !== undefined ? { default_view: defaultView } : {}),
     });
   }
 
@@ -41,10 +51,28 @@ export class ProjectService {
     if (fields.name !== undefined && fields.name.trim().length === 0) {
       throw new Error('Project name cannot be empty.');
     }
-    return this.repository.update(id, {
+    if (fields.views !== undefined && fields.views.length === 0) {
+      throw new Error('A project must have at least one view enabled.');
+    }
+    let defaultView = fields.default_view;
+    if (fields.views !== undefined && fields.views.length > 0) {
+      const current = this.repository.getById(id);
+      const targetDefault = defaultView ?? current?.default_view;
+      if (targetDefault && !fields.views.includes(targetDefault)) {
+        defaultView = fields.views[0];
+      }
+    }
+    const updated = this.repository.update(id, {
       ...fields,
       ...(fields.name !== undefined ? { name: fields.name.trim() } : {}),
+      ...(defaultView !== undefined ? { default_view: defaultView } : {}),
     });
+
+    if (fields.area_id) {
+      this.taskRepo.updateAreaByProjectId(id, fields.area_id);
+    }
+
+    return updated;
   }
 
   public archive(id: string): void {

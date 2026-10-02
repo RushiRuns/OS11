@@ -195,7 +195,9 @@ export function tokenizeInlineSyntax(input: string): InlineSyntaxToken[] {
 }
 
 function tokenizeTitleAndEntities(text: string, tokens: InlineSyntaxToken[]): void {
-  const parts = text.split(/(#[a-zA-Z0-9_\-\u00C0-\u017F]+|@[a-zA-Z0-9_\-\u00C0-\u017F]+|\/[a-zA-Z0-9_\-\u00C0-\u017F]+)/g);
+  const parts = text.split(
+    /(#[a-zA-Z0-9_\-\u00C0-\u017F]+|@(?:"[^"]*"|'[^']*'|[a-zA-Z0-9_\-\u00C0-\u017F]+)|\/(?:"[^"]*"|'[^']*'|[a-zA-Z0-9_\-\u00C0-\u017F]+))/g
+  );
   for (const part of parts) {
     if (!part) continue;
     if (part.startsWith('#')) {

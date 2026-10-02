@@ -25,9 +25,43 @@ export class AreaRepository extends BaseRepository {
     return res?.count ?? 0;
   }
 
+  public getDefault(): Area | null {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM areas
+        ORDER BY is_default DESC, sort_order ASC, created_at ASC
+        LIMIT 1
+      `);
+      const res = stmt.get() as Area | undefined;
+      return res ?? null;
+    } catch {
+      const stmt = this.db.prepare(`
+        SELECT * FROM areas
+        ORDER BY sort_order ASC, created_at ASC
+        LIMIT 1
+      `);
+      const res = stmt.get() as Area | undefined;
+      return res ?? null;
+    }
+  }
+
+  private hasIsDefaultCol: boolean | null = null;
+  private hasIsDefault(): boolean {
+    if (this.hasIsDefaultCol === null) {
+      try {
+        const cols = this.db.pragma('table_info(areas)') as Array<{ name: string }>;
+        this.hasIsDefaultCol = cols.some((c) => c.name === 'is_default');
+      } catch {
+        this.hasIsDefaultCol = false;
+      }
+    }
+    return this.hasIsDefaultCol;
+  }
+
   public create(payload: CreateAreaPayload): Area {
     const id = uuidv4();
     const now = new Date().toISOString();
+    const hasDefault = this.hasIsDefault();
 
     const record: Area = {
       id,
@@ -41,12 +75,20 @@ export class AreaRepository extends BaseRepository {
       updated_at: now,
     };
 
-    const stmt = this.db.prepare(`
-      INSERT INTO areas (id, workspace_id, name, icon, color, sort_order, is_collapsed, created_at, updated_at)
-      VALUES (@id, @workspace_id, @name, @icon, @color, @sort_order, @is_collapsed, @created_at, @updated_at)
-    `);
-
-    stmt.run(record);
+    if (hasDefault) {
+      record.is_default = 0;
+      const stmt = this.db.prepare(`
+        INSERT INTO areas (id, workspace_id, name, icon, color, sort_order, is_collapsed, is_default, created_at, updated_at)
+        VALUES (@id, @workspace_id, @name, @icon, @color, @sort_order, @is_collapsed, @is_default, @created_at, @updated_at)
+      `);
+      stmt.run(record);
+    } else {
+      const stmt = this.db.prepare(`
+        INSERT INTO areas (id, workspace_id, name, icon, color, sort_order, is_collapsed, created_at, updated_at)
+        VALUES (@id, @workspace_id, @name, @icon, @color, @sort_order, @is_collapsed, @created_at, @updated_at)
+      `);
+      stmt.run(record);
+    }
     return record;
   }
 

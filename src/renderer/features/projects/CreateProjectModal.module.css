@@ -231,3 +231,104 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.viewChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.viewChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 8px;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.viewChipActive {
+  background-color: var(--surface-base);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.viewChipCheckbox {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-on-accent);
+  transition: all var(--transition-fast);
+}
+
+.viewChipCheckbox:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.viewChipCheckboxActive {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.viewChipCheckboxDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.viewChipMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.viewChipIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.viewChipLabel {
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.01em;
+}
+
+.defaultBadge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  background-color: rgba(27, 136, 255, 0.14);
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+.viewsHint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+

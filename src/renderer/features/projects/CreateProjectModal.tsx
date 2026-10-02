@@ -3,8 +3,9 @@ import { Dialog } from '../../components/primitives/Dialog/Dialog.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useListStore } from '../../stores/listStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
-import type { Project } from '@shared/types/index.js';
+import type { Project, ProjectViewMode } from '@shared/types/index.js';
 import { EmojiPicker } from '../../components/EmojiPicker/EmojiPicker.js';
+import { renderViewIcon, CheckIcon } from './ProjectViewIcons.js';
 import styles from './CreateProjectModal.module.css';
 
 interface CreateProjectModalProps {
@@ -27,12 +28,12 @@ const PRESET_COLORS = [
   '#34495E', // Slate
 ];
 
-const DEFAULT_VIEWS: Array<{ value: 'list' | 'board' | 'timeline' | 'calendar' | 'table'; label: string }> = [
-  { value: 'list', label: 'List' },
-  { value: 'board', label: 'Board' },
-  { value: 'timeline', label: 'Timeline' },
-  { value: 'calendar', label: 'Calendar' },
-  { value: 'table', label: 'Table' },
+const ALL_VIEWS: Array<{ id: ProjectViewMode; label: string }> = [
+  { id: 'list', label: 'List' },
+  { id: 'board', label: 'Board' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'table', label: 'Table' },
 ];
 
 export function CreateProjectModal({
@@ -52,7 +53,8 @@ export function CreateProjectModal({
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('📁');
   const [color, setColor] = useState(PRESET_COLORS[0]);
-  const [defaultView, setDefaultView] = useState<'list' | 'board' | 'timeline' | 'calendar' | 'table'>('list');
+  const [selectedViews, setSelectedViews] = useState<ProjectViewMode[]>(['list']);
+  const [defaultView, setDefaultView] = useState<ProjectViewMode>('list');
   const [groupId, setGroupId] = useState<string>('');
   const [areaId, setAreaId] = useState<string>('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -66,7 +68,16 @@ export function CreateProjectModal({
       setDescription(projectToEdit.description ?? '');
       setIcon(projectToEdit.icon ?? '📁');
       setColor(projectToEdit.color ?? PRESET_COLORS[0]);
-      setDefaultView(projectToEdit.default_view ?? 'list');
+      const editViews =
+        projectToEdit.views && projectToEdit.views.length > 0
+          ? projectToEdit.views
+          : [projectToEdit.default_view ?? 'list'];
+      setSelectedViews(editViews);
+      setDefaultView(
+        projectToEdit.default_view && editViews.includes(projectToEdit.default_view)
+          ? projectToEdit.default_view
+          : editViews[0] ?? 'list'
+      );
       setGroupId(projectToEdit.group_id ?? '');
       setAreaId(projectToEdit.area_id ?? orderedAreaIds[0] ?? 'area_default');
       setShowEmojiPicker(false);
@@ -78,6 +89,7 @@ export function CreateProjectModal({
       setDescription('');
       setIcon('📁');
       setColor(PRESET_COLORS[0]);
+      setSelectedViews(['list']);
       setDefaultView('list');
       setGroupId(initialGroupId ?? '');
       setAreaId(initialAreaId ?? orderedAreaIds[0] ?? 'area_default');
@@ -105,6 +117,27 @@ export function CreateProjectModal({
     }
   };
 
+  const handleToggleViewSelection = (viewId: ProjectViewMode) => {
+    if (selectedViews.includes(viewId)) {
+      if (selectedViews.length <= 1) return;
+      const remaining = selectedViews.filter((v) => v !== viewId);
+      setSelectedViews(remaining);
+      if (defaultView === viewId) {
+        setDefaultView(remaining[0]);
+      }
+    } else {
+      setSelectedViews([...selectedViews, viewId]);
+    }
+  };
+
+  const handleSelectOrSetDefault = (viewId: ProjectViewMode) => {
+    if (!selectedViews.includes(viewId)) {
+      setSelectedViews([...selectedViews, viewId]);
+    } else {
+      setDefaultView(viewId);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -118,6 +151,7 @@ export function CreateProjectModal({
           color,
           icon,
           default_view: defaultView,
+          views: selectedViews,
           area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
         });
@@ -130,6 +164,7 @@ export function CreateProjectModal({
           color,
           icon,
           default_view: defaultView,
+          views: selectedViews,
           area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
         });
@@ -286,18 +321,60 @@ export function CreateProjectModal({
         </div>
 
         <div className={styles.fieldGroup}>
-          <label className={styles.label}>Default View</label>
-          <select
-            className={styles.selectInput}
-            value={defaultView}
-            onChange={(e) => setDefaultView(e.target.value as Project['default_view'])}
-          >
-            {DEFAULT_VIEWS.map((v) => (
-              <option key={v.value} value={v.value}>
-                {v.label}
-              </option>
-            ))}
-          </select>
+          <div className={styles.labelRow}>
+            <label className={styles.label}>Views</label>
+            <span className={styles.viewsHint}>Tap checkbox to toggle. Tap label to set default.</span>
+          </div>
+          <div className={styles.viewChips} role="group" aria-label="Available project views">
+            {ALL_VIEWS.map((v) => {
+              const isSelected = selectedViews.includes(v.id);
+              const isDefault = defaultView === v.id;
+              const isOnlySelected = isSelected && selectedViews.length === 1;
+
+              return (
+                <div
+                  key={v.id}
+                  className={`${styles.viewChip} ${isSelected ? styles.viewChipActive : ''}`}
+                >
+                  <button
+                    type="button"
+                    className={`${styles.viewChipCheckbox} ${
+                      isSelected ? styles.viewChipCheckboxActive : ''
+                    } ${isOnlySelected ? styles.viewChipCheckboxDisabled : ''}`}
+                    onClick={() => handleToggleViewSelection(v.id)}
+                    disabled={isOnlySelected}
+                    title={
+                      isOnlySelected
+                        ? 'At least one view must be enabled'
+                        : isSelected
+                        ? `Remove ${v.label} view`
+                        : `Enable ${v.label} view`
+                    }
+                    aria-label={`Toggle ${v.label} view`}
+                    aria-pressed={isSelected}
+                  >
+                    {isSelected && <CheckIcon size={11} />}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.viewChipMain}
+                    onClick={() => handleSelectOrSetDefault(v.id)}
+                    title={
+                      isSelected
+                        ? isDefault
+                          ? `${v.label} is the default view`
+                          : `Click to set ${v.label} as default view`
+                        : `Enable ${v.label} view`
+                    }
+                  >
+                    <span className={styles.viewChipIcon}>{renderViewIcon(v.id, 14)}</span>
+                    <span className={styles.viewChipLabel}>{v.label}</span>
+                    {isDefault && <span className={styles.defaultBadge}>Default</span>}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className={styles.fieldGroup}>

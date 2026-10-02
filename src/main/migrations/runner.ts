@@ -20,6 +20,17 @@ export function runMigrations(db: Database.Database, migrationsDir: string): voi
 
     const fileVersion = parseInt(versionMatch[1], 10);
     if (fileVersion > currentVersion) {
+      // Create backup before applying migration on real database files
+      if (db.name && db.name !== ':memory:' && fs.existsSync(db.name)) {
+        try {
+          const backupPath = `${db.name}.pre-v${fileVersion}.bak`;
+          fs.copyFileSync(db.name, backupPath);
+          console.log(`[OS11 Migration] Backed up database to ${backupPath}`);
+        } catch (backupErr) {
+          console.warn('[OS11 Migration] Database backup failed, proceeding with caution:', backupErr);
+        }
+      }
+
       console.log(`[OS11 Migration] Applying ${file} (target v${fileVersion})...`);
       const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
       

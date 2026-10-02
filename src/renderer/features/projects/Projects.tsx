@@ -57,11 +57,35 @@ export function Projects(): React.ReactElement {
 
   const currentProject = selectedProjectId ? projectsById[selectedProjectId] : null;
 
-  const currentView: ProjectViewMode = currentProject?.default_view ?? 'list';
+  const availableViews: ProjectViewMode[] = useMemo(() => {
+    if (!currentProject?.views || currentProject.views.length === 0) {
+      return ['list', 'board', 'timeline', 'calendar', 'table'];
+    }
+    return currentProject.views;
+  }, [currentProject?.views]);
+
+  const currentView: ProjectViewMode = useMemo(() => {
+    if (currentProject?.default_view && availableViews.includes(currentProject.default_view)) {
+      return currentProject.default_view;
+    }
+    return availableViews[0] ?? 'list';
+  }, [currentProject?.default_view, availableViews]);
 
   const handleViewChange = async (view: ProjectViewMode) => {
     if (currentProject) {
       await updateProject(currentProject.id, { default_view: view });
+    }
+  };
+
+  const handleUpdateViews = async (views: ProjectViewMode[]) => {
+    if (currentProject) {
+      const nextDefaultView = views.includes(currentProject.default_view)
+        ? currentProject.default_view
+        : views[0];
+      await updateProject(currentProject.id, {
+        views,
+        default_view: nextDefaultView,
+      });
     }
   };
 
@@ -127,6 +151,7 @@ export function Projects(): React.ReactElement {
             milestones={projectMilestones}
             currentView={currentView}
             onViewChange={handleViewChange}
+            onUpdateViews={handleUpdateViews}
             onOpenMilestones={() => setIsMilestonesModalOpen(true)}
             onOpenTemplates={() => setIsTemplateModalOpen(true)}
           />

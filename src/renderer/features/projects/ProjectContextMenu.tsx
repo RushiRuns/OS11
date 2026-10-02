@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Project } from '@shared/types/index.js';
-import { useListStore } from '../../stores/listStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import styles from '../lists/ListContextMenu.module.css';
@@ -19,6 +20,7 @@ interface ProjectContextMenuProps {
   onArchive: (project: Project) => void;
   onDelete: (project: Project) => void;
   onTogglePin?: (project: Project) => void;
+  onMoveToArea?: (project: Project, areaId: string) => void;
   onMoveToGroup?: (project: Project, groupId: string | null) => void;
   onCreateGroupAndMove?: (project: Project) => void;
 }
@@ -31,12 +33,12 @@ export function ProjectContextMenu({
   onArchive,
   onDelete,
   onTogglePin,
-  onMoveToGroup,
-  onCreateGroupAndMove,
+  onMoveToArea,
 }: ProjectContextMenuProps): React.ReactElement | null {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [showFolderSubmenu, setShowFolderSubmenu] = useState(false);
-  const { listGroupsById, orderedGroupIds } = useListStore();
+  const [showAreaSubmenu, setShowAreaSubmenu] = useState(false);
+  const { areasById, orderedAreaIds } = useAreaStore();
+  const updateProject = useProjectStore((state) => state.updateProject);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -56,7 +58,7 @@ export function ProjectContextMenu({
   const posY = Math.min(position.y, window.innerHeight - menuHeight - 8);
 
   const submenuWidth = 180;
-  const submenuHeight = Math.min(320, (orderedGroupIds.length + 3) * 32);
+  const submenuHeight = Math.min(320, (orderedAreaIds.length + 1) * 32);
   const submenuPosX =
     posX + menuWidth + submenuWidth <= window.innerWidth - 8
       ? posX + menuWidth - 4
@@ -78,25 +80,26 @@ export function ProjectContextMenu({
         style={{ left: posX, top: posY }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Pin / Unpin */}
         {onTogglePin && (
           <button
             type="button"
             className={styles.menuItem}
-            onMouseEnter={() => setShowFolderSubmenu(false)}
+            onMouseEnter={() => setShowAreaSubmenu(false)}
             onClick={() => {
               onClose();
               onTogglePin(project);
             }}
           >
             <span>📌</span>
-            <span>{project.is_pinned === 1 ? 'Unpin from Top' : 'Pin to Top'}</span>
+            <span>{(project.is_pinned ?? 0) === 1 ? 'Unpin from Top' : 'Pin to Top'}</span>
           </button>
         )}
 
         <button
           type="button"
           className={styles.menuItem}
-          onMouseEnter={() => setShowFolderSubmenu(false)}
+          onMouseEnter={() => setShowAreaSubmenu(false)}
           onClick={() => {
             onClose();
             onEdit(project);
@@ -106,16 +109,16 @@ export function ProjectContextMenu({
           <span>Edit Project</span>
         </button>
 
-        {/* Move to Folder */}
+        {/* Move to Area */}
         <button
           type="button"
           className={`${styles.menuItem} ${styles.submenuTrigger}`}
-          onMouseEnter={() => setShowFolderSubmenu(true)}
-          onClick={() => setShowFolderSubmenu((v) => !v)}
+          onMouseEnter={() => setShowAreaSubmenu(true)}
+          onClick={() => setShowAreaSubmenu((v) => !v)}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <span>📁</span>
-            <span>Move to Folder</span>
+            <span>Move to Area</span>
           </span>
           <span className={styles.submenuArrow}>▸</span>
         </button>
@@ -123,7 +126,7 @@ export function ProjectContextMenu({
         <button
           type="button"
           className={styles.menuItem}
-          onMouseEnter={() => setShowFolderSubmenu(false)}
+          onMouseEnter={() => setShowAreaSubmenu(false)}
           onClick={() => {
             onClose();
             onArchive(project);
@@ -138,7 +141,7 @@ export function ProjectContextMenu({
         <button
           type="button"
           className={styles.menuItem}
-          onMouseEnter={() => setShowFolderSubmenu(false)}
+          onMouseEnter={() => setShowAreaSubmenu(false)}
           onClick={() => {
             onClose();
             ipc.invoke(IPC.APP.TOGGLE_DEV_TOOLS).catch(() => {});
@@ -153,7 +156,7 @@ export function ProjectContextMenu({
         <button
           type="button"
           className={`${styles.menuItem} ${styles.menuItemDanger}`}
-          onMouseEnter={() => setShowFolderSubmenu(false)}
+          onMouseEnter={() => setShowAreaSubmenu(false)}
           onClick={() => {
             onClose();
             onDelete(project);
@@ -164,8 +167,8 @@ export function ProjectContextMenu({
         </button>
       </div>
 
-      {/* Submenu for Folders */}
-      {showFolderSubmenu && (
+      {/* Submenu for Areas */}
+      {showAreaSubmenu && (
         <div
           className={styles.menu}
           style={{
@@ -174,56 +177,32 @@ export function ProjectContextMenu({
             minWidth: submenuWidth,
             zIndex: 1002,
           }}
-          onMouseEnter={() => setShowFolderSubmenu(true)}
+          onMouseEnter={() => setShowAreaSubmenu(true)}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            type="button"
-            className={styles.menuItem}
-            onClick={() => {
-              onClose();
-              onMoveToGroup?.(project, null);
-            }}
-          >
-            <span className={styles.checkIcon}>{!project.group_id ? '✓' : ''}</span>
-            <span>No folder (Root)</span>
-          </button>
-
-          {orderedGroupIds.length > 0 && <div className={styles.separator} />}
-
-          {orderedGroupIds.map((gid) => {
-            const grp = listGroupsById[gid];
-            if (!grp) return null;
-            const isSelected = project.group_id === grp.id;
+          {orderedAreaIds.map((aid) => {
+            const area = areasById[aid];
+            if (!area) return null;
+            const isSelected = project.area_id === area.id;
             return (
               <button
-                key={grp.id}
+                key={area.id}
                 type="button"
                 className={styles.menuItem}
-                onClick={() => {
+                onClick={async () => {
                   onClose();
-                  onMoveToGroup?.(project, grp.id);
+                  if (onMoveToArea) {
+                    onMoveToArea(project, area.id);
+                  } else {
+                    await updateProject(project.id, { area_id: area.id });
+                  }
                 }}
               >
                 <span className={styles.checkIcon}>{isSelected ? '✓' : ''}</span>
-                <span>📁 {grp.name}</span>
+                <span>{area.icon || '📁'} {area.name}</span>
               </button>
             );
           })}
-
-          <div className={styles.separator} />
-
-          <button
-            type="button"
-            className={styles.menuItem}
-            onClick={() => {
-              onClose();
-              onCreateGroupAndMove?.(project);
-            }}
-          >
-            <span className={styles.emptyCheck} />
-            <span>+ New Folder...</span>
-          </button>
         </div>
       )}
     </div>

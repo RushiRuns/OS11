@@ -3,22 +3,25 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import type { DistributionStat } from '@shared/types/index.js';
 
 interface TaskDistributionPieProps {
-  byList: DistributionStat[];
+  byList?: DistributionStat[];
+  byProject?: DistributionStat[];
   byTag: DistributionStat[];
   byPriority: DistributionStat[];
 }
 
-type DistributionMode = 'list' | 'tag' | 'priority';
+type DistributionMode = 'project' | 'tag' | 'priority';
 
 export const TaskDistributionPie: React.FC<TaskDistributionPieProps> = ({
   byList,
+  byProject,
   byTag,
   byPriority,
 }) => {
-  const [mode, setMode] = useState<DistributionMode>('list');
+  const [mode, setMode] = useState<DistributionMode>('project');
 
+  const projectData = byProject ?? byList ?? [];
   const currentData =
-    mode === 'list' ? byList : mode === 'tag' ? byTag : byPriority;
+    mode === 'project' ? projectData : mode === 'tag' ? byTag : byPriority;
 
   const totalTasks = currentData.reduce((acc, curr) => acc + curr.count, 0);
 
@@ -61,7 +64,7 @@ export const TaskDistributionPie: React.FC<TaskDistributionPieProps> = ({
               color: 'var(--text-secondary)',
             }}
           >
-            Breakdown of tasks across lists, tags, and priorities
+            Breakdown of tasks across projects, tags, and priorities
           </p>
         </div>
 
@@ -77,20 +80,20 @@ export const TaskDistributionPie: React.FC<TaskDistributionPieProps> = ({
         >
           <button
             type="button"
-            onClick={() => setMode('list')}
+            onClick={() => setMode('project')}
             style={{
               padding: 'var(--space-1) var(--space-3)',
               fontSize: 'var(--text-xs)',
-              fontWeight: mode === 'list' ? 'var(--weight-medium)' : 'var(--weight-normal)',
-              color: mode === 'list' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              backgroundColor: mode === 'list' ? 'var(--surface-raised)' : 'transparent',
+              fontWeight: mode === 'project' ? 'var(--weight-medium)' : 'var(--weight-normal)',
+              color: mode === 'project' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              backgroundColor: mode === 'project' ? 'var(--surface-raised)' : 'transparent',
               border: 'none',
               borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
               transition: 'background-color 150ms var(--ease-out)',
             }}
           >
-            By List
+            By Project
           </button>
           <button
             type="button"

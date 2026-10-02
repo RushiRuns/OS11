@@ -18,10 +18,19 @@ interface QuickAddBarProps {
   onAdded?: () => void;
 }
 
-interface TagMenuOption {
-  type: 'existing' | 'create';
-  tag?: Tag;
+interface AutocompleteMenuOption {
+  type: 'tag' | 'area' | 'project' | 'tag-create';
+  prefix: '#' | '@' | '/';
   name: string;
+  badge?: string;
+  tag?: Tag;
+  id?: string;
+}
+
+interface MenuState {
+  prefix: '#' | '@' | '/';
+  query: string;
+  startIndex: number;
 }
 
 export function QuickAddBar({
@@ -32,9 +41,8 @@ export function QuickAddBar({
   const [parsed, setParsed] = useState<ParsedQuickAddResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Floating Tag Menu state
-  const [tagMenuQuery, setTagMenuQuery] = useState<string | null>(null);
-  const [tagMenuStartIndex, setTagMenuStartIndex] = useState<number>(-1);
+  // Floating Autocomplete Menu state (# tags, @ areas, / projects)
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
   const [highlightedMenuIndex, setHighlightedMenuIndex] = useState<number>(0);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -44,11 +52,15 @@ export function QuickAddBar({
   const { createTask } = useTaskStore();
   const isNlpEnabled = useModuleStore((state) => state.isEnabled('nlp_parsing'));
 
+  const { areasById, loadAreas } = useAreaStore();
+  const { projectsById, loadProjects } = useProjectStore();
   const { tagsById, loadTags, createTag, addTagToTask } = useTagStore();
 
   useEffect(() => {
     loadTags();
-  }, [loadTags]);
+    loadAreas();
+    loadProjects();
+  }, [loadTags, loadAreas, loadProjects]);
 
   // Ctrl+N / Cmd+N keyboard shortcut focus
   useEffect(() => {
@@ -99,20 +111,23 @@ export function QuickAddBar({
     [isNlpEnabled]
   );
 
-  // Check if cursor is right after a `#<word>` pattern to show tag suggestions
-  const evaluateTagMenu = useCallback((text: string, position: number) => {
+  // Check if cursor is right after a `#`, `@`, or `/` pattern to show autocomplete suggestions
+  const evaluateMenu = useCallback((text: string, position: number) => {
     const textBeforeCursor = text.slice(0, position);
-    const match = textBeforeCursor.match(/(?:^|\s)#([a-zA-Z0-9_\-\u00C0-\u017F]+)$/);
+    const match = textBeforeCursor.match(/(?:^|\s)(#|@|\/)([a-zA-Z0-9_\-\u00C0-\u017F]*)$/);
 
     if (match) {
-      const query = match[1];
-      const matchStart = textBeforeCursor.lastIndexOf('#' + query);
-      setTagMenuQuery(query);
-      setTagMenuStartIndex(matchStart);
+      const prefix = match[1] as '#' | '@' | '/';
+      const query = match[2];
+      const matchStart = textBeforeCursor.lastIndexOf(prefix + query);
+      setMenuState({
+        prefix,
+        query,
+        startIndex: matchStart,
+      });
       setHighlightedMenuIndex(0);
     } else {
-      setTagMenuQuery(null);
-      setTagMenuStartIndex(-1);
+      setMenuState(null);
     }
   }, []);
 
@@ -121,61 +136,107 @@ export function QuickAddBar({
     const pos = e.target.selectionStart ?? val.length;
     setInput(val);
     requestParse(val);
-    evaluateTagMenu(val, pos);
+    evaluateMenu(val, pos);
   };
 
   const handleSelectOrClick = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const pos = (e.target as HTMLTextAreaElement).selectionStart ?? 0;
-    evaluateTagMenu(input, pos);
+    evaluateMenu(input, pos);
   };
 
-  // Build menu options based on tagMenuQuery
-  const tagMenuOptions = useMemo<TagMenuOption[]>(() => {
-    if (!tagMenuQuery) return [];
-    const q = tagMenuQuery.toLowerCase();
-    const existing = Object.values(tagsById).filter((t) =>
-      t.name.toLowerCase().startsWith(q)
-    );
+  // Build menu options based on menuState
+  const menuOptions = useMemo<AutocompleteMenuOption[]>(() => {
+    if (!menuState) return [];
+    const { prefix, query } = menuState;
+    const q = query.toLowerCase();
 
-    const exactMatch = existing.find((t) => t.name.toLowerCase() === q);
-    const options: TagMenuOption[] = existing.map((t) => ({
-      type: 'existing',
-      tag: t,
-      name: t.name,
-    }));
+    if (prefix === '#') {
+      const existing = Object.values(tagsById).filter((t) =>
+        t.name.toLowerCase().startsWith(q)
+      );
 
-    if (!exactMatch && tagMenuQuery.trim().length > 0) {
-      options.push({
-        type: 'create',
-        name: tagMenuQuery.trim(),
-      });
+      const exactMatch = existing.find((t) => t.name.toLowerCase() === q);
+      const options: AutocompleteMenuOption[] = existing.map((t) => ({
+        type: 'tag',
+        prefix: '#',
+        name: t.name,
+        tag: t,
+        id: t.id,
+      }));
+
+      if (!exactMatch && query.trim().length > 0) {
+        options.push({
+          type: 'tag-create',
+          prefix: '#',
+          name: query.trim(),
+          badge: 'New',
+        });
+      }
+
+      return options;
     }
 
-    return options;
-  }, [tagMenuQuery, tagsById]);
+    if (prefix === '@') {
+      const existing = Object.values(areasById).filter((a) =>
+        a.name.toLowerCase().includes(q)
+      );
+      return existing.map((a) => ({
+        type: 'area',
+        prefix: '@',
+        name: a.name,
+        badge: 'Area',
+        id: a.id,
+      }));
+    }
 
-  // Apply chosen tag from menu into the text
-  const applyTagOption = useCallback(
-    (option: TagMenuOption) => {
-      if (tagMenuStartIndex < 0 || !tagMenuQuery) return;
+    if (prefix === '/') {
+      const existing = Object.values(projectsById).filter(
+        (p) => p.status !== 'archived' && p.name.toLowerCase().includes(q)
+      );
+      return existing.map((p) => ({
+        type: 'project',
+        prefix: '/',
+        name: p.name,
+        badge: 'Project',
+        id: p.id,
+      }));
+    }
 
-      const before = input.slice(0, tagMenuStartIndex);
-      const after = input.slice(tagMenuStartIndex + tagMenuQuery.length + 1); // +1 for '#'
-      const newText = `${before}#${option.name} ${after}`;
+    return [];
+  }, [menuState, tagsById, areasById, projectsById]);
+
+  // Apply chosen option from menu into the text
+  const applyOption = useCallback(
+    (option: AutocompleteMenuOption) => {
+      if (!menuState) return;
+
+      const { startIndex, query } = menuState;
+      const before = input.slice(0, startIndex);
+      const after = input.slice(startIndex + query.length + 1); // +1 for trigger prefix
+
+      let insertedToken = '';
+      if (option.prefix === '#') {
+        insertedToken = `#${option.name} `;
+      } else if (option.prefix === '@') {
+        insertedToken = option.name.includes(' ') ? `@"${option.name}" ` : `@${option.name} `;
+      } else if (option.prefix === '/') {
+        insertedToken = option.name.includes(' ') ? `/"${option.name}" ` : `/${option.name} `;
+      }
+
+      const newText = `${before}${insertedToken}${after}`;
 
       setInput(newText);
-      setTagMenuQuery(null);
-      setTagMenuStartIndex(-1);
+      setMenuState(null);
 
       setTimeout(() => {
         if (inputRef.current) {
-          const newPos = before.length + option.name.length + 2;
+          const newPos = before.length + insertedToken.length;
           inputRef.current.focus();
           inputRef.current.setSelectionRange(newPos, newPos);
         }
       }, 0);
     },
-    [input, tagMenuStartIndex, tagMenuQuery]
+    [input, menuState]
   );
 
   const handleSubmit = async () => {
@@ -225,7 +286,9 @@ export function QuickAddBar({
         const matched = projects.find((p) => p.name.toLowerCase() === lowerProj);
         if (matched) {
           targetProjectId = matched.id;
-          targetAreaId = matched.area_id ?? targetAreaId;
+          if (matched.area_id) {
+            targetAreaId = matched.area_id;
+          }
         }
       }
 
@@ -290,7 +353,7 @@ export function QuickAddBar({
       // Clear input and parsed preview
       setInput('');
       setParsed(null);
-      setTagMenuQuery(null);
+      setMenuState(null);
       onAdded?.();
     } catch (err) {
       console.error('[QuickAddBar] Failed to create task:', err);
@@ -300,34 +363,34 @@ export function QuickAddBar({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // If floating tag menu is visible
-    if (tagMenuQuery && tagMenuOptions.length > 0) {
+    // If floating autocomplete menu is visible
+    if (menuState && menuOptions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlightedMenuIndex((prev) => (prev + 1) % tagMenuOptions.length);
+        setHighlightedMenuIndex((prev) => (prev + 1) % menuOptions.length);
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlightedMenuIndex((prev) => (prev - 1 + tagMenuOptions.length) % tagMenuOptions.length);
+        setHighlightedMenuIndex((prev) => (prev - 1 + menuOptions.length) % menuOptions.length);
         return;
       }
       if (e.key === 'Tab') {
         e.preventDefault();
-        setHighlightedMenuIndex((prev) => (prev + 1) % tagMenuOptions.length);
+        setHighlightedMenuIndex((prev) => (prev + 1) % menuOptions.length);
         return;
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        const selected = tagMenuOptions[highlightedMenuIndex];
+        const selected = menuOptions[highlightedMenuIndex];
         if (selected) {
-          applyTagOption(selected);
+          applyOption(selected);
         }
         return;
       }
       if (e.key === 'Escape') {
         e.preventDefault();
-        setTagMenuQuery(null);
+        setMenuState(null);
         return;
       }
     }
@@ -365,6 +428,10 @@ export function QuickAddBar({
                   tokenClass = styles.tokenNotes;
                 } else if (token.type === 'tag') {
                   tokenClass = styles.tokenTag;
+                } else if (token.type === 'area') {
+                  tokenClass = styles.tokenArea;
+                } else if (token.type === 'project') {
+                  tokenClass = styles.tokenProject;
                 } else if (token.type === 'delimiter') {
                   tokenClass = styles.tokenDelimiter;
                 }
@@ -393,30 +460,39 @@ export function QuickAddBar({
         </div>
       </div>
 
-      {/* Floating Tag Autocomplete Menu */}
-      {tagMenuQuery && tagMenuOptions.length > 0 && (
-        <div className={styles.tagMenu} role="listbox" aria-label="Tag suggestions">
-          {tagMenuOptions.map((opt, idx) => (
-            <div
-              key={`${opt.type}-${opt.name}`}
-              className={`${styles.tagMenuItem} ${idx === highlightedMenuIndex ? styles.tagMenuItemActive : ''}`}
-              role="option"
-              aria-selected={idx === highlightedMenuIndex}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                applyTagOption(opt);
-              }}
-              onMouseEnter={() => setHighlightedMenuIndex(idx)}
-            >
-              <span className={styles.tagMenuHash}>#</span>
-              <span className={styles.tagMenuName}>
-                {opt.type === 'create' ? `Create this tag #${opt.name}` : opt.name}
-              </span>
-              {opt.type === 'create' && (
-                <span className={styles.tagMenuBadge}>New</span>
-              )}
-            </div>
-          ))}
+      {/* Floating Autocomplete Menu (# tags, @ areas, / projects) */}
+      {menuState && menuOptions.length > 0 && (
+        <div className={styles.tagMenu} role="listbox" aria-label="Suggestions">
+          {menuOptions.map((opt, idx) => {
+            let badgeClass = styles.tagMenuBadge;
+            if (opt.type === 'project') {
+              badgeClass = `${styles.tagMenuBadge} ${styles.tagMenuBadgeProject}`;
+            } else if (opt.type === 'area') {
+              badgeClass = `${styles.tagMenuBadge} ${styles.tagMenuBadgeArea}`;
+            }
+
+            return (
+              <div
+                key={`${opt.type}-${opt.name}-${idx}`}
+                className={`${styles.tagMenuItem} ${idx === highlightedMenuIndex ? styles.tagMenuItemActive : ''}`}
+                role="option"
+                aria-selected={idx === highlightedMenuIndex}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  applyOption(opt);
+                }}
+                onMouseEnter={() => setHighlightedMenuIndex(idx)}
+              >
+                <span className={styles.tagMenuHash}>{opt.prefix}</span>
+                <span className={styles.tagMenuName}>
+                  {opt.type === 'tag-create' ? `Create this tag #${opt.name}` : opt.name}
+                </span>
+                {opt.badge && (
+                  <span className={badgeClass}>{opt.badge}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

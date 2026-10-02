@@ -141,12 +141,13 @@ export class TaskService {
       assignee_device_id: identity.id,
     });
 
-    // Auto-tag rules: if list_id is assigned, check settings 'auto_tag_rules'
-    if (task.list_id) {
+    // Auto-tag rules: if project_id, area_id, or list_id is assigned, check settings 'auto_tag_rules'
+    const targetContainer = task.project_id || task.area_id || task.list_id;
+    if (targetContainer) {
       try {
         const rules = this.settingsRepo.get<Record<string, string[]>>('auto_tag_rules');
-        if (rules && rules[task.list_id] && Array.isArray(rules[task.list_id])) {
-          for (const tagId of rules[task.list_id]) {
+        if (rules && rules[targetContainer] && Array.isArray(rules[targetContainer])) {
+          for (const tagId of rules[targetContainer]) {
             this.tagRepo.addTagToTask(task.id, tagId);
           }
         }
@@ -209,12 +210,28 @@ export class TaskService {
 
     const updated = this.taskRepo.update(id, actualFields);
 
+    // If project_id or area_id was modified on this task, cascade to all child subtasks recursively
+    if (actualFields.project_id !== undefined || actualFields.area_id !== undefined) {
+      this.cascadeContainerToSubtasks(id, updated.area_id ?? null, updated.project_id ?? null);
+    }
+
     // Notify worker thread to update index
     workerManager.send('INDEX_TASK', { id: updated.id, title: updated.title, notes: updated.notes }).catch(() => {
       // Best-effort notification
     });
 
     return updated;
+  }
+
+  private cascadeContainerToSubtasks(parentId: string, areaId: string | null, projectId: string | null): void {
+    const subtasks = this.taskRepo.getSubtasks(parentId);
+    for (const sub of subtasks) {
+      this.taskRepo.update(sub.id, {
+        area_id: areaId,
+        project_id: projectId,
+      });
+      this.cascadeContainerToSubtasks(sub.id, areaId, projectId);
+    }
   }
 
   public complete(id: string, options?: { skipRecurrence?: boolean }): Task {
@@ -237,6 +254,7 @@ export class TaskService {
         this.create({
           title: existing.title,
           notes: existing.notes,
+          area_id: existing.area_id,
           list_id: existing.list_id,
           project_id: existing.project_id,
           section_id: existing.section_id,
@@ -363,6 +381,7 @@ export class TaskService {
     return this.create({
       title: `${existing.title} (Copy)`,
       notes: existing.notes,
+      area_id: existing.area_id,
       list_id: existing.list_id,
       project_id: existing.project_id,
       section_id: existing.section_id,

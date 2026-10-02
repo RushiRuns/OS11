@@ -221,6 +221,7 @@ export const IPC = {
     GET_PRODUCTIVE_HOUR: 'analytics:get-productive-hour',
     GET_COMPLETIONS_BY_DAY: 'analytics:get-completions-by-day',
     GET_TASKS_BY_LIST: 'analytics:get-tasks-by-list',
+    GET_TASKS_BY_PROJECT: 'analytics:get-tasks-by-project',
     GET_TASKS_BY_TAG: 'analytics:get-tasks-by-tag',
     GET_TASKS_BY_PRIORITY: 'analytics:get-tasks-by-priority',
     GET_POMODORO_STATS: 'analytics:get-pomodoro-stats',

@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelectionStore } from '../../stores/selectionStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
-import { useListStore } from '../../stores/listStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 import styles from './BulkActionBar.module.css';
 
 export function BulkActionBar(): React.ReactElement {
   const { selectedIds, isMultiSelectActive, clearSelection } = useSelectionStore();
   const { tasksById, updateTask, deleteTask, restoreTask } = useTaskStore();
-  const { listsById } = useListStore();
+  const areas = useAreaStore((state) => state.orderedAreaIds.map((id) => state.areasById[id]).filter(Boolean));
+  const projects = useProjectStore((state) => Object.values(state.projectsById).filter((p) => p.status !== 'archived'));
   const { pushAction } = useUndoRedo();
 
   const [showPriorityPopover, setShowPriorityPopover] = useState(false);
@@ -60,9 +62,14 @@ export function BulkActionBar(): React.ReactElement {
     clearSelection();
   };
 
-  const handleBulkMove = async (listId: string) => {
+  const handleBulkMove = async (target: { area_id: string | null; project_id: string | null }) => {
     for (const id of idsArray) {
-      await updateTask({ id, list_id: listId });
+      await updateTask({
+        id,
+        area_id: target.area_id,
+        project_id: target.project_id,
+        list_id: target.project_id,
+      });
     }
     setShowMovePopover(false);
     clearSelection();
@@ -174,18 +181,45 @@ export function BulkActionBar(): React.ReactElement {
               </button>
 
               {showMovePopover && (
-                <div className={styles.moveListPopover}>
-                  {Object.values(listsById).map((l) => (
-                    <button
-                      key={l.id}
-                      type="button"
-                      className={styles.moveListItem}
-                      onClick={() => handleBulkMove(l.id)}
-                    >
-                      <span>{l.icon || '•'}</span>
-                      <span>{l.name}</span>
-                    </button>
-                  ))}
+                <div className={styles.moveListPopover} style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                  {/* Inbox */}
+                  <button
+                    type="button"
+                    className={styles.moveListItem}
+                    onClick={() => handleBulkMove({ area_id: null, project_id: null })}
+                  >
+                    <span>📥</span>
+                    <span>Inbox</span>
+                  </button>
+
+                  {/* Areas & Projects */}
+                  {areas.map((area) => {
+                    const areaProjects = projects.filter((p) => p.area_id === area.id);
+                    return (
+                      <React.Fragment key={area.id}>
+                        <button
+                          type="button"
+                          className={styles.moveListItem}
+                          onClick={() => handleBulkMove({ area_id: area.id, project_id: null })}
+                        >
+                          <span>{area.icon || '📁'}</span>
+                          <span>{area.name} (Loose)</span>
+                        </button>
+                        {areaProjects.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className={styles.moveListItem}
+                            style={{ paddingLeft: '24px' }}
+                            onClick={() => handleBulkMove({ area_id: p.area_id ?? area.id, project_id: p.id })}
+                          >
+                            <span>{p.icon || '📁'}</span>
+                            <span>{p.name}</span>
+                          </button>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
               )}
             </div>

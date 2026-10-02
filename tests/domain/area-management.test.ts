@@ -34,6 +34,7 @@ describe('OS11 Unified Area Data Model (Workspace → Area → Project → Task 
       '0006_pin_lists_and_projects.sql',
       '0007_inbox_default_smart_list.sql',
       '0008_area_model.sql',
+      '0009_area_model_hardening.sql',
     ];
 
     for (const file of incrementalMigrations) {

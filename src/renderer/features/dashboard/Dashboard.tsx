@@ -27,7 +27,7 @@ export function Dashboard(): React.ReactElement {
   const [productiveHour, setProductiveHour] = useState<ProductiveHourStat | null>(null);
   const [completions, setCompletions] = useState<CompletionDayStat[]>([]);
   const [yearCompletions, setYearCompletions] = useState<CompletionDayStat[]>([]);
-  const [byList, setByList] = useState<DistributionStat[]>([]);
+  const [byProject, setByProject] = useState<DistributionStat[]>([]);
   const [byTag, setByTag] = useState<DistributionStat[]>([]);
   const [byPriority, setByPriority] = useState<DistributionStat[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -85,7 +85,7 @@ export function Dashboard(): React.ReactElement {
         ipc.invoke<ProductiveHourStat>(IPC.ANALYTICS.GET_PRODUCTIVE_HOUR),
         ipc.invoke<CompletionDayStat[]>(IPC.ANALYTICS.GET_COMPLETIONS_BY_DAY, { from, to }),
         ipc.invoke<CompletionDayStat[]>(IPC.ANALYTICS.GET_COMPLETIONS_BY_DAY, { from: yearFrom, to: yearTo }),
-        ipc.invoke<DistributionStat[]>(IPC.ANALYTICS.GET_TASKS_BY_LIST),
+        ipc.invoke<DistributionStat[]>(IPC.ANALYTICS.GET_TASKS_BY_PROJECT),
         ipc.invoke<DistributionStat[]>(IPC.ANALYTICS.GET_TASKS_BY_TAG),
         ipc.invoke<DistributionStat[]>(IPC.ANALYTICS.GET_TASKS_BY_PRIORITY),
         ipc.invoke<Project[]>(IPC.PROJECTS.GET_ALL).catch(() => []),
@@ -96,7 +96,7 @@ export function Dashboard(): React.ReactElement {
       setProductiveHour(hourRes);
       setCompletions(compRes);
       setYearCompletions(yearCompRes);
-      setByList(listRes);
+      setByProject(listRes);
       setByTag(tagRes);
       setByPriority(priorityRes);
       setProjects(projectsRes);
@@ -339,7 +339,7 @@ export function Dashboard(): React.ReactElement {
             <CompletionBarChart data={completions} />
 
             {/* Chart 2: Task Distribution */}
-            <TaskDistributionPie byList={byList} byTag={byTag} byPriority={byPriority} />
+            <TaskDistributionPie byProject={byProject} byTag={byTag} byPriority={byPriority} />
 
             {/* Chart 3: Completion Trend */}
             <CompletionTrend data={completions} />

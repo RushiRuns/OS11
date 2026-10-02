@@ -6,6 +6,8 @@ export interface ParsedTaskInput {
   priority: number;
   tagNames: string[];
   listName: string | null;
+  areaName?: string | null;
+  projectName?: string | null;
   pomodoroRequested: boolean;
   recurrenceRule: string | null;
 }

@@ -49,6 +49,15 @@ export function registerAnalyticsHandlers(service = new AnalyticsService()): voi
     }
   });
 
+  ipcMain.handle(IPC.ANALYTICS.GET_TASKS_BY_PROJECT, async () => {
+    try {
+      const data = service.getTasksByProject();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(IPC.ANALYTICS.GET_TASKS_BY_TAG, async () => {
     try {
       const data = service.getTasksByTag();

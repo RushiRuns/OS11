@@ -3,25 +3,45 @@ import type { Project, CreateProjectPayload, UpdateProjectPayload, NotificationH
 import { v4 as uuidv4 } from 'uuid';
 
 export class ProjectRepository extends BaseRepository {
+  private mapRow(row: any): Project {
+    let views: Project['views'] = ['list', 'board', 'timeline', 'calendar', 'table'];
+    if (row.views) {
+      try {
+        const parsed = typeof row.views === 'string' ? JSON.parse(row.views) : row.views;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          views = parsed;
+        }
+      } catch {
+        views = ['list', 'board', 'timeline', 'calendar', 'table'];
+      }
+    }
+    return {
+      ...row,
+      views,
+    };
+  }
+
   public getAll(): Project[] {
     const stmt = this.db.prepare(`
       SELECT * FROM projects
       ORDER BY sort_order ASC, created_at ASC
     `);
-    return stmt.all() as Project[];
+    const rows = stmt.all() as any[];
+    return rows.map((r) => this.mapRow(r));
   }
 
   public getById(id: string): Project | null {
     const stmt = this.db.prepare(`
       SELECT * FROM projects WHERE id = ?
     `);
-    const res = stmt.get(id) as Project | undefined;
-    return res ?? null;
+    const res = stmt.get(id) as any | undefined;
+    return res ? this.mapRow(res) : null;
   }
 
   private hasGroupIdCol: boolean | null = null;
   private hasPinnedColsState: boolean | null = null;
   private hasAreaIdCol: boolean | null = null;
+  private hasViewsColState: boolean | null = null;
 
   private hasGroupId(): boolean {
     if (this.hasGroupIdCol === null) {
@@ -59,13 +79,26 @@ export class ProjectRepository extends BaseRepository {
     return this.hasAreaIdCol;
   }
 
+  private hasViewsCol(): boolean {
+    if (this.hasViewsColState === null) {
+      try {
+        const cols = this.db.pragma('table_info(projects)') as Array<{ name: string }>;
+        this.hasViewsColState = cols.some((c) => c.name === 'views');
+      } catch {
+        this.hasViewsColState = false;
+      }
+    }
+    return this.hasViewsColState;
+  }
+
   public getByAreaId(areaId: string): Project[] {
     const stmt = this.db.prepare(`
       SELECT * FROM projects
       WHERE area_id = ?
       ORDER BY sort_order ASC, created_at ASC
     `);
-    return stmt.all(areaId) as Project[];
+    const rows = stmt.all(areaId) as any[];
+    return rows.map((r) => this.mapRow(r));
   }
 
   public countByAreaId(areaId: string): number {
@@ -88,6 +121,11 @@ export class ProjectRepository extends BaseRepository {
           : payload.is_pinned
         : 0;
 
+    const viewsVal: Project['views'] =
+      payload.views && payload.views.length > 0
+        ? payload.views
+        : ['list', 'board', 'timeline', 'calendar', 'table'];
+
     const record: Project = {
       id,
       name: payload.name,
@@ -96,7 +134,8 @@ export class ProjectRepository extends BaseRepository {
       icon: payload.icon ?? null,
       status: payload.status ?? 'active',
       due_date: payload.due_date ?? null,
-      default_view: payload.default_view ?? 'list',
+      default_view: payload.default_view ?? viewsVal[0] ?? 'list',
+      views: viewsVal,
       sort_order: payload.sort_order ?? Date.now(),
       group_id: payload.group_id ?? null,
       area_id: payload.area_id ?? 'area_default',
@@ -129,10 +168,17 @@ export class ProjectRepository extends BaseRepository {
       sql += ', is_pinned, pinned_sort_order';
       values += ', @is_pinned, @pinned_sort_order';
     }
+    if (this.hasViewsCol()) {
+      sql += ', views';
+      values += ', @viewsJson';
+    }
 
     sql += ') ' + values + ')';
     const stmt = this.db.prepare(sql);
-    stmt.run(record);
+    stmt.run({
+      ...record,
+      viewsJson: JSON.stringify(record.views),
+    });
     return record;
   }
 
@@ -186,9 +232,15 @@ export class ProjectRepository extends BaseRepository {
     if (this.hasPinnedCols()) {
       setClauses += ', is_pinned = @is_pinned, pinned_sort_order = @pinned_sort_order';
     }
+    if (this.hasViewsCol()) {
+      setClauses += ', views = @viewsJson';
+    }
 
     const stmt = this.db.prepare(`UPDATE projects SET ${setClauses} WHERE id = @id`);
-    stmt.run(updated);
+    stmt.run({
+      ...updated,
+      viewsJson: JSON.stringify(updated.views),
+    });
     return updated;
   }
 

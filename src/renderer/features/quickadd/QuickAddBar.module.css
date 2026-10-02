@@ -74,6 +74,16 @@
   font-weight: var(--weight-medium);
 }
 
+.tokenArea {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+.tokenProject {
+  color: var(--color-blue, #3b82f6);
+  font-weight: var(--weight-medium);
+}
+
 .tokenDelimiter {
   color: var(--text-tertiary);
   font-weight: var(--weight-semibold);
@@ -151,5 +161,15 @@
   padding: 1px 5px;
   border-radius: var(--radius-xs);
   font-weight: var(--weight-medium);
+}
+
+.tagMenuBadgeProject {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--color-blue, #3b82f6);
+}
+
+.tagMenuBadgeArea {
+  background: var(--accent-muted);
+  color: var(--accent);
 }
 

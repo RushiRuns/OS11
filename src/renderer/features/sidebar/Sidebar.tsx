@@ -229,8 +229,25 @@ export function Sidebar(): React.ReactElement {
       if (detail?.key === 'sidebar_show_all_tasks') setShowAllTasks(Boolean(detail.value));
       if (detail?.key === 'sidebar_show_completed') setShowCompleted(Boolean(detail.value));
     };
+
+    const handleOpenArea = () => {
+      setAreaToEdit(null);
+      setIsCreateAreaModalOpen(true);
+    };
+    const handleOpenProject = () => {
+      setProjectToEdit(null);
+      setIsCreateProjectModalOpen(true);
+    };
+
     window.addEventListener('os11:settings-changed', handleSettingsChanged);
-    return () => window.removeEventListener('os11:settings-changed', handleSettingsChanged);
+    window.addEventListener('open-create-area-modal', handleOpenArea);
+    window.addEventListener('open-create-project-modal', handleOpenProject);
+
+    return () => {
+      window.removeEventListener('os11:settings-changed', handleSettingsChanged);
+      window.removeEventListener('open-create-area-modal', handleOpenArea);
+      window.removeEventListener('open-create-project-modal', handleOpenProject);
+    };
   }, [loadLists, loadProjects, loadAreas, loadModules, loadTags]);
 
   const projects = useMemo(
@@ -812,7 +829,7 @@ export function Sidebar(): React.ReactElement {
         {/* Areas & Projects Section (Single Area: no Area header) */}
         {areas.length <= 1 && (
           <div className={styles.projectsSection}>
-            {areas[0] && (
+            {areas[0] && getAreaLooseTaskCount(areas[0].id) > 0 && (
               <ListItem
                 key={`area_loose_${areas[0].id}`}
                 droppableId={`area:${areas[0].id}`}
@@ -968,46 +985,6 @@ export function Sidebar(): React.ReactElement {
 
                   {isOpen && (
                     <div className={styles.groupItems}>
-                      {/* Area loose tasks item */}
-                      <ListItem
-                        key={`area_loose_${area.id}`}
-                        droppableId={`area:${area.id}`}
-                        list={{
-                          id: `area:${area.id}`,
-                          name: 'Tasks',
-                          icon: '📋',
-                          color: null,
-                          background_type: 'none',
-                          background_value: null,
-                          sort_order: -1,
-                          is_smart: 0,
-                          notification_enabled: 0,
-                          created_at: area.created_at,
-                          updated_at: area.updated_at,
-                        }}
-                        isActive={activeListId === `area:${area.id}`}
-                        taskCount={getAreaLooseTaskCount(area.id)}
-                        onClick={() => setActiveListId(`area:${area.id}`)}
-                        onContextMenu={(e) => handleAreaContextMenu(e, area)}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                        }}
-                        onDrop={async (e) => {
-                          e.preventDefault();
-                          const taskId =
-                            e.dataTransfer.getData('text/plain') ||
-                            (window as any).__draggingTaskId;
-                          if (taskId) {
-                            await useTaskStore.getState().updateTask({
-                              id: taskId,
-                              area_id: area.id,
-                              project_id: null,
-                            });
-                          }
-                        }}
-                      />
-
                       {/* Area projects */}
                       {areaProjects.map((project: Project) => (
                         <ListItem
@@ -1164,34 +1141,63 @@ export function Sidebar(): React.ReactElement {
       {/* Bottom Bar with + Button */}
       <div className={styles.bottomBar}>
         {areas.length <= 1 ? (
-          <button
-            type="button"
-            className={styles.newListButton}
-            onClick={() => {
-              setInitialProjectAreaId(areas[0]?.id ?? null);
-              setProjectToEdit(null);
-              setIsCreateProjectModalOpen(true);
-            }}
-            title={isMac ? 'New project (Cmd + P)' : 'New project (Ctrl + P)'}
-            aria-label="New project"
-          >
-            <svg
-              className={styles.newListIcon}
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          <>
+            <button
+              type="button"
+              className={styles.newListButton}
+              onClick={() => {
+                setInitialProjectAreaId(areas[0]?.id ?? null);
+                setProjectToEdit(null);
+                setIsCreateProjectModalOpen(true);
+              }}
+              title={isMac ? 'New project (Cmd + P)' : 'New project (Ctrl + P)'}
+              aria-label="New project"
             >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            <span className={styles.newListLabel}>New project</span>
-          </button>
+              <svg
+                className={styles.newListIcon}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span className={styles.newListLabel}>New project</span>
+            </button>
+            <button
+              type="button"
+              className={styles.newGroupButton}
+              onClick={() => {
+                setAreaToEdit(null);
+                setIsCreateAreaModalOpen(true);
+              }}
+              title="New area"
+              aria-label="New area"
+            >
+              <svg
+                className={styles.newListIcon}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                <line x1="12" y1="11" x2="12" y2="17" />
+                <line x1="9" y1="14" x2="15" y2="14" />
+              </svg>
+            </button>
+          </>
         ) : (
           <button
             type="button"

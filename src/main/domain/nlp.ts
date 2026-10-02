@@ -49,13 +49,24 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
     workingText = workingText.replace(priorityRegex, ' ');
   }
 
-  // 3. List detection (@list_name)
+  // 3. Area detection (@area_name) and backward-compatible listName
   let listName: string | null = null;
-  const listRegex = /(?:^|\s)@([a-zA-Z0-9_\-\u00C0-\u017F]+)(?=\s|$)/;
-  const listMatch = workingText.match(listRegex);
-  if (listMatch) {
-    listName = listMatch[1];
-    workingText = workingText.replace(listRegex, ' ');
+  let areaName: string | null = null;
+  const areaRegex = /(?:^|\s)@([a-zA-Z0-9_\-\u00C0-\u017F]+)(?=\s|$)/;
+  const areaMatch = workingText.match(areaRegex);
+  if (areaMatch) {
+    listName = areaMatch[1];
+    areaName = areaMatch[1];
+    workingText = workingText.replace(areaRegex, ' ');
+  }
+
+  // 3b. Project detection (/project_name)
+  let projectName: string | null = null;
+  const projectRegex = /(?:^|\s)\/([a-zA-Z0-9_\-\u00C0-\u017F]+)(?=\s|$)/;
+  const projectMatch = workingText.match(projectRegex);
+  if (projectMatch) {
+    projectName = projectMatch[1];
+    workingText = workingText.replace(projectRegex, ' ');
   }
 
   // 4. Tag detection (#tag_name)
@@ -129,6 +140,8 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
     priority,
     tagNames,
     listName,
+    areaName,
+    projectName,
     pomodoroRequested,
     recurrenceRule,
   };

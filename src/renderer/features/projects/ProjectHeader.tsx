@@ -15,6 +15,7 @@ interface ProjectHeaderProps {
   milestones: Milestone[];
   currentView: ProjectViewMode;
   onViewChange: (view: ProjectViewMode) => void;
+  onUpdateViews?: (views: ProjectViewMode[]) => void | Promise<void>;
   onOpenMilestones: () => void;
   onOpenTemplates: () => void;
 }
@@ -26,6 +27,7 @@ export function ProjectHeader({
   milestones,
   currentView,
   onViewChange,
+  onUpdateViews,
   onOpenMilestones,
   onOpenTemplates,
 }: ProjectHeaderProps): React.ReactElement {
@@ -34,6 +36,7 @@ export function ProjectHeader({
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExportSubmenuOpen, setIsExportSubmenuOpen] = useState(false);
+  const [isCustomizeViewsOpen, setIsCustomizeViewsOpen] = useState(false);
   const [showProgressTooltip, setShowProgressTooltip] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -242,6 +245,19 @@ export function ProjectHeader({
 
               <button
                 type="button"
+                className={menuStyles.menuItem}
+                onMouseEnter={() => setIsExportSubmenuOpen(false)}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsCustomizeViewsOpen(true);
+                }}
+              >
+                <span>🎛️</span>
+                <span>Customize Views...</span>
+              </button>
+
+              <button
+                type="button"
                 className={`${menuStyles.menuItem} ${menuStyles.submenuTrigger}`}
                 onMouseEnter={() => setIsExportSubmenuOpen(true)}
                 onClick={() => setIsExportSubmenuOpen((v) => !v)}
@@ -345,7 +361,14 @@ export function ProjectHeader({
         )}
 
       <div className={styles.bottomRow}>
-        <ViewSwitcher currentView={currentView} onViewChange={onViewChange} />
+        <ViewSwitcher
+          currentView={currentView}
+          availableViews={project.views}
+          onViewChange={onViewChange}
+          onUpdateViews={onUpdateViews}
+          isCustomizeOpen={isCustomizeViewsOpen}
+          onCustomizeOpenChange={setIsCustomizeViewsOpen}
+        />
       </div>
     </header>
   );

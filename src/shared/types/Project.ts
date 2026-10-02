@@ -1,3 +1,5 @@
+export type ProjectViewMode = 'list' | 'board' | 'timeline' | 'calendar' | 'table';
+
 export interface Project {
   id: string;
   name: string;
@@ -6,7 +8,8 @@ export interface Project {
   icon?: string | null;
   status: 'active' | 'archived' | 'completed';
   due_date?: string | null;
-  default_view: 'list' | 'board' | 'timeline' | 'calendar' | 'table';
+  default_view: ProjectViewMode;
+  views: ProjectViewMode[];
   sort_order: number;
   group_id?: string | null;
   area_id?: string | null;
@@ -23,7 +26,8 @@ export interface CreateProjectPayload {
   icon?: string | null;
   status?: 'active' | 'archived' | 'completed';
   due_date?: string | null;
-  default_view?: 'list' | 'board' | 'timeline' | 'calendar' | 'table';
+  default_view?: ProjectViewMode;
+  views?: ProjectViewMode[];
   sort_order?: number;
   group_id?: string | null;
   area_id?: string | null;
@@ -38,7 +42,8 @@ export interface UpdateProjectPayload {
   icon?: string | null;
   status?: 'active' | 'archived' | 'completed';
   due_date?: string | null;
-  default_view?: 'list' | 'board' | 'timeline' | 'calendar' | 'table';
+  default_view?: ProjectViewMode;
+  views?: ProjectViewMode[];
   sort_order?: number;
   group_id?: string | null;
   area_id?: string | null;

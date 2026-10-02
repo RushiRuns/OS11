@@ -4,6 +4,8 @@ import { useListStore } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useSearchStore } from '../../stores/searchStore.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import styles from './CommandPalette.module.css';
@@ -35,6 +37,8 @@ export function CommandPalette({
   const { setActiveListId, activeListId } = useAppStore();
   const listsById = useListStore((state) => state.listsById);
   const tasksById = useTaskStore((state) => state.tasksById);
+  const areasById = useAreaStore((state) => state.areasById);
+  const projectsById = useProjectStore((state) => state.projectsById);
   const { setSelectedTaskId } = useTaskStore();
   const { openSearch } = useSearchStore();
   const { everyAttachment, loadEveryAttachment } = useAttachmentStore();
@@ -53,6 +57,27 @@ export function CommandPalette({
     const items: PaletteItem[] = [];
 
     // Core Actions
+    items.push({
+      id: 'action_create_project',
+      title: 'Create New Project',
+      category: 'Action',
+      icon: '💼',
+      shortcut: 'Ctrl+P',
+      onSelect: () => {
+        window.dispatchEvent(new CustomEvent('open-create-project-modal'));
+      },
+    });
+
+    items.push({
+      id: 'action_create_area',
+      title: 'Create New Area',
+      category: 'Action',
+      icon: '📁',
+      onSelect: () => {
+        window.dispatchEvent(new CustomEvent('open-create-area-modal'));
+      },
+    });
+
     items.push({
       id: 'action_focus_mode',
       title: 'Toggle Focus Mode',
@@ -141,6 +166,30 @@ export function CommandPalette({
         }
       },
     });
+
+    // Areas
+    Object.values(areasById).forEach((area) => {
+      items.push({
+        id: `area_${area.id}`,
+        title: `Open Area: ${area.name}`,
+        category: 'List',
+        icon: area.icon || '📁',
+        onSelect: () => setActiveListId(`area:${area.id}`),
+      });
+    });
+
+    // Projects
+    Object.values(projectsById)
+      .filter((p) => p.status !== 'archived')
+      .forEach((project) => {
+        items.push({
+          id: `project_${project.id}`,
+          title: `Open Project: ${project.name}`,
+          category: 'List',
+          icon: project.icon || '💼',
+          onSelect: () => setActiveListId(`project:${project.id}`),
+        });
+      });
 
     // Lists
     Object.values(listsById).forEach((list) => {

@@ -47,16 +47,24 @@ export class TaskRepository extends BaseRepository {
   public getByAreaId(areaId: string): Task[] {
     const stmt = this.db.prepare(`
       SELECT * FROM tasks
-      WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0
+      WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0 AND parent_task_id IS NULL
       ORDER BY sort_order ASC, created_at DESC
     `);
     return stmt.all(areaId) as Task[];
   }
 
-  public countLooseByAreaId(areaId: string): number {
+  public countLooseByAreaId(areaId: string, options?: { includeTrashed?: boolean }): number {
+    const sql = options?.includeTrashed
+      ? `SELECT COUNT(*) as count FROM tasks WHERE area_id = ? AND project_id IS NULL`
+      : `SELECT COUNT(*) as count FROM tasks WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0 AND parent_task_id IS NULL`;
+    const stmt = this.db.prepare(sql);
+    const res = stmt.get(areaId) as { count: number };
+    return res?.count ?? 0;
+  }
+
+  public countAllByAreaId(areaId: string): number {
     const stmt = this.db.prepare(`
-      SELECT COUNT(*) as count FROM tasks
-      WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0
+      SELECT COUNT(*) as count FROM tasks WHERE area_id = ?
     `);
     const res = stmt.get(areaId) as { count: number };
     return res?.count ?? 0;
@@ -65,7 +73,7 @@ export class TaskRepository extends BaseRepository {
   public getInbox(): Task[] {
     const stmt = this.db.prepare(`
       SELECT * FROM tasks
-      WHERE area_id IS NULL AND project_id IS NULL AND is_trashed = 0
+      WHERE area_id IS NULL AND project_id IS NULL AND is_trashed = 0 AND parent_task_id IS NULL
       ORDER BY sort_order ASC, created_at DESC
     `);
     return stmt.all() as Task[];
@@ -432,11 +440,65 @@ export class TaskRepository extends BaseRepository {
   }
 
   public restore(id: string): void {
+    const hasArea = this.hasAreaId();
     const now = new Date().toISOString();
+
+    if (!hasArea) {
+      const stmt = this.db.prepare(`
+        UPDATE tasks
+        SET is_trashed = 0,
+            trashed_at = NULL,
+            updated_at = ?
+        WHERE id = ?
+      `);
+      stmt.run(now, id);
+      return;
+    }
+
+    const task = this.getById(id);
+    let targetProjectId = task?.project_id ?? null;
+    let targetAreaId = task?.area_id ?? null;
+
+    if (targetProjectId) {
+      try {
+        const proj = this.db.prepare(`SELECT id, area_id FROM projects WHERE id = ?`).get(targetProjectId) as
+          | { id: string; area_id: string | null }
+          | undefined;
+        if (!proj) {
+          targetProjectId = null;
+          targetAreaId = null;
+        } else {
+          targetAreaId = proj.area_id ?? targetAreaId;
+        }
+      } catch {
+        targetProjectId = null;
+        targetAreaId = null;
+      }
+    }
+
+    if (targetAreaId) {
+      try {
+        const area = this.db.prepare(`SELECT id FROM areas WHERE id = ?`).get(targetAreaId);
+        if (!area) {
+          targetAreaId = null;
+          targetProjectId = null;
+        }
+      } catch {
+        targetAreaId = null;
+        targetProjectId = null;
+      }
+    }
+
     const stmt = this.db.prepare(`
-      UPDATE tasks SET is_trashed = 0, trashed_at = NULL, updated_at = ? WHERE id = ?
+      UPDATE tasks
+      SET is_trashed = 0,
+          trashed_at = NULL,
+          project_id = ?,
+          area_id = ?,
+          updated_at = ?
+      WHERE id = ?
     `);
-    stmt.run(now, id);
+    stmt.run(targetProjectId, targetAreaId, now, id);
   }
 
   public delete(id: string): boolean {
@@ -447,6 +509,14 @@ export class TaskRepository extends BaseRepository {
   public permanentDelete(id: string): void {
     const stmt = this.db.prepare(`DELETE FROM tasks WHERE id = ?`);
     stmt.run(id);
+  }
+
+  public updateAreaByProjectId(projectId: string, areaId: string): void {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE tasks SET area_id = ?, updated_at = ? WHERE project_id = ?
+    `);
+    stmt.run(areaId, now, projectId);
   }
 
   public addToMyDay(id: string, date: string): void {

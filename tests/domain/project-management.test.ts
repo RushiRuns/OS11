@@ -143,6 +143,7 @@ describe('Phase 10: Project Management Domain & Repositories', () => {
       icon: '📱',
       status: 'active' as const,
       default_view: 'board' as const,
+      views: ['board' as const],
       sort_order: 1,
       created_at: '',
       updated_at: '',

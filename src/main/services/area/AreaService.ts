@@ -57,8 +57,9 @@ export class AreaService {
     }
 
     const projectCount = this.projectRepo.countByAreaId(id);
-    const looseTaskCount = this.taskRepo.countLooseByAreaId(id);
-    if (projectCount > 0 || looseTaskCount > 0) {
+    const looseTaskCount = this.taskRepo.countLooseByAreaId(id, { includeTrashed: true });
+    const allTaskCount = this.taskRepo.countAllByAreaId(id);
+    if (projectCount > 0 || looseTaskCount > 0 || allTaskCount > 0) {
       throw new Error("Move or delete this Area's projects first.");
     }
 
