@@ -28,7 +28,7 @@ import { useAttachmentStore } from './stores/attachmentStore.js';
 import { useTagStore } from './stores/tagStore.js';
 import {
   DndContext,
-  closestCenter,
+  DragOverlay,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -41,6 +41,11 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ipc, invoke } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
+import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
+import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
+import { yToMinutes, snapToGrid, defaultDuration, placeBlock, type BlockInterval } from '@shared/utils/schedulerMath.js';
+import { HOUR_HEIGHT } from './features/lists/scheduler/useSchedulerLayout.js';
+import { toISODate } from '@shared/utils/date.js';
 
 // Lazy views — loaded on-demand per PERFORMANCE.md §5 & vite.config.ts manualChunks
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard.js'));
@@ -108,6 +113,9 @@ export function App(): React.ReactElement {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [activeDragItem, setActiveDragItem] = useState<{ id: string; type?: string; task?: Task } | null>(null);
+  const [isOverGrid, setIsOverGrid] = useState(false);
+  const [isOverList, setIsOverList] = useState(false);
   const isPomodoroFocus = usePomodoroStore(state => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore(state => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
@@ -394,59 +402,165 @@ export function App(): React.ReactElement {
   }
 
   const handleAppDragStart = (event: DragStartEvent) => {
-    console.log('[DragDrop] Drag start:', event.active.id);
+    const { active } = event;
+    const type = active.data?.current?.type as string | undefined;
+    let task = active.data?.current?.task as Task | undefined;
+    if (!task) {
+      task = useTaskStore.getState().tasksById[String(active.id)];
+    }
+    setActiveDragItem({ id: String(active.id), type, task });
+    if (type === 'time-block') {
+      useSchedulerUiStore.getState().setIsDragging(true);
+    }
   };
 
   const handleAppDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (over) {
-      console.log('[DragDrop] Hover target detected:', over.id, 'from active:', active.id);
-      const overData = over.data?.current as PlannedDropData | undefined;
+    const isTimeBlock = active.data?.current?.type === 'time-block';
+    const overId = over ? String(over.id) : null;
+
+    setIsOverGrid(overId === 'scheduler-grid');
+    setIsOverList(overId === 'my-day-list-drop-zone');
+
+    if (isTimeBlock) {
+      if (overId === 'scheduler-grid' || overId === 'my-day-list-drop-zone') {
+        document.body.classList.remove('dnd-cursor-not-allowed');
+      } else {
+        document.body.classList.add('dnd-cursor-not-allowed');
+      }
+    } else {
+      const overData = over?.data?.current as PlannedDropData | undefined;
       if (overData?.type === 'planned-group' && overData.kind === 'overdue') {
         document.body.classList.add('dnd-cursor-not-allowed');
       } else {
         document.body.classList.remove('dnd-cursor-not-allowed');
       }
+    }
+
+    if (overId === 'scheduler-grid') {
+      const gridEl = document.querySelector('[data-drop-target="scheduler-grid"]') as HTMLElement | null;
+      if (gridEl) {
+        const scrollContainer = gridEl.parentElement;
+        const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+        const gridRect = gridEl.getBoundingClientRect();
+
+        const activeRect = active.rect.current.translated ?? active.rect.current.initial;
+        const pointerY = activeRect ? activeRect.top : 0;
+        const yInGrid = Math.max(0, pointerY - gridRect.top + scrollTop);
+        const rawMin = yToMinutes(yInGrid, HOUR_HEIGHT);
+        const snappedMin = snapToGrid(rawMin);
+
+        let taskId: string;
+        let durationMin: number;
+        if (isTimeBlock) {
+          taskId = String(active.data.current?.taskId ?? active.id);
+          const task = (active.data.current?.task as Task | undefined) ?? useTaskStore.getState().tasksById[taskId];
+          durationMin = task?.scheduled_duration_min ?? 30;
+        } else {
+          taskId = String(active.id);
+          const task = useTaskStore.getState().tasksById[taskId];
+          durationMin = defaultDuration(task);
+        }
+
+        const today = toISODate(new Date());
+        const occupied: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
+          .filter(
+            (t) =>
+              t.id !== taskId &&
+              t.my_day_date === today &&
+              t.is_trashed === 0 &&
+              typeof t.scheduled_start_min === 'number' &&
+              typeof t.scheduled_duration_min === 'number'
+          )
+          .map((t) => ({
+            start: t.scheduled_start_min!,
+            duration: t.scheduled_duration_min!,
+          }));
+
+        const placed = placeBlock(occupied, snappedMin, durationMin, { allowShrink: !isTimeBlock });
+        if (placed) {
+          useSchedulerUiStore.getState().setDragPreviewMinutes({
+            startMin: placed.start,
+            durationMin: placed.duration,
+          });
+        } else {
+          useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+        }
+      }
     } else {
-      document.body.classList.remove('dnd-cursor-not-allowed');
+      useSchedulerUiStore.getState().setDragPreviewMinutes(null);
     }
   };
 
   const handleAppDragEnd = async (event: DragEndEvent) => {
     document.body.classList.remove('dnd-cursor-not-allowed');
+    setActiveDragItem(null);
+    setIsOverGrid(false);
+    setIsOverList(false);
+    useSchedulerUiStore.getState().setIsDragging(false);
+
     const { active, over } = event;
-    console.log('[DragDrop] Drag end event:', { activeId: active.id, overId: over?.id });
-    if (!over || active.id === over.id) return;
+    const dragPreview = useSchedulerUiStore.getState().dragPreviewMinutes;
+    useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+
+    if (!over) return;
 
     const overIdStr = String(over.id);
-    const activeTaskId = String(active.id);
+    const isTimeBlock = active.data?.current?.type === 'time-block';
+    const activeTaskId = isTimeBlock
+      ? String(active.data.current?.taskId ?? active.id)
+      : String(active.id);
+
+    // 1. Drop on scheduler-grid
+    if (overIdStr === 'scheduler-grid') {
+      const task = useTaskStore.getState().tasksById[activeTaskId];
+      if (!task) return;
+
+      // Spec §2 Decisions 19 & 20:
+      // Subtasks cannot be scheduled in v1; Completed tasks cannot be newly dragged in
+      if (!isTimeBlock) {
+        if (task.parent_task_id !== null || task.is_completed === 1) {
+          return;
+        }
+      }
+
+      if (dragPreview) {
+        if (isTimeBlock) {
+          await useTaskStore.getState().updateTimeBlock(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+        } else {
+          await useTaskStore.getState().scheduleTask(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+        }
+      }
+      return;
+    }
+
+    // 2. Drop on my-day-list-drop-zone (unschedule)
+    if (overIdStr === 'my-day-list-drop-zone') {
+      if (isTimeBlock) {
+        await useTaskStore.getState().unscheduleTask(activeTaskId);
+      }
+      return;
+    }
+
+    // Dropping a time block anywhere outside returns to where it was (no-op)
+    if (isTimeBlock) {
+      return;
+    }
 
     if (overIdStr.startsWith('list:')) {
       const targetListId = overIdStr.slice(5);
-      console.log('[DragDrop] Drop commit on list:', targetListId, 'with payload:', {
-        taskId: activeTaskId,
-        target: overIdStr,
-      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
       return;
     }
 
     if (overIdStr.startsWith('project:')) {
       const targetProjectId = overIdStr.slice(8);
-      console.log('[DragDrop] Drop commit on project:', targetProjectId, 'with payload:', {
-        taskId: activeTaskId,
-        target: overIdStr,
-      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, project_id: targetProjectId });
       return;
     }
 
     if (overIdStr.startsWith('tag:')) {
       const targetTagId = overIdStr.slice(4);
-      console.log('[DragDrop] Drop commit on tag:', targetTagId, 'with payload:', {
-        taskId: activeTaskId,
-        target: overIdStr,
-      });
       await useTagStore.getState().addTagToTask(activeTaskId, targetTagId);
       return;
     }
@@ -514,7 +628,7 @@ export function App(): React.ReactElement {
       ) : (
         <DndContext
           sensors={dndSensors}
-          collisionDetection={closestCenter}
+          collisionDetection={schedulerCollisionDetection}
           onDragStart={handleAppDragStart}
           onDragOver={handleAppDragOver}
           onDragEnd={handleAppDragEnd}
@@ -587,6 +701,15 @@ export function App(): React.ReactElement {
               )}
             </div>
           </div>
+          {activeDragItem?.type === 'time-block' && activeDragItem.task && (
+            <DragOverlay dropAnimation={null}>
+              <TimeBlockDragOverlay
+                task={activeDragItem.task}
+                isOverGrid={isOverGrid}
+                isInvalidDrop={!isOverGrid && !isOverList}
+              />
+            </DragOverlay>
+          )}
         </DndContext>
       )}
 

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useDeferredValue, useCallback, useM
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   useDndMonitor,
+  useDroppable,
+  useDndContext,
   DragOverlay,
   type DragStartEvent,
   type DragEndEvent,
@@ -464,9 +466,16 @@ export function TaskList({
     }
 
     const overIdStr = String(over.id);
-    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
+    if (
+      overIdStr.startsWith('list:') ||
+      overIdStr.startsWith('project:') ||
+      overIdStr.startsWith('tag:') ||
+      overIdStr === 'scheduler-grid' ||
+      overIdStr === 'my-day-list-drop-zone' ||
+      active.data?.current?.type === 'time-block'
+    ) {
       setDropIndicator(null);
-      return; // Handled by App.tsx (sidebar list/project/tag drop targets)
+      return; // Handled by App.tsx (sidebar list/project/tag/scheduler drop targets)
     }
 
     const overRect = over.rect;
@@ -502,7 +511,14 @@ export function TaskList({
     if (!over || active.id === over.id) return;
 
     const overIdStr = String(over.id);
-    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
+    if (
+      overIdStr.startsWith('list:') ||
+      overIdStr.startsWith('project:') ||
+      overIdStr.startsWith('tag:') ||
+      overIdStr === 'scheduler-grid' ||
+      overIdStr === 'my-day-list-drop-zone' ||
+      active.data?.current?.type === 'time-block'
+    ) {
       return; // Handled by App.tsx
     }
 
@@ -577,6 +593,15 @@ export function TaskList({
   })();
 
   const isMyDay = propIsMyDayList ?? (activeListId === 'smart_my_day');
+
+  const { active: dndActive } = useDndContext();
+  const isDraggingTimeBlock = dndActive?.data?.current?.type === 'time-block';
+
+  const { setNodeRef: setListDropRef, isOver: isOverListDrop } = useDroppable({
+    id: 'my-day-list-drop-zone',
+    data: { type: 'my-day-list' },
+    disabled: !isMyDay || !isDraggingTimeBlock,
+  });
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const calculatedSuggestionsCount = useMemo(() => {
     if (!isMyDay) return 0;
@@ -621,7 +646,31 @@ export function TaskList({
         items={allTaskIds}
         strategy={verticalListSortingStrategy}
       >
-        <div ref={parentRef} className={styles.virtualScrollArea}>
+        <div
+          ref={(node) => {
+            (parentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+            setListDropRef(node);
+          }}
+          className={`${styles.virtualScrollArea} ${isOverListDrop && isDraggingTimeBlock ? styles.unscheduleDropZoneActive : ''}`}
+        >
+          {isOverListDrop && isDraggingTimeBlock && (
+            <div className={styles.unscheduleBadge} aria-hidden="true">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              Drop to unschedule
+            </div>
+          )}
           {flattenedIncomplete.length === 0 && completedTasks.length === 0 ? (
             <EmptyState
               title="All clear"
