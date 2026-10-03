@@ -94,6 +94,18 @@ export const taskServiceAdapter = {
   removeFromMyDay(id: string): Promise<Task> {
     return invoke<Task>(IPC.TASKS.REMOVE_FROM_MY_DAY, id);
   },
+
+  setTimeBlock(id: string, startMin: number, durationMin: number): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.SET_TIME_BLOCK, { id, startMin, durationMin });
+  },
+
+  clearTimeBlock(id: string): Promise<Task> {
+    return invoke<Task>(IPC.TASKS.CLEAR_TIME_BLOCK, { id });
+  },
+
+  rolloverToToday(ids: string[], today?: string): Promise<Task[]> {
+    return invoke<Task[]>(IPC.TASKS.ROLLOVER_TO_TODAY, { ids, today });
+  },
 };
 
 export default taskServiceAdapter;

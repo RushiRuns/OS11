@@ -178,6 +178,20 @@ export class TaskRepository extends BaseRepository {
     return this.isListIdNotNullState;
   }
 
+  private hasTimeBlockCol: boolean | null = null;
+  private hasTimeBlock(): boolean {
+    if (this.hasTimeBlockCol === null) {
+      try {
+        const cols = this.db.pragma('table_info(tasks)') as Array<{ name: string }>;
+        this.hasTimeBlockCol = cols.some((c) => c.name === 'scheduled_start_min');
+      } catch {
+        this.hasTimeBlockCol = false;
+      }
+    }
+    return this.hasTimeBlockCol;
+  }
+
+
   public create(payload: CreateTaskPayload | (Partial<Task> & { title: string })): Task {
     const id = ('id' in payload && payload.id) ? payload.id : uuidv4();
     const now = new Date().toISOString();
@@ -251,6 +265,8 @@ export class TaskRepository extends BaseRepository {
       is_habit: typeof payload.is_habit === 'boolean' ? (payload.is_habit ? 1 : 0) : (payload.is_habit ?? 0),
       is_trashed: 0,
       trashed_at: null,
+      scheduled_start_min: null,
+      scheduled_duration_min: null,
       created_at: now,
       updated_at: now,
     };
@@ -289,7 +305,12 @@ export class TaskRepository extends BaseRepository {
 
   public update(idOrPayload: string | (UpdateTaskPayload & { id: string }), fields?: Partial<Task> | UpdateTaskPayload): Task {
     const id = typeof idOrPayload === 'string' ? idOrPayload : idOrPayload.id;
-    const actualFields = (typeof idOrPayload === 'string' ? fields : idOrPayload) ?? {};
+    const rawFields = (typeof idOrPayload === 'string' ? fields : idOrPayload) ?? {};
+    const {
+      scheduled_start_min: _ignoredStart,
+      scheduled_duration_min: _ignoredDuration,
+      ...actualFields
+    } = rawFields as any;
     const current = this.getById(id);
     if (!current) {
       throw new Error(`Task not found: ${id}`);
@@ -323,6 +344,8 @@ export class TaskRepository extends BaseRepository {
       ...current,
       ...actualFields,
       id, // Preserve id
+      scheduled_start_min: current.scheduled_start_min ?? null,
+      scheduled_duration_min: current.scheduled_duration_min ?? null,
       area_id: actualFields.area_id !== undefined ? actualFields.area_id : current.area_id,
       all_day: actualFields.all_day !== undefined
         ? (typeof actualFields.all_day === 'boolean' ? (actualFields.all_day ? 1 : 0) : actualFields.all_day)
@@ -529,10 +552,103 @@ export class TaskRepository extends BaseRepository {
 
   public removeFromMyDay(id: string): void {
     const now = new Date().toISOString();
+    if (this.hasTimeBlock()) {
+      const stmt = this.db.prepare(`
+        UPDATE tasks
+        SET my_day_date = NULL,
+            scheduled_start_min = NULL,
+            scheduled_duration_min = NULL,
+            updated_at = ?
+        WHERE id = ?
+      `);
+      stmt.run(now, id);
+    } else {
+      const stmt = this.db.prepare(`
+        UPDATE tasks
+        SET my_day_date = NULL,
+            updated_at = ?
+        WHERE id = ?
+      `);
+      stmt.run(now, id);
+    }
+  }
+
+  public setTimeBlock(id: string, startMin: number, durationMin: number): Task {
+    const now = new Date().toISOString();
     const stmt = this.db.prepare(`
-      UPDATE tasks SET my_day_date = NULL, updated_at = ? WHERE id = ?
+      UPDATE tasks
+      SET scheduled_start_min = ?,
+          scheduled_duration_min = ?,
+          updated_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(startMin, durationMin, now, id);
+    const updated = this.getById(id);
+    if (!updated) throw new Error(`Task with id "${id}" not found.`);
+    return updated;
+  }
+
+  public clearTimeBlock(id: string): Task {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE tasks
+      SET scheduled_start_min = NULL,
+          scheduled_duration_min = NULL,
+          updated_at = ?
+      WHERE id = ?
     `);
     stmt.run(now, id);
+    const updated = this.getById(id);
+    if (!updated) throw new Error(`Task with id "${id}" not found.`);
+    return updated;
+  }
+
+  public clearAllTimeBlocks(effectiveToday?: string): number {
+    const now = new Date().toISOString();
+    if (effectiveToday) {
+      const stmt = this.db.prepare(`
+        UPDATE tasks
+        SET scheduled_start_min = NULL,
+            scheduled_duration_min = NULL,
+            updated_at = ?
+        WHERE scheduled_start_min IS NOT NULL
+          AND (my_day_date IS NULL OR my_day_date <> ?)
+      `);
+      const res = stmt.run(now, effectiveToday);
+      return res.changes;
+    } else {
+      const stmt = this.db.prepare(`
+        UPDATE tasks
+        SET scheduled_start_min = NULL,
+            scheduled_duration_min = NULL,
+            updated_at = ?
+        WHERE scheduled_start_min IS NOT NULL
+      `);
+      const res = stmt.run(now);
+      return res.changes;
+    }
+  }
+
+  public rollOverToToday(ids: string[], today: string): Task[] {
+    if (ids.length === 0) return [];
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE tasks
+      SET my_day_date = ?,
+          scheduled_start_min = NULL,
+          scheduled_duration_min = NULL,
+          updated_at = ?
+      WHERE id = ?
+    `);
+
+    const runTx = this.db.transaction(() => {
+      for (const id of ids) {
+        stmt.run(today, now, id);
+      }
+    });
+
+    runTx();
+    return ids.map((id) => this.getById(id)!).filter(Boolean);
   }
 
   public updateSortOrder(id: string, sortOrder: number): void {

@@ -242,6 +242,49 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
     }
   });
 
+  ipcMain.handle(
+    IPC.TASKS.SET_TIME_BLOCK,
+    async (_event, payload: { id: string; startMin: number; durationMin: number }) => {
+      try {
+        if (!payload || typeof payload !== 'object' || typeof payload.id !== 'string') {
+          return { ok: false, error: 'Invalid payload: id must be a string' };
+        }
+        const data = taskService.scheduleTask(payload.id, payload.startMin, payload.durationMin);
+        return { ok: true, data };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  ipcMain.handle(IPC.TASKS.CLEAR_TIME_BLOCK, async (_event, payload: { id: string } | string) => {
+    try {
+      const id = typeof payload === 'string' ? payload : payload?.id;
+      if (!id || typeof id !== 'string') {
+        return { ok: false, error: 'Invalid payload: id is required' };
+      }
+      const data = taskService.unscheduleTask(id);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(
+    IPC.TASKS.ROLLOVER_TO_TODAY,
+    async (_event, payload: { ids: string[]; today?: string }) => {
+      try {
+        if (!payload || !Array.isArray(payload.ids)) {
+          return { ok: false, error: 'Invalid payload: ids array is required' };
+        }
+        const data = taskService.rollOverToToday(payload.ids, payload.today);
+        return { ok: true, data };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
   ipcMain.handle(IPC.TASKS.GET_HISTORY, async (_event, taskId: string) => {
     try {
       const data = taskService.getHistory(taskId);

@@ -107,3 +107,19 @@ export function isOverdue(dueDateISO: string | null | undefined): boolean {
   // Otherwise, it's a date-only (YYYY-MM-DD), overdue if before start of today
   return isBefore(startOfDay(date), startOfDay(new Date()));
 }
+
+export function getEffectiveToday(dayStartsAt = '08:00', now = new Date()): string {
+  const [startHour, startMin] = dayStartsAt.split(':').map(Number);
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const currentMinutes = currentHour * 60 + currentMin;
+  const cutoffMinutes = (startHour || 0) * 60 + (startMin || 0);
+
+  if (currentMinutes < cutoffMinutes) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return toISODateOnly(yesterday);
+  }
+  return toISODateOnly(now);
+}
+
