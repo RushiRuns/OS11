@@ -6,9 +6,7 @@ import { SettingsRepository } from '../../repositories/SettingsRepository.js';
 import { TagRepository } from '../../repositories/TagRepository.js';
 import { TaskHistoryRepository } from '../../repositories/TaskHistoryRepository.js';
 import { validateCreate, validateUpdate, ValidationError } from '../../domain/task-validation.js';
-import { validateTimeBlock, findOverlap } from '../../domain/timeBlock.js';
 import { calculateNextOccurrence } from '../../../shared/utils/recurrence.js';
-import { getEffectiveToday } from '../../../shared/utils/date.js';
 import { wouldCreateCycle } from '../../domain/dependency-check.js';
 import { workerManager } from '../worker-manager.js';
 import { AttachmentService } from '../attachment/AttachmentService.js';
@@ -336,83 +334,6 @@ export class TaskService {
   public removeFromMyDay(id: string): Task {
     this.taskRepo.removeFromMyDay(id);
     return this.getById(id);
-  }
-
-  public scheduleTask(id: string, startMin: number, durationMin: number): Task {
-    validateTimeBlock(startMin, durationMin);
-
-    const task = this.getById(id);
-    if (task.is_trashed === 1) {
-      throw new ValidationError('Cannot schedule a trashed task.');
-    }
-
-    const settings = this.settingsRepo.getAll();
-    const effectiveToday = getEffectiveToday(
-      typeof settings.day_starts_at === 'string' ? settings.day_starts_at : undefined
-    );
-
-    if (task.my_day_date !== effectiveToday) {
-      throw new ValidationError('Task must be in My Day for today to be scheduled.');
-    }
-
-    const isNewPlacement = task.scheduled_start_min === null || task.scheduled_start_min === undefined;
-    if (isNewPlacement && task.is_completed === 1) {
-      throw new ValidationError('Completed tasks cannot be newly scheduled.');
-    }
-
-    const myDayTasks = this.taskRepo.getMyDay(effectiveToday);
-    const overlap = findOverlap(myDayTasks, { startMin, durationMin }, id);
-    if (overlap) {
-      throw new ValidationError('Time block overlaps with an existing scheduled task.');
-    }
-
-    return this.taskRepo.setTimeBlock(id, startMin, durationMin);
-  }
-
-  public updateTimeBlock(id: string, startMin: number, durationMin: number): Task {
-    validateTimeBlock(startMin, durationMin);
-
-    const task = this.getById(id);
-    if (task.is_trashed === 1) {
-      throw new ValidationError('Cannot update time block for a trashed task.');
-    }
-
-    const settings = this.settingsRepo.getAll();
-    const effectiveToday = getEffectiveToday(
-      typeof settings.day_starts_at === 'string' ? settings.day_starts_at : undefined
-    );
-
-    if (task.my_day_date !== effectiveToday) {
-      throw new ValidationError('Task must be in My Day for today to update its time block.');
-    }
-
-    const myDayTasks = this.taskRepo.getMyDay(effectiveToday);
-    const overlap = findOverlap(myDayTasks, { startMin, durationMin }, id);
-    if (overlap) {
-      throw new ValidationError('Time block overlaps with an existing scheduled task.');
-    }
-
-    return this.taskRepo.setTimeBlock(id, startMin, durationMin);
-  }
-
-  public unscheduleTask(id: string): Task {
-    return this.taskRepo.clearTimeBlock(id);
-  }
-
-  public rollOverToToday(ids: string[]): void {
-    const settings = this.settingsRepo.getAll();
-    const effectiveToday = getEffectiveToday(
-      typeof settings.day_starts_at === 'string' ? settings.day_starts_at : undefined
-    );
-    this.taskRepo.rollOverToToday(ids, effectiveToday);
-  }
-
-  public ensureDayRollover(): number {
-    const settings = this.settingsRepo.getAll();
-    const effectiveToday = getEffectiveToday(
-      typeof settings.day_starts_at === 'string' ? settings.day_starts_at : undefined
-    );
-    return this.taskRepo.clearAllTimeBlocks(effectiveToday);
   }
 
   public moveToList(id: string, listId: string): Task {

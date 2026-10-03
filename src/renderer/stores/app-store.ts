@@ -20,9 +20,8 @@ export const useAppStore = create<AppState>((set) => ({
   isSidebarVisible: true,
 
   setActiveListId: (id: string) => {
-    const effectiveId = id === 'view_agenda' ? 'smart_my_day' : id;
-    set({ activeListId: effectiveId });
-    useListStore.getState().setActiveList(effectiveId);
+    set({ activeListId: id });
+    useListStore.getState().setActiveList(id);
   },
 
   setSidebarVisible: (visible: boolean) => {

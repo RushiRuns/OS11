@@ -31,7 +31,7 @@ interface NavView {
 }
 
 const VIEWS: NavView[] = [
-  { id: 'view_goals', label: 'Goals', icon: '🎯', moduleName: 'goals_habits' },
+  { id: 'view_agenda', label: 'Agenda', icon: '📆', moduleName: 'agenda' },
   { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
 ];
 
@@ -938,17 +938,10 @@ export function Sidebar(): React.ReactElement {
                     }
                   }}
                 >
-                  <div
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
                     className={styles.groupHeaderButton}
                     onClick={() => toggleAreaExpand(area.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        toggleAreaExpand(area.id);
-                      }
-                    }}
                     onContextMenu={(e) => handleAreaContextMenu(e, area)}
                     aria-expanded={isOpen}
                     aria-label={`Area ${area.name}, ${areaProjects.length} projects`}
@@ -990,7 +983,7 @@ export function Sidebar(): React.ReactElement {
                         +
                       </button>
                     </div>
-                  </div>
+                  </button>
 
                   {isOpen && (
                     <div className={styles.groupItems}>

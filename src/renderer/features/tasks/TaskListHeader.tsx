@@ -3,7 +3,6 @@ import type { TaskFilterConfig, SortOption, SortDirection } from '../../hooks/us
 import { Button } from '../../components/Button/Button.js';
 import { Tooltip } from '../../components/Tooltip/Tooltip.js';
 import type { DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
-import { useModuleStore } from '../../stores/moduleStore.js';
 import styles from './TaskListHeader.module.css';
 
 const DropdownMenu = lazy(() => import('../../components/primitives/DropdownMenu/DropdownMenu.js'));
@@ -16,8 +15,6 @@ export interface TaskListHeaderProps {
   isMyDayList?: boolean;
   isSuggestionsOpen?: boolean;
   onToggleSuggestions?: () => void;
-  isSchedulerOpen?: boolean;
-  onToggleScheduler?: () => void;
   suggestionsCount?: number;
 }
 
@@ -29,13 +26,9 @@ export function TaskListHeader({
   isMyDayList = false,
   isSuggestionsOpen = false,
   onToggleSuggestions,
-  isSchedulerOpen = false,
-  onToggleScheduler,
   suggestionsCount,
 }: TaskListHeaderProps): React.ReactElement {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const isAgendaEnabled = useModuleStore((state) => state.isEnabled('agenda'));
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
   const menuItems: (DropdownMenuItemConfig | 'separator')[] = [
     {
@@ -121,39 +114,6 @@ export function TaskListHeader({
         </div>
 
         <div className={styles.headerControls}>
-          {isMyDayList && isAgendaEnabled && (
-            <Tooltip
-              content={`Schedule your day (${isMac ? '⇧⌘S' : 'Ctrl+Shift+S'})`}
-              side="bottom"
-            >
-              <Button
-                variant={isSchedulerOpen ? 'primary' : 'ghost'}
-                size="sm"
-                className={styles.iconBtn}
-                onClick={onToggleScheduler}
-                aria-label="Schedule your day"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
-                  <path d="M16 2v4" />
-                  <path d="M8 2v4" />
-                  <path d="M3 10h18" />
-                  <circle cx="16.5" cy="16.5" r="5.5" />
-                  <path d="M16.5 14v2.5l1.5 1.5" />
-                </svg>
-              </Button>
-            </Tooltip>
-          )}
-
           {isMyDayList && (
             <Tooltip
               content={suggestionsCount ? `Suggestions (${suggestionsCount})` : 'Suggestions'}

@@ -259,57 +259,6 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
-
-  ipcMain.handle(
-    IPC.TASKS.SET_TIME_BLOCK,
-    async (_event, payload: { id: string; startMin: number; durationMin: number }) => {
-      try {
-        if (!payload || typeof payload !== 'object') {
-          return { ok: false, error: 'Payload must be an object.' };
-        }
-        const { id, startMin, durationMin } = payload;
-        if (!id || typeof id !== 'string') {
-          return { ok: false, error: 'Task ID is required.' };
-        }
-        const data = taskService.scheduleTask(id, startMin, durationMin);
-        return { ok: true, data };
-      } catch (err: unknown) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
-      }
-    }
-  );
-
-  ipcMain.handle(IPC.TASKS.CLEAR_TIME_BLOCK, async (_event, payload: string | { id: string }) => {
-    try {
-      const id = typeof payload === 'string' ? payload : payload?.id;
-      if (!id || typeof id !== 'string') {
-        return { ok: false, error: 'Task ID is required.' };
-      }
-      const data = taskService.unscheduleTask(id);
-      return { ok: true, data };
-    } catch (err: unknown) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) };
-    }
-  });
-
-  ipcMain.handle(IPC.TASKS.ROLLOVER_TO_TODAY, async (_event, payload: { ids: string[] }) => {
-    try {
-      const ids = Array.isArray(payload?.ids) ? payload.ids : [];
-      taskService.rollOverToToday(ids);
-      return { ok: true, data: true };
-    } catch (err: unknown) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) };
-    }
-  });
-
-  ipcMain.handle(IPC.TASKS.ENSURE_DAY_ROLLOVER, async () => {
-    try {
-      const cleared = taskService.ensureDayRollover();
-      return { ok: true, data: { cleared } };
-    } catch (err: unknown) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) };
-    }
-  });
 }
 
 export default registerTaskHandlers;

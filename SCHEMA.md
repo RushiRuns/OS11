@@ -93,8 +93,6 @@ CREATE TABLE tasks (
   created_by_device   TEXT NOT NULL DEFAULT 'local',
   sort_order          REAL NOT NULL DEFAULT 0,    -- fractional indexing for manual sort
   my_day_date         TEXT,                       -- date added to My Day (YYYY-MM-DD)
-  scheduled_start_min INTEGER CHECK (scheduled_start_min IS NULL OR (scheduled_start_min >= 0 AND scheduled_start_min < 1440)),
-  scheduled_duration_min INTEGER CHECK (scheduled_duration_min IS NULL OR (scheduled_duration_min >= 15 AND scheduled_duration_min <= 480)),
   pomodoro_count      INTEGER NOT NULL DEFAULT 0,
   is_trashed          INTEGER NOT NULL DEFAULT 0,
   trashed_at          TEXT,
@@ -115,7 +113,6 @@ CREATE INDEX idx_tasks_is_trashed    ON tasks(is_trashed);
 **Notes:**
 - `parent_task_id` supports unlimited subtask nesting. Depth enforced in domain logic.
 - `sort_order` uses fractional indexing — reordering one task never rewrites all others.
-- `scheduled_start_min` and `scheduled_duration_min`: Represent time blocks placed in the My Day Scheduler panel. Minutes since midnight (0..1439) and duration (15..480, multiple of 15). Both columns are set together or both NULL. Invariant `scheduled_start_min + scheduled_duration_min <= 1440` enforced in domain logic. Cleared when task is removed from My Day (`my_day_date = NULL`), and cleared on day rollover. Moving, resizing, and dragging blocks update both columns atomically. Completing a task preserves the block (shown muted with strike-through). Tasks restored from trash keep blocks only if `my_day_date = today` and no overlap occurs. Recurring spawns and duplicates never copy blocks.
 - `my_day_date` stores which day a task was added to My Day. Tasks where `my_day_date < today` surface in the midnight rollover prompt.
 - `assignee_device_id` is a placeholder column. It is created now but remains null in Phase 1.
 

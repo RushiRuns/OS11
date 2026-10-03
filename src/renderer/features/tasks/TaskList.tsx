@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useDeferredValue, useCallback, useM
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   useDndMonitor,
-  useDroppable,
-  useDndContext,
+  DragOverlay,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -42,8 +41,6 @@ export interface TaskListProps {
   isMyDayList?: boolean;
   isSuggestionsOpen?: boolean;
   onToggleSuggestions?: () => void;
-  isSchedulerOpen?: boolean;
-  onToggleScheduler?: () => void;
   suggestionsCount?: number;
 }
 
@@ -90,8 +87,6 @@ export function TaskList({
   isMyDayList: propIsMyDayList,
   isSuggestionsOpen,
   onToggleSuggestions,
-  isSchedulerOpen,
-  onToggleScheduler,
   suggestionsCount: propSuggestionsCount,
 }: TaskListProps): React.ReactElement {
   const { activeListId } = useAppStore();
@@ -465,16 +460,9 @@ export function TaskList({
     }
 
     const overIdStr = String(over.id);
-    if (
-      overIdStr.startsWith('list:') ||
-      overIdStr.startsWith('project:') ||
-      overIdStr.startsWith('tag:') ||
-      overIdStr === 'scheduler-grid' ||
-      overIdStr === 'my-day-list-drop-zone' ||
-      active.data?.current?.type === 'time-block'
-    ) {
+    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
       setDropIndicator(null);
-      return; // Handled by App.tsx (sidebar list/project/tag/scheduler drop targets)
+      return; // Handled by App.tsx (sidebar list/project/tag drop targets)
     }
 
     const overRect = over.rect;
@@ -510,14 +498,7 @@ export function TaskList({
     if (!over || active.id === over.id) return;
 
     const overIdStr = String(over.id);
-    if (
-      overIdStr.startsWith('list:') ||
-      overIdStr.startsWith('project:') ||
-      overIdStr.startsWith('tag:') ||
-      overIdStr === 'scheduler-grid' ||
-      overIdStr === 'my-day-list-drop-zone' ||
-      active.data?.current?.type === 'time-block'
-    ) {
+    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
       return; // Handled by App.tsx
     }
 
@@ -592,15 +573,6 @@ export function TaskList({
   })();
 
   const isMyDay = propIsMyDayList ?? (activeListId === 'smart_my_day');
-
-  const { active: dndActive } = useDndContext();
-  const isDraggingTimeBlock = dndActive?.data?.current?.type === 'time-block';
-
-  const { setNodeRef: setListDropRef, isOver: isOverListDrop } = useDroppable({
-    id: 'my-day-list-drop-zone',
-    data: { type: 'my-day-list' },
-    disabled: !isMyDay || !isDraggingTimeBlock,
-  });
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const calculatedSuggestionsCount = useMemo(() => {
     if (!isMyDay) return 0;
@@ -625,8 +597,6 @@ export function TaskList({
         isMyDayList={isMyDay}
         isSuggestionsOpen={isSuggestionsOpen}
         onToggleSuggestions={onToggleSuggestions}
-        isSchedulerOpen={isSchedulerOpen}
-        onToggleScheduler={onToggleScheduler}
         suggestionsCount={calculatedSuggestionsCount}
       />
 
@@ -645,31 +615,7 @@ export function TaskList({
         items={allTaskIds}
         strategy={verticalListSortingStrategy}
       >
-        <div
-          ref={(node) => {
-            (parentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-            setListDropRef(node);
-          }}
-          className={`${styles.virtualScrollArea} ${isOverListDrop && isDraggingTimeBlock ? styles.unscheduleDropZoneActive : ''}`}
-        >
-          {isOverListDrop && isDraggingTimeBlock && (
-            <div className={styles.unscheduleBadge} aria-hidden="true">
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              Drop to unschedule
-            </div>
-          )}
+        <div ref={parentRef} className={styles.virtualScrollArea}>
           {flattenedIncomplete.length === 0 && completedTasks.length === 0 ? (
             <EmptyState
               title="All clear"
@@ -827,7 +773,69 @@ export function TaskList({
         </>
       )}
 
-
+      {/* Floating drag preview: follows the pointer directly instead of the
+          card animating/shifting in place, so it's always obvious what
+          you're holding and where it'll go. */}
+      <DragOverlay dropAnimation={null}>
+        {draggingTaskId
+          ? (() => {
+              const draggingItem = flattenedIncomplete.find((i) => i.task.id === draggingTaskId);
+              const draggingTask = draggingItem?.task ?? tasksById[draggingTaskId];
+              if (!draggingTask) return null;
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-md, 10px)',
+                    background: 'var(--surface-raised, #2a2a2e)',
+                    border: '1px solid var(--border-subtle, #3a3a3e)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+                    maxWidth: '420px',
+                    cursor: 'grabbing',
+                  }}
+                >
+                  <span
+                    style={{ fontSize: '13px', color: 'var(--text-tertiary, #888)', lineHeight: 1 }}
+                    aria-hidden="true"
+                  >
+                    ⠿
+                  </span>
+                  <span
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      border: '2px solid var(--text-tertiary, #888)',
+                      flexShrink: 0,
+                    }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      color: 'var(--text-primary, #fff)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {draggingTask.title}
+                  </span>
+                  {draggingItem?.hasSubtasks && (
+                    <span
+                      style={{ fontSize: '12px', color: 'var(--text-tertiary, #888)', flexShrink: 0 }}
+                    >
+                      {draggingItem.subtaskCount.completed}/{draggingItem.subtaskCount.total}
+                    </span>
+                  )}
+                </div>
+              );
+            })()
+          : null}
+      </DragOverlay>
 
       {/* Bulk Action Bar (Framer Motion AnimatePresence) */}
       <BulkActionBar />
@@ -854,11 +862,8 @@ export function TaskList({
         onToggleMyDay={(id) => {
           const today = new Date().toISOString().split('T')[0];
           const target = activeTasks.find((t) => t.id === id);
-          if (target?.my_day_date === today) {
-            useTaskStore.getState().removeFromMyDay(id).catch(console.error);
-          } else {
-            useTaskStore.getState().addToMyDay(id, today).catch(console.error);
-          }
+          const next = target?.my_day_date === today ? null : today;
+          updateTask({ id, my_day_date: next });
         }}
         onMoveToList={(id, listId) => updateTask({ id, list_id: listId })}
         onDuplicate={duplicateTask}

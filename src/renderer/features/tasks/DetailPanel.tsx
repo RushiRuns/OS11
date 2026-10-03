@@ -314,11 +314,10 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
       icon: <span>☀️</span>,
       onClick: () => {
         const today = new Date().toISOString().split('T')[0];
-        if (isMyDay) {
-          useTaskStore.getState().removeFromMyDay(currentTask.id).catch(console.error);
-        } else {
-          useTaskStore.getState().addToMyDay(currentTask.id, today).catch(console.error);
-        }
+        updateTask({
+          id: currentTask.id,
+          my_day_date: isMyDay ? null : today,
+        });
       },
     },
     {

@@ -250,11 +250,8 @@ export function ProjectListView({
         onToggleMyDay={(id) => {
           const today = new Date().toISOString().split('T')[0];
           const target = tasks.find((t) => t.id === id);
-          if (target?.my_day_date === today) {
-            useTaskStore.getState().removeFromMyDay(id).catch(console.error);
-          } else {
-            useTaskStore.getState().addToMyDay(id, today).catch(console.error);
-          }
+          const next = target?.my_day_date === today ? null : today;
+          updateTask({ id, my_day_date: next });
         }}
         onMoveToList={(id, listId) => updateTask({ id, list_id: listId })}
         onDuplicate={duplicateTask}

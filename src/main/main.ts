@@ -138,10 +138,8 @@ app.on('window-all-closed', () => {
 // Power Monitor: adjust and trigger overdue timers after system sleep
 if (typeof powerMonitor !== 'undefined' && powerMonitor.on) {
   powerMonitor.on('resume', () => {
-    console.log('[OS11 Main] System resumed from sleep; recalculating reminder schedules and checking day rollover...');
+    console.log('[OS11 Main] System resumed from sleep; recalculating reminder schedules...');
     getReminderService()?.rescheduleAfterSleep();
-    const win = getMainWindow();
-    win?.webContents.send(IPC.TASKS.ENSURE_DAY_ROLLOVER);
   });
 }
 

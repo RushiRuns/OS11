@@ -22,45 +22,34 @@ import { NotificationCenter } from './features/notifications/NotificationCenter.
 import { OnboardingFlow } from './features/onboarding/OnboardingFlow.js';
 import { FocusModeView } from './features/focus/FocusModeView.js';
 import { ReviewManager } from './features/review/ReviewManager.js';
+import { AnimatePresence } from 'framer-motion';
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
 import { useTagStore } from './stores/tagStore.js';
 import {
   DndContext,
-  DragOverlay,
+  closestCenter,
   KeyboardSensor,
+  PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
-  type Active,
 } from '@dnd-kit/core';
-import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ipc, invoke } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
-import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
-import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
-import { TaskRowDragOverlay } from './features/tasks/TaskRowDragOverlay.js';
-import { yToMinutes, snapToGrid, defaultDuration, placeBlock, type BlockInterval } from '@shared/utils/schedulerMath.js';
-import { HOUR_HEIGHT } from './features/lists/scheduler/useSchedulerLayout.js';
-import { toISODate } from '@shared/utils/date.js';
 
 // Lazy views — loaded on-demand per PERFORMANCE.md §5 & vite.config.ts manualChunks
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard.js'));
-const GoalsView = lazy(() => import('./features/goals/GoalsView.js'));
-const SchedulerPanel = lazy(() => import('./features/lists/scheduler/SchedulerPanel.js'));
+const Agenda = lazy(() => import('./features/agenda/Agenda.js'));
 const Projects = lazy(() => import('./features/projects/Projects.js'));
 const AreaView = lazy(() => import('./features/areas/AreaView.js'));
 const Settings = lazy(() => import('./features/settings/Settings.js'));
 const Pomodoro = lazy(() => import('./features/pomodoro/PomodoroView.js'));
-
-import { SchedulerSkeleton } from './features/lists/scheduler/SchedulerSkeleton.js';
-import { useSchedulerUiStore } from './stores/schedulerUiStore.js';
-import { useModuleStore } from './stores/moduleStore.js';
 
 import {
   applyTheme,
@@ -96,31 +85,32 @@ export function App(): React.ReactElement {
 
   const { activeListId, systemInfo, fetchSystemInfo, isSidebarVisible, setSidebarVisible } =
     useAppStore();
-  const rightSlotActive = useTaskStore(state => state.rightSlotActive);
-  const selectedTaskId = useTaskStore(state => state.selectedTaskId);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  // Derive live task directly from Zustand store to ensure changes (e.g. priority) reflect instantly in sidebar
   const liveSelectedTask = useTaskStore(state =>
-    selectedTaskId ? state.tasksById[selectedTaskId] ?? null : null
+    selectedTask?.id ? (state.tasksById[selectedTask.id] ?? selectedTask) : null
   );
-  const schedulerWidth = useSchedulerUiStore(state => state.panelWidth);
-  const isSchedulerDragging = useSchedulerUiStore(state => state.isDragging);
 
   // Auto-close detail sidebar if task is deleted or trashed
   useEffect(() => {
-    if (selectedTaskId && (!liveSelectedTask || liveSelectedTask.is_trashed === 1)) {
-      useTaskStore.getState().closeDetail();
+    if (selectedTask?.id && (!liveSelectedTask || liveSelectedTask.is_trashed === 1)) {
+      setSelectedTask(null);
     }
-  }, [selectedTaskId, liveSelectedTask]);
+  }, [selectedTask?.id, liveSelectedTask]);
 
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const [activeDragItem, setActiveDragItem] = useState<{ id: string; type?: string; task?: Task } | null>(null);
-  const [isOverGrid, setIsOverGrid] = useState(false);
-  const [isOverList, setIsOverList] = useState(false);
   const isPomodoroFocus = usePomodoroStore(state => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore(state => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
+
+  useEffect(() => {
+    setIsSuggestionsOpen(false);
+  }, [activeListId]);
 
   useEffect(() => {
     fetchSystemInfo();
@@ -230,45 +220,12 @@ export function App(): React.ReactElement {
         e.preventDefault();
         setIsFocusMode(prev => !prev);
         togglePomodoroFocus();
-      } else if (modKey && e.shiftKey && e.key.toLowerCase() === 's') {
-        const activeListId = useAppStore.getState().activeListId;
-        if (activeListId === 'smart_my_day' && useModuleStore.getState().isEnabled('agenda')) {
-          e.preventDefault();
-          useTaskStore.getState().toggleScheduler();
-        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Day Rollover Lifecycle Hooks
-    useTaskStore.getState().ensureDayRollover().catch(console.error);
-
-    const handleWindowFocus = () => {
-      useTaskStore.getState().ensureDayRollover().catch(console.error);
-    };
-    window.addEventListener('focus', handleWindowFocus);
-
-    const unsubRollover = ipc.on(IPC.TASKS.ENSURE_DAY_ROLLOVER, () => {
-      useTaskStore.getState().ensureDayRollover().catch(console.error);
-    });
-
-    let rolloverTimerId: ReturnType<typeof setTimeout> | null = null;
-    const scheduleNextRollover = () => {
-      const now = new Date();
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
-      const delayMs = Math.max(1000, tomorrow.getTime() - now.getTime());
-      rolloverTimerId = setTimeout(async () => {
-        await useTaskStore.getState().ensureDayRollover().catch(console.error);
-        scheduleNextRollover();
-      }, delayMs);
-    };
-    scheduleNextRollover();
-
     return () => {
-      if (rolloverTimerId) clearTimeout(rolloverTimerId);
-      window.removeEventListener('focus', handleWindowFocus);
-      unsubRollover?.();
       unsubFocus?.();
       unsubTheme?.();
       unsubAccent?.();
@@ -280,14 +237,9 @@ export function App(): React.ReactElement {
   }, [fetchSystemInfo, togglePomodoroFocus, isFocusMode, isPomodoroFocus]);
 
   const dndSensors = useSensors(
-    useSensor(RowPointerSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 2,
-      },
-    }),
-    useSensor(BlockPointerSensor, {
-      activationConstraint: {
-        distance: 3,
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -309,10 +261,9 @@ export function App(): React.ReactElement {
 
   const handleSelectTask = (task: Task | null) => {
     if (task) {
-      useTaskStore.getState().openDetail(task.id);
-    } else {
-      useTaskStore.getState().closeDetail();
+      setIsSuggestionsOpen(false);
     }
+    setSelectedTask(task);
   };
 
   const handleFocusTask = async (taskId: string) => {
@@ -373,10 +324,14 @@ export function App(): React.ReactElement {
           <MyDayView
             onSelectTask={handleSelectTask}
             selectedTaskId={liveSelectedTask?.id}
-            isSuggestionsOpen={rightSlotActive === 'suggestions'}
-            onToggleSuggestions={() => useTaskStore.getState().toggleSuggestions()}
-            isSchedulerOpen={rightSlotActive === 'scheduler'}
-            onToggleScheduler={() => useTaskStore.getState().toggleScheduler()}
+            isSuggestionsOpen={isSuggestionsOpen}
+            onToggleSuggestions={() => {
+              setIsSuggestionsOpen(prev => {
+                const next = !prev;
+                if (next) setSelectedTask(null);
+                return next;
+              });
+            }}
           />
         );
       case 'smart_planned':
@@ -391,19 +346,8 @@ export function App(): React.ReactElement {
         );
       case 'view_agenda':
         return (
-          <MyDayView
-            onSelectTask={handleSelectTask}
-            selectedTaskId={liveSelectedTask?.id}
-            isSuggestionsOpen={rightSlotActive === 'suggestions'}
-            onToggleSuggestions={() => useTaskStore.getState().toggleSuggestions()}
-            isSchedulerOpen={rightSlotActive === 'scheduler'}
-            onToggleScheduler={() => useTaskStore.getState().toggleScheduler()}
-          />
-        );
-      case 'view_goals':
-        return (
           <Suspense fallback={<ViewSkeleton />}>
-            <GoalsView />
+            <Agenda />
           </Suspense>
         );
       case 'view_projects':
@@ -429,254 +373,65 @@ export function App(): React.ReactElement {
     }
   };
 
-  const isMyDay = activeListId === 'smart_my_day';
   const isDetailVisible =
     !activeListId.startsWith('view_') &&
     !activeListId.startsWith('project:') &&
-    ((rightSlotActive === 'detail' && Boolean(liveSelectedTask)) ||
-      (isMyDay && (rightSlotActive === 'scheduler' || rightSlotActive === 'suggestions')));
-
-  let rightSlotWidth = 'var(--detail-panel-width, 360px)';
-  if (isMyDay && rightSlotActive === 'scheduler') {
-    rightSlotWidth = `${schedulerWidth}px`;
-  }
+    (Boolean(liveSelectedTask) || (isSuggestionsOpen && activeListId === 'smart_my_day'));
 
   const handleAppDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const type = active.data?.current?.type as string | undefined;
-    let task = active.data?.current?.task as Task | undefined;
-    if (!task) {
-      task = useTaskStore.getState().tasksById[String(active.id)];
-    }
-    setActiveDragItem({ id: String(active.id), type, task });
-    if (type === 'time-block') {
-      useSchedulerUiStore.getState().setIsDragging(true);
-    }
-  };
-
-  const getDragPointerY = (event: DragOverEvent | DragEndEvent, active: Active): number => {
-    const activator = event.activatorEvent as MouseEvent | TouchEvent | PointerEvent | undefined;
-    if (activator && 'clientY' in activator && typeof activator.clientY === 'number') {
-      return activator.clientY + (event.delta?.y ?? 0);
-    }
-    if (activator && 'touches' in activator && activator.touches?.[0]) {
-      return activator.touches[0].clientY + (event.delta?.y ?? 0);
-    }
-    const activeRect = active.rect.current.translated ?? active.rect.current.initial;
-    return activeRect ? activeRect.top : 0;
+    console.log('[DragDrop] Drag start:', event.active.id);
   };
 
   const handleAppDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    const isTimeBlock = active.data?.current?.type === 'time-block';
-    const overId = over ? String(over.id) : null;
-
-    setIsOverGrid(overId === 'scheduler-grid');
-    setIsOverList(overId === 'my-day-list-drop-zone');
-
-    if (isTimeBlock) {
-      if (overId === 'scheduler-grid' || overId === 'my-day-list-drop-zone') {
-        document.body.classList.remove('dnd-cursor-not-allowed');
-      } else {
-        document.body.classList.add('dnd-cursor-not-allowed');
-      }
-    } else {
-      const overData = over?.data?.current as PlannedDropData | undefined;
+    if (over) {
+      console.log('[DragDrop] Hover target detected:', over.id, 'from active:', active.id);
+      const overData = over.data?.current as PlannedDropData | undefined;
       if (overData?.type === 'planned-group' && overData.kind === 'overdue') {
         document.body.classList.add('dnd-cursor-not-allowed');
       } else {
         document.body.classList.remove('dnd-cursor-not-allowed');
       }
-    }
-
-    if (overId === 'scheduler-grid') {
-      const gridEl = document.querySelector('[data-drop-target="scheduler-grid"]') as HTMLElement | null;
-      if (gridEl) {
-        const gridRect = gridEl.getBoundingClientRect();
-        const pointerY = getDragPointerY(event, active);
-        const yInGrid = Math.max(0, pointerY - gridRect.top);
-        const rawMin = yToMinutes(yInGrid, HOUR_HEIGHT);
-        const snappedMin = snapToGrid(rawMin);
-
-        let taskId: string;
-        let durationMin: number;
-        if (isTimeBlock) {
-          taskId = String(active.data.current?.taskId ?? active.id);
-          const task = (active.data.current?.task as Task | undefined) ?? useTaskStore.getState().tasksById[taskId];
-          durationMin = task?.scheduled_duration_min ?? 30;
-        } else {
-          taskId = String(active.id);
-          const task = useTaskStore.getState().tasksById[taskId];
-          durationMin = defaultDuration(task);
-        }
-
-        const today = toISODate(new Date());
-        const occupied: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
-          .filter(
-            (t) =>
-              t.id !== taskId &&
-              t.my_day_date === today &&
-              t.is_trashed === 0 &&
-              typeof t.scheduled_start_min === 'number' &&
-              typeof t.scheduled_duration_min === 'number'
-          )
-          .map((t) => ({
-            start: t.scheduled_start_min!,
-            duration: t.scheduled_duration_min!,
-          }));
-
-        const placed = placeBlock(occupied, snappedMin, durationMin, { allowShrink: !isTimeBlock });
-        if (placed) {
-          useSchedulerUiStore.getState().setDragPreviewMinutes({
-            startMin: placed.start,
-            durationMin: placed.duration,
-          });
-        } else {
-          useSchedulerUiStore.getState().setDragPreviewMinutes(null);
-        }
-      }
     } else {
-      useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+      document.body.classList.remove('dnd-cursor-not-allowed');
     }
   };
 
   const handleAppDragEnd = async (event: DragEndEvent) => {
     document.body.classList.remove('dnd-cursor-not-allowed');
-    setActiveDragItem(null);
-    setIsOverGrid(false);
-    setIsOverList(false);
-    useSchedulerUiStore.getState().setIsDragging(false);
-
     const { active, over } = event;
-    const dragPreview = useSchedulerUiStore.getState().dragPreviewMinutes;
-    useSchedulerUiStore.getState().setDragPreviewMinutes(null);
-
-    if (!over) return;
+    console.log('[DragDrop] Drag end event:', { activeId: active.id, overId: over?.id });
+    if (!over || active.id === over.id) return;
 
     const overIdStr = String(over.id);
-    const isTimeBlock = active.data?.current?.type === 'time-block';
-    const activeTaskId = isTimeBlock
-      ? String(active.data.current?.taskId ?? active.id)
-      : String(active.id);
-
-    // 1. Drop on scheduler-grid
-    if (overIdStr === 'scheduler-grid') {
-      const task = useTaskStore.getState().tasksById[activeTaskId];
-      if (!task) return;
-
-      // Spec §2 Decisions 19 & 20:
-      // Subtasks cannot be scheduled in v1; Completed tasks cannot be newly dragged in
-      if (!isTimeBlock) {
-        if (task.parent_task_id !== null || task.is_completed === 1) {
-          return;
-        }
-      }
-
-      let finalPlacement = dragPreview;
-      if (!finalPlacement) {
-        // Fallback calculation using exact drop coordinates
-        const gridEl = document.querySelector('[data-drop-target="scheduler-grid"]') as HTMLElement | null;
-        if (gridEl) {
-          const gridRect = gridEl.getBoundingClientRect();
-          const pointerY = getDragPointerY(event, active);
-          const yInGrid = Math.max(0, pointerY - gridRect.top);
-          const rawMin = yToMinutes(yInGrid, HOUR_HEIGHT);
-          const snappedMin = snapToGrid(rawMin);
-          const durationMin = isTimeBlock ? (task.scheduled_duration_min ?? 30) : defaultDuration(task);
-          const today = toISODate(new Date());
-          const occupied = Object.values(useTaskStore.getState().tasksById)
-            .filter(
-              (t) =>
-                t.id !== activeTaskId &&
-                t.my_day_date === today &&
-                t.is_trashed === 0 &&
-                typeof t.scheduled_start_min === 'number' &&
-                typeof t.scheduled_duration_min === 'number'
-            )
-            .map((t) => ({
-              start: t.scheduled_start_min!,
-              duration: t.scheduled_duration_min!,
-            }));
-          const placed = placeBlock(occupied, snappedMin, durationMin, { allowShrink: !isTimeBlock });
-          if (placed) {
-            finalPlacement = { startMin: placed.start, durationMin: placed.duration };
-          }
-        }
-      }
-
-      if (finalPlacement) {
-        if (isTimeBlock) {
-          const prevStart = task.scheduled_start_min;
-          const prevDuration = task.scheduled_duration_min;
-          await useTaskStore.getState().updateTimeBlock(activeTaskId, finalPlacement.startMin, finalPlacement.durationMin);
-          if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
-            useUndoRedoStore.getState().pushAction({
-              description: `Rescheduled "${task.title}"`,
-              undoFn: async () => {
-                await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
-              },
-              redoFn: async () => {
-                await useTaskStore.getState().updateTimeBlock(activeTaskId, finalPlacement!.startMin, finalPlacement!.durationMin);
-              },
-            });
-          }
-        } else {
-          await useTaskStore.getState().scheduleTask(activeTaskId, finalPlacement.startMin, finalPlacement.durationMin);
-          useUndoRedoStore.getState().pushAction({
-            description: `Scheduled "${task.title}"`,
-            undoFn: async () => {
-              await useTaskStore.getState().unscheduleTask(activeTaskId);
-            },
-            redoFn: async () => {
-              await useTaskStore.getState().scheduleTask(activeTaskId, finalPlacement!.startMin, finalPlacement!.durationMin);
-            },
-          });
-        }
-      }
-      return;
-    }
-
-    // 2. Drop on my-day-list-drop-zone (unschedule)
-    if (overIdStr === 'my-day-list-drop-zone') {
-      if (isTimeBlock) {
-        const task = useTaskStore.getState().tasksById[activeTaskId];
-        const prevStart = task?.scheduled_start_min;
-        const prevDuration = task?.scheduled_duration_min;
-        await useTaskStore.getState().unscheduleTask(activeTaskId);
-        if (task && prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
-          useUndoRedoStore.getState().pushAction({
-            description: `Unscheduled "${task.title}"`,
-            undoFn: async () => {
-              await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
-            },
-            redoFn: async () => {
-              await useTaskStore.getState().unscheduleTask(activeTaskId);
-            },
-          });
-        }
-      }
-      return;
-    }
-
-    // Dropping a time block anywhere outside returns to where it was (no-op)
-    if (isTimeBlock) {
-      return;
-    }
+    const activeTaskId = String(active.id);
 
     if (overIdStr.startsWith('list:')) {
       const targetListId = overIdStr.slice(5);
+      console.log('[DragDrop] Drop commit on list:', targetListId, 'with payload:', {
+        taskId: activeTaskId,
+        target: overIdStr,
+      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
       return;
     }
 
     if (overIdStr.startsWith('project:')) {
       const targetProjectId = overIdStr.slice(8);
+      console.log('[DragDrop] Drop commit on project:', targetProjectId, 'with payload:', {
+        taskId: activeTaskId,
+        target: overIdStr,
+      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, project_id: targetProjectId });
       return;
     }
 
     if (overIdStr.startsWith('tag:')) {
       const targetTagId = overIdStr.slice(4);
+      console.log('[DragDrop] Drop commit on tag:', targetTagId, 'with payload:', {
+        taskId: activeTaskId,
+        target: overIdStr,
+      });
       await useTagStore.getState().addTagToTask(activeTaskId, targetTagId);
       return;
     }
@@ -739,22 +494,20 @@ export function App(): React.ReactElement {
             setIsFocusMode(false);
             if (isPomodoroFocus) togglePomodoroFocus();
           }}
-          onSelectTask={task => handleSelectTask(task)}
+          onSelectTask={task => setSelectedTask(task)}
         />
       ) : (
         <DndContext
           sensors={dndSensors}
-          collisionDetection={schedulerCollisionDetection}
+          collisionDetection={closestCenter}
           onDragStart={handleAppDragStart}
           onDragOver={handleAppDragOver}
           onDragEnd={handleAppDragEnd}
         >
           <div
             className={layoutStyles.shellGrid}
-            style={{ '--right-slot-width': rightSlotWidth } as React.CSSProperties}
             data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
             data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
-            data-dragging={isSchedulerDragging ? 'true' : 'false'}
             data-focus={effectiveFocusMode ? 'active' : 'inactive'}
           >
             {/* Column 1: Sidebar (Critical path) */}
@@ -792,44 +545,23 @@ export function App(): React.ReactElement {
               {renderMainContent()}
             </main>
 
-            {/* Column 3: Right Slot (Detail Panel / Suggestions / Scheduler) */}
+            {/* Column 3: Detail Panel / Suggestions Sidebar (Critical path) */}
             <div className={layoutStyles.detailCol}>
-              {isDetailVisible && (
-                <div key={rightSlotActive} className={layoutStyles.rightSlotFade}>
-                  {rightSlotActive === 'scheduler' && isMyDay && (
-                    <Suspense fallback={<SchedulerSkeleton />}>
-                      <SchedulerPanel />
-                    </Suspense>
-                  )}
-                  {rightSlotActive === 'suggestions' && isMyDay && (
-                    <SuggestionsSidebar
-                      onClose={() => useTaskStore.getState().toggleSuggestions()}
-                    />
-                  )}
-                  {rightSlotActive === 'detail' && liveSelectedTask && (
+              {isSuggestionsOpen && activeListId === 'smart_my_day' ? (
+                <SuggestionsSidebar onClose={() => setIsSuggestionsOpen(false)} />
+              ) : (
+                <AnimatePresence mode="wait">
+                  {liveSelectedTask && (
                     <DetailPanel
                       key={liveSelectedTask.id}
                       task={liveSelectedTask}
-                      onClose={() => useTaskStore.getState().closeDetail()}
+                      onClose={() => setSelectedTask(null)}
                     />
                   )}
-                </div>
+                </AnimatePresence>
               )}
             </div>
           </div>
-          {activeDragItem && (
-            <DragOverlay dropAnimation={null}>
-              {activeDragItem.type === 'time-block' && activeDragItem.task ? (
-                <TimeBlockDragOverlay
-                  task={activeDragItem.task}
-                  isOverGrid={isOverGrid}
-                  isInvalidDrop={!isOverGrid && !isOverList}
-                />
-              ) : activeDragItem.task ? (
-                <TaskRowDragOverlay task={activeDragItem.task} />
-              ) : null}
-            </DragOverlay>
-          )}
         </DndContext>
       )}
 

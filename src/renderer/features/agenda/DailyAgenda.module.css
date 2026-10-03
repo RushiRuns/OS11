@@ -1,0 +1,293 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  padding: var(--space-6) var(--space-8);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.navGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.navBtn {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.navBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.dateDisplay {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.todayBadge {
+  font-size: var(--text-xs);
+  background-color: var(--accent-muted, rgba(59, 130, 246, 0.2));
+  color: var(--accent-primary, #3b82f6);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: var(--weight-semibold);
+}
+
+.loadBalancingPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.loadGreen {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.loadAmber {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.loadRed {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.overdueSection {
+  margin-bottom: var(--space-6);
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.overdueHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: #ef4444;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
+}
+
+.overdueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.overdueCard {
+  background-color: var(--surface-raised);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.overdueLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.overdueDateBadge {
+  font-size: var(--text-xs);
+  color: #ef4444;
+  font-weight: var(--weight-medium);
+}
+
+.actionRescheduleBtn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.actionRescheduleBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.agendaLayout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: var(--space-6);
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .agendaLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.timelineColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hourRow {
+  display: flex;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  transition: background-color var(--duration-fast, 150ms) ease;
+}
+
+.hourRowDragOver {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid var(--accent-primary, #3b82f6);
+}
+
+.hourLabel {
+  width: 72px;
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  padding-top: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.hourSlot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+.taskItem {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  cursor: grab;
+  transition: transform var(--duration-fast, 150ms) ease, box-shadow var(--duration-fast, 150ms) ease;
+}
+
+.taskItem:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.taskItemCompleted {
+  opacity: 0.6;
+}
+
+.taskTitle {
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.taskMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.eventItem {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.unscheduledSidebar {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+.sidebarTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebarDesc {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.unscheduledList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.unscheduledCard {
+  background-color: var(--surface-base);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  cursor: grab;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.unscheduledCard:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--surface-hover);
+}

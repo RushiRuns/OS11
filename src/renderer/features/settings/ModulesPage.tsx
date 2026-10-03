@@ -15,7 +15,7 @@ const MODULES: ModuleDef[] = [
   { id: 'my_day', name: 'My Day', desc: 'Daily intentional task focus list with automatic midnight rollover', icon: '☀️' },
   { id: 'project_management', name: 'Projects & Work breakdown', desc: 'Multi-list grouping, sections, milestones, and task dependencies', icon: '📁' },
   { id: 'pomodoro', name: 'Pomodoro Focus Timer', desc: 'Time-boxed focus sessions, intervals, floating mini-window, and audio alerts', icon: '⏱️' },
-  { id: 'agenda', name: 'Time Blocking', desc: 'Time blocking scheduler panel on My Day with drag-and-drop planning', icon: '⏱️' },
+  { id: 'agenda', name: 'Chronological Agenda', desc: 'Daily and weekly schedule view with external calendar integration and load balancing', icon: '📆' },
   { id: 'goals_habits', name: 'Goals & Habit Chains', desc: 'Milestones, outcomes, recurring habits, and streak counters', icon: '🎯' },
   { id: 'dashboard', name: 'Productivity Dashboard', desc: 'Personal productivity stats, burndown velocity, on-time rate, and PDF/CSV export', icon: '📊' },
   { id: 'file_attachments', name: 'File Attachments', desc: 'Local file picker, drag & drop, clipboard paste, cloud links, and image lightbox', icon: '📎' },
