@@ -9,7 +9,8 @@ import { DetailPanel } from './features/tasks/DetailPanel.js';
 import { MyDayView } from './features/lists/MyDayView.js';
 import { PlannedView } from './features/lists/PlannedView.js';
 import { useUndoRedoStore } from './hooks/useUndoRedo.js';
-import { formatForDisplay } from '@shared/utils/date.js';
+import { formatForDisplay, toISODateOnly } from '@shared/utils/date.js';
+import { resolvePlannedDrop, type PlannedDropData } from './hooks/usePlannedGroups.js';
 import { SuggestionsSidebar } from './features/lists/SuggestionsSidebar.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
@@ -385,10 +386,19 @@ export function App(): React.ReactElement {
     const { active, over } = event;
     if (over) {
       console.log('[DragDrop] Hover target detected:', over.id, 'from active:', active.id);
+      const overData = over.data?.current as PlannedDropData | undefined;
+      if (overData?.type === 'planned-group' && overData.kind === 'overdue') {
+        document.body.classList.add('dnd-cursor-not-allowed');
+      } else {
+        document.body.classList.remove('dnd-cursor-not-allowed');
+      }
+    } else {
+      document.body.classList.remove('dnd-cursor-not-allowed');
     }
   };
 
   const handleAppDragEnd = async (event: DragEndEvent) => {
+    document.body.classList.remove('dnd-cursor-not-allowed');
     const { active, over } = event;
     console.log('[DragDrop] Drag end event:', { activeId: active.id, overId: over?.id });
     if (!over || active.id === over.id) return;
@@ -426,30 +436,30 @@ export function App(): React.ReactElement {
       return;
     }
 
-    const overData = over.data?.current as
-      { type?: string; targetDropDateISO?: string; kind?: string } | undefined;
+    const overData = over.data?.current as PlannedDropData | undefined;
 
     if (overData?.type === 'planned-group') {
-      if (overData.kind === 'overdue' || !overData.targetDropDateISO) {
-        // Overdue groups are not drop targets (no-op)
+      const target = useTaskStore.getState().tasksById[activeTaskId];
+      if (!target) return;
+
+      const todayStr = toISODateOnly(new Date());
+      const resolvedTargetDate = resolvePlannedDrop(target, overData, todayStr);
+      if (!resolvedTargetDate) {
+        // No-op: same group, same date, or invalid/overdue drop target
         return;
       }
 
-      const targetDate = overData.targetDropDateISO;
-      const target = useTaskStore.getState().tasksById[activeTaskId];
-      if (!target) return;
       const prevDueDate = target.due_date;
+      await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: resolvedTargetDate });
 
-      await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: targetDate });
-
-      const displayDate = formatForDisplay(targetDate);
+      const displayDate = formatForDisplay(resolvedTargetDate);
       useUndoRedoStore.getState().pushAction({
         description: `Moved to ${displayDate}`,
         undoFn: async () => {
           await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: prevDueDate });
         },
         redoFn: async () => {
-          await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: targetDate });
+          await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: resolvedTargetDate });
         },
       });
       return;

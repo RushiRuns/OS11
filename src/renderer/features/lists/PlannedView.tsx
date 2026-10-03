@@ -21,7 +21,7 @@ export function PlannedView({
   onSelectTask,
   selectedTaskId,
 }: PlannedViewProps): React.ReactElement {
-  const { loadTasks, tasksById } = useTaskStore();
+  const { loadTasks, tasksById, loading } = useTaskStore();
   const plannedTasks = usePlanned();
   const todayStr = useToday();
 
@@ -91,6 +91,7 @@ export function PlannedView({
           <PlannedTimeline
             groups={groups}
             tasksById={tasksById}
+            isLoading={loading}
             onSelectTask={onSelectTask}
             selectedTaskId={selectedTaskId}
             targetScrollRequest={scrollRequest}

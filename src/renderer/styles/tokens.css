@@ -205,6 +205,7 @@
   --detail-panel-width: 360px;
   --planned-calendar-width: 240px;
   --planned-header-height: 32px;
+  --planned-cell-size: 28px;
   --titlebar-height: 28px; /* Electron custom titlebar */
   --toolbar-height: 52px;
   --quick-add-height: 52px;
@@ -520,3 +521,10 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Drag and Drop global cursor override */
+body.dnd-cursor-not-allowed,
+body.dnd-cursor-not-allowed * {
+  cursor: not-allowed !important;
+}
+

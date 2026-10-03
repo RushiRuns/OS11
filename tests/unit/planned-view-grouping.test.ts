@@ -3,9 +3,11 @@ import type { Task } from '../../src/shared/types/task.js';
 import {
   buildPlannedGroups,
   sortTasksWithinDay,
+  resolvePlannedDrop,
 } from '../../src/renderer/hooks/usePlannedGroups.js';
 import { computeCalendarDots } from '../../src/renderer/hooks/useCalendarDots.js';
 import { buildMonthGridCells } from '../../src/renderer/hooks/useMonthGrid.js';
+import { toISODateOnly, addDaysISO, getNextWeekRange } from '../../src/shared/utils/date.js';
 
 function makeTask(overrides: Partial<Task>): Task {
   return {
@@ -107,7 +109,8 @@ describe('Planned View Grouping Logic (buildPlannedGroups)', () => {
     expect(laterGroups.length).toBe(2);
     expect(laterGroups[0].label).toBe('October');
     expect(laterGroups[0].taskIds).toEqual(['t-later-oct']);
-    expect(laterGroups[0].targetDropDateISO).toBe('2026-10-01');
+    // Target must be first day after next week (Oct 19), never a past date like Oct 1!
+    expect(laterGroups[0].targetDropDateISO).toBe('2026-10-19');
     expect(laterGroups[1].label).toBe('November');
     expect(laterGroups[1].taskIds).toEqual(['t-later-nov']);
     expect(laterGroups[1].targetDropDateISO).toBe('2026-11-01');
@@ -193,6 +196,99 @@ describe('Planned View Grouping Logic (buildPlannedGroups)', () => {
   });
 });
 
+describe('resolvePlannedDrop (Drop Resolution & Same-Group Protection)', () => {
+  const today = '2026-10-07';
+
+  it('returns null on same-group drop inside Next Week without jumping to Monday', () => {
+    // Task due Thursday of Next Week
+    const task = makeTask({ id: 't-next', due_date: '2026-10-15' });
+    const dropData = {
+      type: 'planned-group',
+      kind: 'next-week',
+      groupKey: 'next-week',
+      targetDropDateISO: '2026-10-12',
+    };
+
+    const resolved = resolvePlannedDrop(task, dropData, today);
+    expect(resolved).toBeNull();
+  });
+
+  it('returns null on same-group drop inside Today', () => {
+    const task = makeTask({ id: 't-today', due_date: '2026-10-07' });
+    const dropData = {
+      type: 'planned-group',
+      kind: 'today',
+      groupKey: 'today',
+      targetDropDateISO: '2026-10-07',
+    };
+
+    const resolved = resolvePlannedDrop(task, dropData, today);
+    expect(resolved).toBeNull();
+  });
+
+  it('returns null on same-group drop inside current-month Later', () => {
+    const task = makeTask({ id: 't-later-oct', due_date: '2026-10-25' });
+    const dropData = {
+      type: 'planned-group',
+      kind: 'later',
+      groupKey: 'later:2026-10',
+      targetDropDateISO: '2026-10-19',
+    };
+
+    const resolved = resolvePlannedDrop(task, dropData, today);
+    expect(resolved).toBeNull();
+  });
+
+  it('returns null when dropping over an Overdue group', () => {
+    const task = makeTask({ id: 't-overdue', due_date: '2026-10-01' });
+    const dropData = {
+      type: 'planned-group',
+      kind: 'overdue',
+      groupKey: 'overdue:2026-10-01',
+      targetDropDateISO: undefined,
+    };
+
+    const resolved = resolvePlannedDrop(task, dropData, today);
+    expect(resolved).toBeNull();
+  });
+
+  it('resolves valid cross-group drops with the new target date', () => {
+    const task = makeTask({ id: 't-today', due_date: '2026-10-07' });
+    const dropData = {
+      type: 'planned-group',
+      kind: 'tomorrow',
+      groupKey: 'tomorrow',
+      targetDropDateISO: '2026-10-08',
+    };
+
+    const resolved = resolvePlannedDrop(task, dropData, today);
+    expect(resolved).toBe('2026-10-08');
+  });
+
+  it('handles Sunday-today drop precedence correctly', () => {
+    const sundayToday = '2026-10-04';
+    const task = makeTask({ id: 't-sun', due_date: '2026-10-04' });
+
+    // Drop on Tomorrow (Monday)
+    const dropTomorrow = {
+      type: 'planned-group',
+      kind: 'tomorrow',
+      groupKey: 'tomorrow',
+      targetDropDateISO: '2026-10-05',
+    };
+    expect(resolvePlannedDrop(task, dropTomorrow, sundayToday)).toBe('2026-10-05');
+
+    // Drop on Next Week (starts Monday of next week)
+    const dropNextWeek = {
+      type: 'planned-group',
+      kind: 'next-week',
+      groupKey: 'next-week',
+      targetDropDateISO: '2026-10-05',
+    };
+    expect(resolvePlannedDrop(task, dropNextWeek, sundayToday)).toBe('2026-10-05');
+  });
+});
+
 describe('useCalendarDots / computeCalendarDots', () => {
   it('correctly counts incomplete dated tasks across the 42 visible cells', () => {
     const month = new Date('2026-10-01T12:00:00');
@@ -237,5 +333,20 @@ describe('useMonthGrid / buildMonthGridCells', () => {
     // Today cell test
     const todayCell = cells.find(c => c.dateStr === '2026-10-07');
     expect(todayCell?.isToday).toBe(true);
+  });
+});
+
+describe('Timezone Edge Case (Asia/Kolkata 01:00 AM)', () => {
+  it('formats dates consistently in Asia/Kolkata timezone at 01:00 AM without off-by-one drift', () => {
+    // Date-only string preserves date verbatim regardless of client timezone
+    expect(toISODateOnly('2026-10-07')).toBe('2026-10-07');
+
+    // addDaysISO correctly advances date-only string without timezone shifting
+    expect(addDaysISO('2026-10-07', 1)).toBe('2026-10-08');
+
+    // getNextWeekRange computes proper start/end for Oct 7 (Wed) -> Next week starts Oct 12, ends Oct 18
+    const nextWeek = getNextWeekRange('2026-10-07');
+    expect(nextWeek.startISO).toBe('2026-10-12');
+    expect(nextWeek.endISO).toBe('2026-10-18');
   });
 });

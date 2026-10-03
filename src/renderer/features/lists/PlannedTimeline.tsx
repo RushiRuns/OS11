@@ -15,6 +15,7 @@ import styles from './PlannedTimeline.module.css';
 export interface PlannedTimelineProps {
   groups: PlannedGroup[];
   tasksById: Record<string, Task>;
+  isLoading?: boolean;
   onSelectTask?: (task: Task | null) => void;
   selectedTaskId?: string | null;
   targetScrollRequest?: { dateISO: string; timestamp: number } | null;
@@ -72,6 +73,7 @@ const PlannedTaskRow = React.memo(function PlannedTaskRow({
       type: 'planned-group',
       targetDropDateISO: group.targetDropDateISO,
       kind: group.kind,
+      groupKey: group.key,
     },
   });
 
@@ -118,6 +120,7 @@ const PlannedTaskRow = React.memo(function PlannedTaskRow({
 export function PlannedTimeline({
   groups,
   tasksById,
+  isLoading,
   onSelectTask,
   selectedTaskId,
   targetScrollRequest,
@@ -240,6 +243,20 @@ export function PlannedTimeline({
     },
     [tasksById, deleteTask, pushAction, restoreTask]
   );
+
+  if (isLoading && flattenedItems.length === 0) {
+    return (
+      <div className={styles.timelinePanel} aria-label="Loading planned tasks">
+        <div className={styles.skeletonContainer}>
+          <div className={styles.skeletonHeader} />
+          <div className={styles.skeletonRow} />
+          <div className={styles.skeletonRow} />
+          <div className={styles.skeletonHeader} />
+          <div className={styles.skeletonRow} />
+        </div>
+      </div>
+    );
+  }
 
   if (flattenedItems.length === 0) {
     return (

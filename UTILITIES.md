@@ -31,8 +31,8 @@
 | `useGoalStore` | `src/renderer/stores/goalStore.ts` | Normalized Zustand goal store (`goalsById`, `linksByGoalId`) with progress tracking and task-goal link management | Renderer global |
 | `useAttachmentStore` | `src/renderer/stores/attachmentStore.ts` | Attachment counts and global attachment index store for task cards and command palette search | Renderer global |
 | `useToday` | `src/renderer/hooks/useToday.ts` | Returns today's ISO date string (`YYYY-MM-DD`); auto-updates at midnight and on focus/resume | Component scope |
-| `useMonthGrid` | `src/renderer/hooks/useMonthGrid.ts` | Shared 42-cell Monday–Sunday month grid builder with keyboard navigation | Component scope |
-| `usePlannedGroups` | `src/renderer/hooks/usePlannedGroups.ts` | Memoized partitioning of dated incomplete tasks into chronological buckets | Component scope |
+| `useMonthGrid` | `src/renderer/hooks/useMonthGrid.ts` | Shared 42-cell Monday–Sunday month grid builder with keyboard navigation (Debt: DatePicker and ProjectCalendarView currently use Sunday-first; planned migration to unify on useMonthGrid) | Component scope |
+| `usePlannedGroups` | `src/renderer/hooks/usePlannedGroups.ts` | Memoized partitioning of dated incomplete tasks into chronological buckets with resolvePlannedDrop helper | Component scope |
 | `useCalendarDots` | `src/renderer/hooks/useCalendarDots.ts` | Computes incomplete dated task density map per visible calendar date cell | Component scope |
 
 ---

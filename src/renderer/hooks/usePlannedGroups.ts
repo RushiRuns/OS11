@@ -20,11 +20,86 @@ export type PlannedGroupKind =
   | 'later'; // one group per month
 
 export interface PlannedGroup {
+  key: string;
   kind: PlannedGroupKind;
   label: string; // "Overdue · Sep 28", "Today", "Wednesday, Oct 7", "Next Week", "November"
   dateISO?: string; // set for day-level groups only
   taskIds: string[];
   targetDropDateISO?: string; // required for every kind except 'overdue' (not a drop target)
+}
+
+export interface PlannedDropData {
+  type?: string;
+  targetDropDateISO?: string;
+  kind?: string;
+  groupKey?: string;
+}
+
+/**
+ * Computes the planned group key a task currently belongs to.
+ */
+export function getTaskPlannedGroupKey(task: Task, today: string): string | null {
+  if (!task.due_date || task.is_trashed === 1 || task.is_completed === 1) return null;
+  const taskDateStr = toISODateOnly(task.due_date);
+  const todayStr = toISODateOnly(today);
+  const tomorrowStr = addDaysISO(todayStr, 1);
+
+  const todayDate = parseISO(todayStr);
+  const currentWeekEndStr = format(getEndOfWeek(todayDate), 'yyyy-MM-dd');
+  const nextWeekRange = getNextWeekRange(todayDate);
+
+  if (taskDateStr < todayStr) {
+    return `overdue:${taskDateStr}`;
+  }
+  if (taskDateStr === todayStr) {
+    return 'today';
+  }
+  if (taskDateStr === tomorrowStr) {
+    return 'tomorrow';
+  }
+  if (taskDateStr > tomorrowStr && taskDateStr <= currentWeekEndStr) {
+    return `this-week:${taskDateStr}`;
+  }
+  if (taskDateStr >= nextWeekRange.startISO && taskDateStr <= nextWeekRange.endISO) {
+    return 'next-week';
+  }
+  if (taskDateStr > nextWeekRange.endISO) {
+    return `later:${taskDateStr.slice(0, 7)}`;
+  }
+  return null;
+}
+
+/**
+ * Pure function to resolve whether a drag drop should update a task's due date.
+ * Returns the target date ISO string if the drop is valid and requires rescheduling,
+ * or null if the drop is a no-op (same group, same date, or invalid target).
+ */
+export function resolvePlannedDrop(
+  task: Task | null | undefined,
+  overData: PlannedDropData | null | undefined,
+  today: string
+): string | null {
+  if (!task || !overData) return null;
+  if (overData.type !== 'planned-group') return null;
+  if (overData.kind === 'overdue' || !overData.targetDropDateISO) return null;
+
+  const currentTaskDate = task.due_date ? toISODateOnly(task.due_date) : null;
+  const targetDate = overData.targetDropDateISO;
+
+  // 1. If dropping onto the exact same date, no-op
+  if (currentTaskDate === targetDate) {
+    return null;
+  }
+
+  // 2. If dropping onto the exact same group bucket, no-op
+  if (overData.groupKey && currentTaskDate) {
+    const currentGroupKey = getTaskPlannedGroupKey(task, today);
+    if (currentGroupKey && currentGroupKey === overData.groupKey) {
+      return null;
+    }
+  }
+
+  return targetDate;
 }
 
 /**
@@ -116,6 +191,7 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
     const dateTasks = overdueMap.get(dateStr)!.sort(sortTasksWithinDay);
     if (dateTasks.length > 0) {
       groups.push({
+        key: `overdue:${dateStr}`,
         kind: 'overdue',
         label: formatOverdueLabel(dateStr),
         dateISO: dateStr,
@@ -129,6 +205,7 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
   if (todayTasks.length > 0) {
     todayTasks.sort(sortTasksWithinDay);
     groups.push({
+      key: 'today',
       kind: 'today',
       label: 'Today',
       dateISO: todayStr,
@@ -141,6 +218,7 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
   if (tomorrowTasks.length > 0) {
     tomorrowTasks.sort(sortTasksWithinDay);
     groups.push({
+      key: 'tomorrow',
       kind: 'tomorrow',
       label: 'Tomorrow',
       dateISO: tomorrowStr,
@@ -155,6 +233,7 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
     const dateTasks = thisWeekMap.get(dateStr)!.sort(sortTasksWithinDay);
     if (dateTasks.length > 0) {
       groups.push({
+        key: `this-week:${dateStr}`,
         kind: 'this-week',
         label: formatForDisplay(dateStr),
         dateISO: dateStr,
@@ -175,6 +254,7 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
     });
 
     groups.push({
+      key: 'next-week',
       kind: 'next-week',
       label: 'Next Week',
       dateISO: undefined,
@@ -195,12 +275,19 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
 
     if (monthTasks.length > 0) {
       const monthFirstDate = parseISO(`${ym}-01`);
+      // If the 1st of this month is on or before nextWeekEndStr (e.g. current month),
+      // the drop target must be the first day after next week so it never targets a past or overdue date!
+      const defaultDropDate = `${ym}-01`;
+      const targetDropDate =
+        defaultDropDate <= nextWeekEndStr ? addDaysISO(nextWeekEndStr, 1) : defaultDropDate;
+
       groups.push({
+        key: `later:${ym}`,
         kind: 'later',
         label: formatMonthLabel(monthFirstDate),
         dateISO: undefined,
         taskIds: monthTasks.map(t => t.id),
-        targetDropDateISO: `${ym}-01`, // Defaults to 1st of that month
+        targetDropDateISO: targetDropDate,
       });
     }
   }

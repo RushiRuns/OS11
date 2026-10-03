@@ -20,6 +20,7 @@ export const PlannedDateGroup = React.memo(function PlannedDateGroup({
       type: 'planned-group',
       targetDropDateISO: group.targetDropDateISO,
       kind: group.kind,
+      groupKey: group.key,
     },
   });
 
