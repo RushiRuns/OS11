@@ -162,6 +162,14 @@
 | `calculateNextOccurrence` | `src/shared/utils/recurrence.ts` | Calculates next occurrence for fixed (due_date) vs after-completion recurrence basis |
 | `getTagShape` / `getTagShapeClass` | `src/shared/utils/tag-shape.ts` | Deterministic geometric shape hashing (`circle`, `square`, `triangle`) and CSS class assignment for color-blind accessible tags |
 | `createZipArchive` / `extractZipArchive` | `src/main/utils/zip-util.ts` | Zero-dependency PKZip archive packaging and extraction using Node.js `node:zlib` with CRC-32 checksums |
+| `snapToGrid` | `src/shared/utils/schedulerMath.ts` | Snaps minute offset to nearest 15-minute grid interval |
+| `yToMinutes` / `minutesToY` | `src/shared/utils/schedulerMath.ts` | Invertible vertical pixel coordinate <-> minutes conversion given hourHeight |
+| `defaultDuration` | `src/shared/utils/schedulerMath.ts` | Calculates initial time block duration from task `estimated_minutes` (rounded up to 15, clamped 15-480) or 30m |
+| `clampBlock` | `src/shared/utils/schedulerMath.ts` | Keeps time block start and duration within 0..1440 day range and 15..480 min bounds |
+| `overlaps` | `src/shared/utils/schedulerMath.ts` | Half-open interval overlap check `[start, start + duration)` between time blocks |
+| `placeBlock` | `src/shared/utils/schedulerMath.ts` | Non-overlapping time block placement finding nearest fitting free gap with optional shrink |
+| `resizeLimits` | `src/shared/utils/schedulerMath.ts` | Top/bottom edge resize boundaries bounded by adjacent blocks, day boundaries, and duration limits |
+
 
 ---
 
