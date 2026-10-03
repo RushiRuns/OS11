@@ -1,9 +1,8 @@
 .container {
   display: flex;
   flex-direction: column;
-  width: 100vw;
-  height: 100vh;
-  min-width: 600px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   background-color: var(--surface-base);
   color: var(--text-primary);
@@ -16,7 +15,8 @@
   grid-template-columns: var(--sidebar-width, 224px) 1fr var(--right-slot-width, var(--detail-panel-width, 360px));
   grid-template-rows: 1fr;
   flex: 1;
-  height: 100vh;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   transition: grid-template-columns var(--transition-base, 0.18s cubic-bezier(0, 0, 0.2, 1));
 }

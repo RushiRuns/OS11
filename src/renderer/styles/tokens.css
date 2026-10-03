@@ -447,6 +447,16 @@
   padding: 0;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 html {
   font-family: var(--font-body);
   font-size: 100%; /* Respects OS accessibility font size */
@@ -459,8 +469,7 @@ html {
 
 body {
   font-size: var(--text-md);
-  margin: 0;
-  padding: 0;
+  background: var(--surface-base);
 }
 
 /* Global focus-visible ring — active on keyboard navigation only */

@@ -572,6 +572,9 @@ export class TaskRepository extends BaseRepository {
   }
 
   public setTimeBlock(id: string, startMin: number, durationMin: number): Task {
+    if (!this.hasTimeBlockCols()) {
+      throw new Error(`Time block columns not present in database schema.`);
+    }
     const now = new Date().toISOString();
     const stmt = this.db.prepare(`
       UPDATE tasks
@@ -587,6 +590,9 @@ export class TaskRepository extends BaseRepository {
   }
 
   public clearTimeBlock(id: string): Task {
+    if (!this.hasTimeBlockCols()) {
+      return this.getById(id)!;
+    }
     const now = new Date().toISOString();
     const stmt = this.db.prepare(`
       UPDATE tasks
@@ -602,6 +608,9 @@ export class TaskRepository extends BaseRepository {
   }
 
   public clearAllTimeBlocks(effectiveToday?: string): number {
+    if (!this.hasTimeBlockCols()) {
+      return 0;
+    }
     const now = new Date().toISOString();
     if (effectiveToday) {
       const stmt = this.db.prepare(`
@@ -626,11 +635,17 @@ export class TaskRepository extends BaseRepository {
   public rollOverToToday(ids: string[], today: string): void {
     if (ids.length === 0) return;
     const now = new Date().toISOString();
-    const updateStmt = this.db.prepare(`
-      UPDATE tasks
-      SET my_day_date = ?, scheduled_start_min = NULL, scheduled_duration_min = NULL, updated_at = ?
-      WHERE id = ?
-    `);
+    const updateStmt = this.hasTimeBlockCols()
+      ? this.db.prepare(`
+          UPDATE tasks
+          SET my_day_date = ?, scheduled_start_min = NULL, scheduled_duration_min = NULL, updated_at = ?
+          WHERE id = ?
+        `)
+      : this.db.prepare(`
+          UPDATE tasks
+          SET my_day_date = ?, updated_at = ?
+          WHERE id = ?
+        `);
     const runTransaction = this.db.transaction((taskIds: string[]) => {
       for (const id of taskIds) {
         updateStmt.run(today, now, id);
