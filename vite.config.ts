@@ -110,6 +110,9 @@ export default defineConfig({
           if (id.includes('src/renderer/features/agenda')) {
             return 'agenda';
           }
+          if (id.includes('src/renderer/features/lists/scheduler')) {
+            return 'scheduler';
+          }
           if (id.includes('src/renderer/features/projects')) {
             return 'projects';
           }

@@ -22,7 +22,6 @@ import { NotificationCenter } from './features/notifications/NotificationCenter.
 import { OnboardingFlow } from './features/onboarding/OnboardingFlow.js';
 import { FocusModeView } from './features/focus/FocusModeView.js';
 import { ReviewManager } from './features/review/ReviewManager.js';
-import { AnimatePresence } from 'framer-motion';
 import { useTaskStore } from './stores/taskStore.js';
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
@@ -46,10 +45,15 @@ import type { Task } from '../shared/types/task.js';
 // Lazy views — loaded on-demand per PERFORMANCE.md §5 & vite.config.ts manualChunks
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard.js'));
 const Agenda = lazy(() => import('./features/agenda/Agenda.js'));
+const SchedulerPanel = lazy(() => import('./features/lists/scheduler/SchedulerPanel.js'));
 const Projects = lazy(() => import('./features/projects/Projects.js'));
 const AreaView = lazy(() => import('./features/areas/AreaView.js'));
 const Settings = lazy(() => import('./features/settings/Settings.js'));
 const Pomodoro = lazy(() => import('./features/pomodoro/PomodoroView.js'));
+
+import { SchedulerSkeleton } from './features/lists/scheduler/SchedulerSkeleton.js';
+import { useSchedulerUiStore } from './stores/schedulerUiStore.js';
+import { useModuleStore } from './stores/moduleStore.js';
 
 import {
   applyTheme,
@@ -85,21 +89,21 @@ export function App(): React.ReactElement {
 
   const { activeListId, systemInfo, fetchSystemInfo, isSidebarVisible, setSidebarVisible } =
     useAppStore();
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-
-  // Derive live task directly from Zustand store to ensure changes (e.g. priority) reflect instantly in sidebar
+  const rightSlotActive = useTaskStore(state => state.rightSlotActive);
+  const selectedTaskId = useTaskStore(state => state.selectedTaskId);
   const liveSelectedTask = useTaskStore(state =>
-    selectedTask?.id ? (state.tasksById[selectedTask.id] ?? selectedTask) : null
+    selectedTaskId ? state.tasksById[selectedTaskId] ?? null : null
   );
+  const schedulerWidth = useSchedulerUiStore(state => state.panelWidth);
+  const isSchedulerDragging = useSchedulerUiStore(state => state.isDragging);
 
   // Auto-close detail sidebar if task is deleted or trashed
   useEffect(() => {
-    if (selectedTask?.id && (!liveSelectedTask || liveSelectedTask.is_trashed === 1)) {
-      setSelectedTask(null);
+    if (selectedTaskId && (!liveSelectedTask || liveSelectedTask.is_trashed === 1)) {
+      useTaskStore.getState().closeDetail();
     }
-  }, [selectedTask?.id, liveSelectedTask]);
+  }, [selectedTaskId, liveSelectedTask]);
 
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
@@ -107,10 +111,6 @@ export function App(): React.ReactElement {
   const isPomodoroFocus = usePomodoroStore(state => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore(state => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
-
-  useEffect(() => {
-    setIsSuggestionsOpen(false);
-  }, [activeListId]);
 
   useEffect(() => {
     fetchSystemInfo();
@@ -220,6 +220,12 @@ export function App(): React.ReactElement {
         e.preventDefault();
         setIsFocusMode(prev => !prev);
         togglePomodoroFocus();
+      } else if (modKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        const activeListId = useAppStore.getState().activeListId;
+        if (activeListId === 'smart_my_day' && useModuleStore.getState().isEnabled('agenda')) {
+          e.preventDefault();
+          useTaskStore.getState().toggleScheduler();
+        }
       }
     };
 
@@ -266,9 +272,10 @@ export function App(): React.ReactElement {
 
   const handleSelectTask = (task: Task | null) => {
     if (task) {
-      setIsSuggestionsOpen(false);
+      useTaskStore.getState().openDetail(task.id);
+    } else {
+      useTaskStore.getState().closeDetail();
     }
-    setSelectedTask(task);
   };
 
   const handleFocusTask = async (taskId: string) => {
@@ -329,14 +336,10 @@ export function App(): React.ReactElement {
           <MyDayView
             onSelectTask={handleSelectTask}
             selectedTaskId={liveSelectedTask?.id}
-            isSuggestionsOpen={isSuggestionsOpen}
-            onToggleSuggestions={() => {
-              setIsSuggestionsOpen(prev => {
-                const next = !prev;
-                if (next) setSelectedTask(null);
-                return next;
-              });
-            }}
+            isSuggestionsOpen={rightSlotActive === 'suggestions'}
+            onToggleSuggestions={() => useTaskStore.getState().toggleSuggestions()}
+            isSchedulerOpen={rightSlotActive === 'scheduler'}
+            onToggleScheduler={() => useTaskStore.getState().toggleScheduler()}
           />
         );
       case 'smart_planned':
@@ -378,10 +381,17 @@ export function App(): React.ReactElement {
     }
   };
 
+  const isMyDay = activeListId === 'smart_my_day';
   const isDetailVisible =
     !activeListId.startsWith('view_') &&
     !activeListId.startsWith('project:') &&
-    (Boolean(liveSelectedTask) || (isSuggestionsOpen && activeListId === 'smart_my_day'));
+    ((rightSlotActive === 'detail' && Boolean(liveSelectedTask)) ||
+      (isMyDay && (rightSlotActive === 'scheduler' || rightSlotActive === 'suggestions')));
+
+  let rightSlotWidth = 'var(--detail-panel-width, 360px)';
+  if (isMyDay && rightSlotActive === 'scheduler') {
+    rightSlotWidth = `${schedulerWidth}px`;
+  }
 
   const handleAppDragStart = (event: DragStartEvent) => {
     console.log('[DragDrop] Drag start:', event.active.id);
@@ -499,7 +509,7 @@ export function App(): React.ReactElement {
             setIsFocusMode(false);
             if (isPomodoroFocus) togglePomodoroFocus();
           }}
-          onSelectTask={task => setSelectedTask(task)}
+          onSelectTask={task => handleSelectTask(task)}
         />
       ) : (
         <DndContext
@@ -511,8 +521,10 @@ export function App(): React.ReactElement {
         >
           <div
             className={layoutStyles.shellGrid}
+            style={{ '--right-slot-width': rightSlotWidth } as React.CSSProperties}
             data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
             data-detail={effectiveFocusMode || !isDetailVisible ? 'hidden' : 'visible'}
+            data-dragging={isSchedulerDragging ? 'true' : 'false'}
             data-focus={effectiveFocusMode ? 'active' : 'inactive'}
           >
             {/* Column 1: Sidebar (Critical path) */}
@@ -550,20 +562,28 @@ export function App(): React.ReactElement {
               {renderMainContent()}
             </main>
 
-            {/* Column 3: Detail Panel / Suggestions Sidebar (Critical path) */}
+            {/* Column 3: Right Slot (Detail Panel / Suggestions / Scheduler) */}
             <div className={layoutStyles.detailCol}>
-              {isSuggestionsOpen && activeListId === 'smart_my_day' ? (
-                <SuggestionsSidebar onClose={() => setIsSuggestionsOpen(false)} />
-              ) : (
-                <AnimatePresence mode="wait">
-                  {liveSelectedTask && (
+              {isDetailVisible && (
+                <div key={rightSlotActive} className={layoutStyles.rightSlotFade}>
+                  {rightSlotActive === 'scheduler' && isMyDay && (
+                    <Suspense fallback={<SchedulerSkeleton />}>
+                      <SchedulerPanel />
+                    </Suspense>
+                  )}
+                  {rightSlotActive === 'suggestions' && isMyDay && (
+                    <SuggestionsSidebar
+                      onClose={() => useTaskStore.getState().toggleSuggestions()}
+                    />
+                  )}
+                  {rightSlotActive === 'detail' && liveSelectedTask && (
                     <DetailPanel
                       key={liveSelectedTask.id}
                       task={liveSelectedTask}
-                      onClose={() => setSelectedTask(null)}
+                      onClose={() => useTaskStore.getState().closeDetail()}
                     />
                   )}
-                </AnimatePresence>
+                </div>
               )}
             </div>
           </div>

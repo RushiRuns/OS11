@@ -203,6 +203,9 @@
   --sidebar-min-width: 180px;
   --sidebar-max-width: 280px;
   --detail-panel-width: 360px;
+  --right-slot-width: var(--detail-panel-width);
+  --scheduler-hour-height: 80px;
+  --scheduler-gutter-width: 56px;
   --planned-calendar-width: 240px;
   --planned-header-height: 32px;
   --planned-cell-size: 28px;
@@ -244,6 +247,7 @@
   /* Convenience shorthand combos */
   --transition-fast: var(--motion-fast) var(--ease-out);
   --transition-default: var(--motion-default) var(--ease-out);
+  --transition-base: var(--transition-default);
   --transition-slow: var(--motion-slow) var(--ease-out);
   --transition-spring: var(--motion-fast) var(--ease-spring);
 

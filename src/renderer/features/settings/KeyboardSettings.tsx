@@ -20,6 +20,7 @@ const SHORTCUTS: ShortcutItem[] = [
   { category: 'Tasks', action: 'Star / Unstar Task', keys: ['S'] },
   { category: 'Tasks', action: 'Delete Task (Move to Trash)', keys: ['Delete'] },
   { category: 'Tasks', action: 'Duplicate Selected Task', keys: ['Ctrl', 'D'] },
+  { category: 'Tasks', action: 'Toggle Time Blocking Scheduler (My Day)', keys: ['Ctrl', 'Shift', 'S'] },
   { category: 'Editing', action: 'Undo Last Action', keys: ['Ctrl', 'Z'] },
   { category: 'Editing', action: 'Redo Last Action', keys: ['Ctrl', 'Shift', 'Z'] },
   { category: 'Developer', action: 'Toggle Developer Tools', keys: ['F12', 'or', 'Ctrl', 'Shift', 'I'] },

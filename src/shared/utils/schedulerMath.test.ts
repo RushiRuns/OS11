@@ -8,10 +8,6 @@ import {
   overlaps,
   placeBlock,
   resizeLimits,
-  SNAP,
-  MIN_DURATION,
-  MAX_DURATION,
-  DAY_END,
 } from './schedulerMath.js';
 
 describe('schedulerMath: Snapping & Coordinates', () => {

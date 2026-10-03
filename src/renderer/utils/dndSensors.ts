@@ -1,12 +1,13 @@
-import { PointerSensor } from '@dnd-kit/core';
+import { PointerSensor, type PointerSensorOptions } from '@dnd-kit/core';
+import type { PointerEvent } from 'react';
 
 export class RowPointerSensor extends PointerSensor {
   static activators = [
     {
       eventName: 'onPointerDown' as const,
       handler: (
-        { nativeEvent: event }: { nativeEvent: PointerEvent },
-        { onActivation }: { onActivation?: (params: { event: PointerEvent }) => void }
+        { nativeEvent: event }: PointerEvent,
+        { onActivation }: PointerSensorOptions
       ) => {
         if (!event.isPrimary || event.button !== 0) {
           return false;
@@ -32,8 +33,8 @@ export class BlockPointerSensor extends PointerSensor {
     {
       eventName: 'onPointerDown' as const,
       handler: (
-        { nativeEvent: event }: { nativeEvent: PointerEvent },
-        { onActivation }: { onActivation?: (params: { event: PointerEvent }) => void }
+        { nativeEvent: event }: PointerEvent,
+        { onActivation }: PointerSensorOptions
       ) => {
         if (!event.isPrimary || event.button !== 0) {
           return false;

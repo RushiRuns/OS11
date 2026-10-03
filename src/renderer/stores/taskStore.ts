@@ -2,18 +2,29 @@ import { create } from 'zustand';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/task.js';
 import { taskServiceAdapter } from '../services/task-service-adapter.js';
 import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
+import { useAppStore } from './app-store.js';
+
+export type RightSlotActive = 'scheduler' | 'suggestions' | 'detail' | null;
+export type RightSlotPrevious = 'scheduler' | 'suggestions' | null;
 
 export interface TaskStoreState {
   tasksById: Record<string, Task>;
   loading: boolean;
   error: string | null;
   selectedTaskId: string | null;
+  rightSlotActive: RightSlotActive;
+  rightSlotPrevious: RightSlotPrevious;
 
   // Primary Actions
   loadTasks: () => Promise<void>;
   loadTasksByList: (listId: string) => Promise<void>;
   appendTasks: (tasks: Task[]) => void;
   setSelectedTaskId: (id: string | null) => void;
+  openDetail: (id: string) => void;
+  closeDetail: () => void;
+  toggleScheduler: () => void;
+  toggleSuggestions: () => void;
+  setRightSlotActive: (slot: RightSlotActive) => void;
 
   // Optimistic Mutations (PERFORMANCE.md §11)
   createTask: (payload: CreateTaskPayload) => Promise<Task>;
@@ -44,7 +55,8 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
   loading: false,
   error: null,
   selectedTaskId: null,
-
+  rightSlotActive: null,
+  rightSlotPrevious: null,
   loadTasks: async () => {
     set({ loading: true, error: null });
     try {
@@ -87,8 +99,96 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     });
   },
 
+  openDetail: (id: string) => {
+    const currentActive = get().rightSlotActive;
+    const currentPrev = get().rightSlotPrevious;
+    const activeListId = useAppStore.getState().activeListId;
+    const isMyDay = activeListId === 'smart_my_day';
+
+    let nextPrev: RightSlotPrevious = null;
+    if (isMyDay) {
+      if (currentActive === 'scheduler' || currentActive === 'suggestions') {
+        nextPrev = currentActive;
+      } else if (currentActive === 'detail') {
+        nextPrev = currentPrev;
+      }
+    }
+
+    set({
+      selectedTaskId: id,
+      rightSlotActive: 'detail',
+      rightSlotPrevious: nextPrev,
+    });
+  },
+
+  closeDetail: () => {
+    const currentPrev = get().rightSlotPrevious;
+    const activeListId = useAppStore.getState().activeListId;
+    const isMyDay = activeListId === 'smart_my_day';
+
+    set({
+      selectedTaskId: null,
+      rightSlotActive: isMyDay && currentPrev ? currentPrev : null,
+      rightSlotPrevious: null,
+    });
+  },
+
   setSelectedTaskId: (id: string | null) => {
-    set({ selectedTaskId: id });
+    if (id) {
+      get().openDetail(id);
+    } else {
+      get().closeDetail();
+    }
+  },
+
+  toggleScheduler: () => {
+    const currentActive = get().rightSlotActive;
+    if (currentActive === 'scheduler') {
+      set({
+        rightSlotActive: null,
+        rightSlotPrevious: null,
+      });
+    } else {
+      set({
+        rightSlotActive: 'scheduler',
+        rightSlotPrevious: null,
+        selectedTaskId: null,
+      });
+    }
+  },
+
+  toggleSuggestions: () => {
+    const currentActive = get().rightSlotActive;
+    if (currentActive === 'suggestions') {
+      set({
+        rightSlotActive: null,
+        rightSlotPrevious: null,
+      });
+    } else {
+      set({
+        rightSlotActive: 'suggestions',
+        rightSlotPrevious: null,
+        selectedTaskId: null,
+      });
+    }
+  },
+
+  setRightSlotActive: (slot: RightSlotActive) => {
+    if (slot === 'detail') {
+      set({ rightSlotActive: 'detail' });
+    } else if (slot === 'scheduler' || slot === 'suggestions') {
+      set({
+        rightSlotActive: slot,
+        rightSlotPrevious: null,
+        selectedTaskId: null,
+      });
+    } else {
+      set({
+        rightSlotActive: null,
+        rightSlotPrevious: null,
+        selectedTaskId: null,
+      });
+    }
   },
 
   createTask: async (payload: CreateTaskPayload): Promise<Task> => {
@@ -284,12 +384,15 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     const previousSnapshot: Task = { ...existing };
 
     // Optimistic soft delete: mark as trashed and remove from active map
+    if (get().selectedTaskId === id) {
+      get().closeDetail();
+    }
+
     set((state) => {
       const next = { ...state.tasksById };
       delete next[id];
       return {
         tasksById: next,
-        selectedTaskId: state.selectedTaskId === id ? null : state.selectedTaskId,
       };
     });
 
@@ -644,9 +747,9 @@ export function useAllActiveTasks(): Task[] {
   });
 }
 
-export function useScheduledTasks(): Task[] {
+export function useScheduledTasks(dateStr?: string): Task[] {
   return useTaskStore((state) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = dateStr ?? new Date().toISOString().split('T')[0];
     return Object.values(state.tasksById)
       .filter(
         (t) =>
@@ -659,9 +762,9 @@ export function useScheduledTasks(): Task[] {
   });
 }
 
-export function usePlannedMinutes(): number {
+export function usePlannedMinutes(dateStr?: string): number {
   return useTaskStore((state) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = dateStr ?? new Date().toISOString().split('T')[0];
     return Object.values(state.tasksById)
       .filter(
         (t) =>
@@ -674,9 +777,9 @@ export function usePlannedMinutes(): number {
   });
 }
 
-export function useUnplacedCount(): number {
+export function useUnplacedCount(dateStr?: string): number {
   return useTaskStore((state) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = dateStr ?? new Date().toISOString().split('T')[0];
     return Object.values(state.tasksById).filter(
       (t) =>
         t.my_day_date === today &&

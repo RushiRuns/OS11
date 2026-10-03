@@ -8,6 +8,8 @@ interface MyDayViewProps {
   selectedTaskId?: string | null;
   isSuggestionsOpen?: boolean;
   onToggleSuggestions?: () => void;
+  isSchedulerOpen?: boolean;
+  onToggleScheduler?: () => void;
 }
 
 export function MyDayView({
@@ -15,6 +17,8 @@ export function MyDayView({
   selectedTaskId,
   isSuggestionsOpen,
   onToggleSuggestions,
+  isSchedulerOpen,
+  onToggleScheduler,
 }: MyDayViewProps): React.ReactElement {
   return (
     <div className={styles.container}>
@@ -24,6 +28,8 @@ export function MyDayView({
         isMyDayList={true}
         isSuggestionsOpen={isSuggestionsOpen}
         onToggleSuggestions={onToggleSuggestions}
+        isSchedulerOpen={isSchedulerOpen}
+        onToggleScheduler={onToggleScheduler}
       />
     </div>
   );

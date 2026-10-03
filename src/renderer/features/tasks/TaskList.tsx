@@ -41,6 +41,8 @@ export interface TaskListProps {
   isMyDayList?: boolean;
   isSuggestionsOpen?: boolean;
   onToggleSuggestions?: () => void;
+  isSchedulerOpen?: boolean;
+  onToggleScheduler?: () => void;
   suggestionsCount?: number;
 }
 
@@ -87,6 +89,8 @@ export function TaskList({
   isMyDayList: propIsMyDayList,
   isSuggestionsOpen,
   onToggleSuggestions,
+  isSchedulerOpen,
+  onToggleScheduler,
   suggestionsCount: propSuggestionsCount,
 }: TaskListProps): React.ReactElement {
   const { activeListId } = useAppStore();
@@ -597,6 +601,8 @@ export function TaskList({
         isMyDayList={isMyDay}
         isSuggestionsOpen={isSuggestionsOpen}
         onToggleSuggestions={onToggleSuggestions}
+        isSchedulerOpen={isSchedulerOpen}
+        onToggleScheduler={onToggleScheduler}
         suggestionsCount={calculatedSuggestionsCount}
       />
 

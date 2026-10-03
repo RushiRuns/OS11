@@ -100,6 +100,20 @@ export function CommandPalette({
     });
 
     items.push({
+      id: 'action_toggle_scheduler',
+      title: 'Toggle Time Blocking Scheduler (My Day)',
+      category: 'Action',
+      icon: '⏱️',
+      shortcut: 'Ctrl+Shift+S',
+      onSelect: () => {
+        if (useAppStore.getState().activeListId !== 'smart_my_day') {
+          useAppStore.getState().setActiveListId('smart_my_day');
+        }
+        useTaskStore.getState().toggleScheduler();
+      },
+    });
+
+    items.push({
       id: 'action_search',
       title: 'Search Tasks (Full-Text Search)',
       category: 'Action',
