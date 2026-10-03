@@ -49,7 +49,7 @@ import { toISODate } from '@shared/utils/date.js';
 
 // Lazy views — loaded on-demand per PERFORMANCE.md §5 & vite.config.ts manualChunks
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard.js'));
-const Agenda = lazy(() => import('./features/agenda/Agenda.js'));
+const GoalsView = lazy(() => import('./features/goals/GoalsView.js'));
 const SchedulerPanel = lazy(() => import('./features/lists/scheduler/SchedulerPanel.js'));
 const Projects = lazy(() => import('./features/projects/Projects.js'));
 const AreaView = lazy(() => import('./features/areas/AreaView.js'));
@@ -389,8 +389,19 @@ export function App(): React.ReactElement {
         );
       case 'view_agenda':
         return (
+          <MyDayView
+            onSelectTask={handleSelectTask}
+            selectedTaskId={liveSelectedTask?.id}
+            isSuggestionsOpen={rightSlotActive === 'suggestions'}
+            onToggleSuggestions={() => useTaskStore.getState().toggleSuggestions()}
+            isSchedulerOpen={rightSlotActive === 'scheduler'}
+            onToggleScheduler={() => useTaskStore.getState().toggleScheduler()}
+          />
+        );
+      case 'view_goals':
+        return (
           <Suspense fallback={<ViewSkeleton />}>
-            <Agenda />
+            <GoalsView />
           </Suspense>
         );
       case 'view_projects':
