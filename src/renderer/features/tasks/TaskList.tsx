@@ -4,7 +4,6 @@ import {
   useDndMonitor,
   useDroppable,
   useDndContext,
-  DragOverlay,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -828,69 +827,7 @@ export function TaskList({
         </>
       )}
 
-      {/* Floating drag preview: follows the pointer directly instead of the
-          card animating/shifting in place, so it's always obvious what
-          you're holding and where it'll go. */}
-      <DragOverlay dropAnimation={null}>
-        {draggingTaskId
-          ? (() => {
-              const draggingItem = flattenedIncomplete.find((i) => i.task.id === draggingTaskId);
-              const draggingTask = draggingItem?.task ?? tasksById[draggingTaskId];
-              if (!draggingTask) return null;
-              return (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-md, 10px)',
-                    background: 'var(--surface-raised, #2a2a2e)',
-                    border: '1px solid var(--border-subtle, #3a3a3e)',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-                    maxWidth: '420px',
-                    cursor: 'grabbing',
-                  }}
-                >
-                  <span
-                    style={{ fontSize: '13px', color: 'var(--text-tertiary, #888)', lineHeight: 1 }}
-                    aria-hidden="true"
-                  >
-                    ⠿
-                  </span>
-                  <span
-                    style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                      border: '2px solid var(--text-tertiary, #888)',
-                      flexShrink: 0,
-                    }}
-                    aria-hidden="true"
-                  />
-                  <span
-                    style={{
-                      fontSize: '14px',
-                      color: 'var(--text-primary, #fff)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {draggingTask.title}
-                  </span>
-                  {draggingItem?.hasSubtasks && (
-                    <span
-                      style={{ fontSize: '12px', color: 'var(--text-tertiary, #888)', flexShrink: 0 }}
-                    >
-                      {draggingItem.subtaskCount.completed}/{draggingItem.subtaskCount.total}
-                    </span>
-                  )}
-                </div>
-              );
-            })()
-          : null}
-      </DragOverlay>
+
 
       {/* Bulk Action Bar (Framer Motion AnimatePresence) */}
       <BulkActionBar />

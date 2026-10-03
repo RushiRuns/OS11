@@ -35,6 +35,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
+  type Active,
 } from '@dnd-kit/core';
 import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
@@ -43,6 +44,7 @@ import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
 import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
 import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
+import { TaskRowDragOverlay } from './features/tasks/TaskRowDragOverlay.js';
 import { yToMinutes, snapToGrid, defaultDuration, placeBlock, type BlockInterval } from '@shared/utils/schedulerMath.js';
 import { HOUR_HEIGHT } from './features/lists/scheduler/useSchedulerLayout.js';
 import { toISODate } from '@shared/utils/date.js';
@@ -452,6 +454,18 @@ export function App(): React.ReactElement {
     }
   };
 
+  const getDragPointerY = (event: DragOverEvent | DragEndEvent, active: Active): number => {
+    const activator = event.activatorEvent as MouseEvent | TouchEvent | PointerEvent | undefined;
+    if (activator && 'clientY' in activator && typeof activator.clientY === 'number') {
+      return activator.clientY + (event.delta?.y ?? 0);
+    }
+    if (activator && 'touches' in activator && activator.touches?.[0]) {
+      return activator.touches[0].clientY + (event.delta?.y ?? 0);
+    }
+    const activeRect = active.rect.current.translated ?? active.rect.current.initial;
+    return activeRect ? activeRect.top : 0;
+  };
+
   const handleAppDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     const isTimeBlock = active.data?.current?.type === 'time-block';
@@ -478,13 +492,9 @@ export function App(): React.ReactElement {
     if (overId === 'scheduler-grid') {
       const gridEl = document.querySelector('[data-drop-target="scheduler-grid"]') as HTMLElement | null;
       if (gridEl) {
-        const scrollContainer = gridEl.parentElement;
-        const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
         const gridRect = gridEl.getBoundingClientRect();
-
-        const activeRect = active.rect.current.translated ?? active.rect.current.initial;
-        const pointerY = activeRect ? activeRect.top : 0;
-        const yInGrid = Math.max(0, pointerY - gridRect.top + scrollTop);
+        const pointerY = getDragPointerY(event, active);
+        const yInGrid = Math.max(0, pointerY - gridRect.top);
         const rawMin = yToMinutes(yInGrid, HOUR_HEIGHT);
         const snappedMin = snapToGrid(rawMin);
 
@@ -562,11 +572,43 @@ export function App(): React.ReactElement {
         }
       }
 
-      if (dragPreview) {
+      let finalPlacement = dragPreview;
+      if (!finalPlacement) {
+        // Fallback calculation using exact drop coordinates
+        const gridEl = document.querySelector('[data-drop-target="scheduler-grid"]') as HTMLElement | null;
+        if (gridEl) {
+          const gridRect = gridEl.getBoundingClientRect();
+          const pointerY = getDragPointerY(event, active);
+          const yInGrid = Math.max(0, pointerY - gridRect.top);
+          const rawMin = yToMinutes(yInGrid, HOUR_HEIGHT);
+          const snappedMin = snapToGrid(rawMin);
+          const durationMin = isTimeBlock ? (task.scheduled_duration_min ?? 30) : defaultDuration(task);
+          const today = toISODate(new Date());
+          const occupied = Object.values(useTaskStore.getState().tasksById)
+            .filter(
+              (t) =>
+                t.id !== activeTaskId &&
+                t.my_day_date === today &&
+                t.is_trashed === 0 &&
+                typeof t.scheduled_start_min === 'number' &&
+                typeof t.scheduled_duration_min === 'number'
+            )
+            .map((t) => ({
+              start: t.scheduled_start_min!,
+              duration: t.scheduled_duration_min!,
+            }));
+          const placed = placeBlock(occupied, snappedMin, durationMin, { allowShrink: !isTimeBlock });
+          if (placed) {
+            finalPlacement = { startMin: placed.start, durationMin: placed.duration };
+          }
+        }
+      }
+
+      if (finalPlacement) {
         if (isTimeBlock) {
           const prevStart = task.scheduled_start_min;
           const prevDuration = task.scheduled_duration_min;
-          await useTaskStore.getState().updateTimeBlock(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+          await useTaskStore.getState().updateTimeBlock(activeTaskId, finalPlacement.startMin, finalPlacement.durationMin);
           if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
             useUndoRedoStore.getState().pushAction({
               description: `Rescheduled "${task.title}"`,
@@ -574,19 +616,19 @@ export function App(): React.ReactElement {
                 await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
               },
               redoFn: async () => {
-                await useTaskStore.getState().updateTimeBlock(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+                await useTaskStore.getState().updateTimeBlock(activeTaskId, finalPlacement!.startMin, finalPlacement!.durationMin);
               },
             });
           }
         } else {
-          await useTaskStore.getState().scheduleTask(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+          await useTaskStore.getState().scheduleTask(activeTaskId, finalPlacement.startMin, finalPlacement.durationMin);
           useUndoRedoStore.getState().pushAction({
             description: `Scheduled "${task.title}"`,
             undoFn: async () => {
               await useTaskStore.getState().unscheduleTask(activeTaskId);
             },
             redoFn: async () => {
-              await useTaskStore.getState().scheduleTask(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+              await useTaskStore.getState().scheduleTask(activeTaskId, finalPlacement!.startMin, finalPlacement!.durationMin);
             },
           });
         }
@@ -775,13 +817,17 @@ export function App(): React.ReactElement {
               )}
             </div>
           </div>
-          {activeDragItem?.type === 'time-block' && activeDragItem.task && (
+          {activeDragItem && (
             <DragOverlay dropAnimation={null}>
-              <TimeBlockDragOverlay
-                task={activeDragItem.task}
-                isOverGrid={isOverGrid}
-                isInvalidDrop={!isOverGrid && !isOverList}
-              />
+              {activeDragItem.type === 'time-block' && activeDragItem.task ? (
+                <TimeBlockDragOverlay
+                  task={activeDragItem.task}
+                  isOverGrid={isOverGrid}
+                  isInvalidDrop={!isOverGrid && !isOverList}
+                />
+              ) : activeDragItem.task ? (
+                <TaskRowDragOverlay task={activeDragItem.task} />
+              ) : null}
             </DragOverlay>
           )}
         </DndContext>

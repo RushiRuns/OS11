@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import type { Task } from '@shared/types/task.js';
-import { PIXELS_PER_MINUTE, GUTTER_WIDTH, formatTimeRange } from './useSchedulerLayout.js';
+import { HOUR_HEIGHT, PIXELS_PER_MINUTE, GUTTER_WIDTH, formatTimeRange } from './useSchedulerLayout.js';
+import { SNAP, resizeLimits, type BlockInterval } from '@shared/utils/schedulerMath.js';
+import { toISODate } from '@shared/utils/date.js';
 import { useTaskStore } from '../../../stores/taskStore.js';
 import { useSchedulerUiStore } from '../../../stores/schedulerUiStore.js';
 import { useUndoRedoStore } from '../../../hooks/useUndoRedo.js';
@@ -12,11 +14,165 @@ interface TimeBlockProps {
 }
 
 export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
-  const startMin = task.scheduled_start_min ?? 0;
-  const durationMin = task.scheduled_duration_min ?? 30;
+  const [resizingEdge, setResizingEdge] = useState<'top' | 'bottom' | null>(null);
+  const [liveStart, setLiveStart] = useState<number>(task.scheduled_start_min ?? 0);
+  const [liveDuration, setLiveDuration] = useState<number>(task.scheduled_duration_min ?? 30);
+
+  const liveStartRef = useRef(liveStart);
+  const liveDurationRef = useRef(liveDuration);
+  liveStartRef.current = liveStart;
+  liveDurationRef.current = liveDuration;
+
+  const resizeStateRef = useRef<{
+    edge: 'top' | 'bottom';
+    pointerId: number;
+    initialPointerY: number;
+    initialStart: number;
+    initialDuration: number;
+    limits: { min: number; max: number };
+  } | null>(null);
+
+  useEffect(() => {
+    if (resizingEdge === null) {
+      setLiveStart(task.scheduled_start_min ?? 0);
+      setLiveDuration(task.scheduled_duration_min ?? 30);
+    }
+  }, [task.scheduled_start_min, task.scheduled_duration_min, resizingEdge]);
+
+  useEffect(() => {
+    if (!resizingEdge) return;
+
+    const onPointerMove = (e: PointerEvent) => {
+      const state = resizeStateRef.current;
+      if (!state || (state.pointerId !== undefined && e.pointerId !== state.pointerId)) return;
+
+      const deltaPx = e.clientY - state.initialPointerY;
+      const rawDeltaMin = (deltaPx / HOUR_HEIGHT) * 60;
+      const deltaMin = Math.round(rawDeltaMin / SNAP) * SNAP;
+
+      if (state.edge === 'bottom') {
+        const rawEnd = state.initialStart + state.initialDuration + deltaMin;
+        const clampedEnd = Math.max(state.limits.min, Math.min(state.limits.max, rawEnd));
+        const newDuration = clampedEnd - state.initialStart;
+        setLiveDuration(newDuration);
+      } else {
+        const rawStart = state.initialStart + deltaMin;
+        const clampedStart = Math.max(state.limits.min, Math.min(state.limits.max, rawStart));
+        const initialEnd = state.initialStart + state.initialDuration;
+        const newDuration = initialEnd - clampedStart;
+        setLiveStart(clampedStart);
+        setLiveDuration(newDuration);
+      }
+    };
+
+    const onPointerUp = async () => {
+      const state = resizeStateRef.current;
+      if (!state) return;
+
+      const { initialStart, initialDuration } = state;
+      const finalStart = liveStartRef.current;
+      const finalDuration = liveDurationRef.current;
+
+      resizeStateRef.current = null;
+      setResizingEdge(null);
+
+      if (finalStart !== initialStart || finalDuration !== initialDuration) {
+        try {
+          await useTaskStore.getState().updateTimeBlock(task.id, finalStart, finalDuration);
+          useUndoRedoStore.getState().pushAction({
+            description: `Resized "${task.title}"`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(task.id, initialStart, initialDuration);
+            },
+            redoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(task.id, finalStart, finalDuration);
+            },
+          });
+        } catch (err) {
+          console.error('Failed to update time block:', err);
+        }
+      }
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        const state = resizeStateRef.current;
+        if (state) {
+          setLiveStart(state.initialStart);
+          setLiveDuration(state.initialDuration);
+          resizeStateRef.current = null;
+          setResizingEdge(null);
+        }
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('keydown', onKeyDown, { capture: true });
+    };
+  }, [resizingEdge, task.id, task.title]);
+
+  const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>, edge: 'top' | 'bottom') => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+
+    const start = task.scheduled_start_min ?? 0;
+    const duration = task.scheduled_duration_min ?? 30;
+
+    const today = toISODate(new Date());
+    const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
+      .filter(
+        (t) =>
+          t.id !== task.id &&
+          t.my_day_date === today &&
+          t.is_trashed === 0 &&
+          typeof t.scheduled_start_min === 'number' &&
+          typeof t.scheduled_duration_min === 'number'
+      )
+      .map((t) => ({
+        id: t.id,
+        start: t.scheduled_start_min!,
+        duration: t.scheduled_duration_min!,
+      }));
+
+    const currentBlock: BlockInterval = { id: task.id, start, duration };
+    const limits = resizeLimits(others, currentBlock, edge);
+
+    resizeStateRef.current = {
+      edge,
+      pointerId: e.pointerId,
+      initialPointerY: e.clientY,
+      initialStart: start,
+      initialDuration: duration,
+      limits,
+    };
+
+    liveStartRef.current = start;
+    liveDurationRef.current = duration;
+    setResizingEdge(edge);
+    setLiveStart(start);
+    setLiveDuration(duration);
+  };
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `block:${task.id}`,
+    disabled: resizingEdge !== null,
     data: {
       type: 'time-block',
       taskId: task.id,
@@ -33,8 +189,12 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
   const isHovered = hoveredBlockId === task.id;
   const isCompleted = task.is_completed === 1;
 
-  const top = startMin * PIXELS_PER_MINUTE;
-  const height = Math.max(18, durationMin * PIXELS_PER_MINUTE - 2);
+  const effectiveStart = resizingEdge ? liveStart : (task.scheduled_start_min ?? 0);
+  const effectiveDuration = resizingEdge ? liveDuration : (task.scheduled_duration_min ?? 30);
+  const isCompact = effectiveDuration <= 30;
+
+  const top = effectiveStart * PIXELS_PER_MINUTE;
+  const height = Math.max(18, effectiveDuration * PIXELS_PER_MINUTE - 2);
 
   const handleUnschedule = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,7 +271,7 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
       ref={setNodeRef}
       data-dnd-kind="time-block"
       data-task-id={task.id}
-      aria-label={`${task.title}, ${formatTimeRange(startMin, durationMin)}`}
+      aria-label={`${task.title}, ${formatTimeRange(effectiveStart, effectiveDuration)}`}
       className={`
         ${styles.timeBlock}
         ${priorityClass}
@@ -119,6 +279,8 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
         ${isHovered ? styles.timeBlockHovered : ''}
         ${isCompleted ? styles.timeBlockCompleted : ''}
         ${isDragging ? styles.timeBlockDragging : ''}
+        ${resizingEdge ? styles.timeBlockResizing : ''}
+        ${isCompact ? styles.timeBlockCompact : ''}
       `}
       style={{
         top: `${top}px`,
@@ -133,10 +295,18 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
       {...attributes}
       {...listeners}
     >
+      {/* Top resize handle */}
+      <div
+        data-resize-handle="top"
+        className={styles.resizeHandleTop}
+        onPointerDown={(e) => handleResizeStart(e, 'top')}
+        aria-label="Resize start time"
+      />
+
       <div className={styles.timeBlockContent}>
         <div className={styles.timeBlockHeader}>
           <span className={styles.timeBlockRange}>
-            {formatTimeRange(startMin, durationMin)}
+            {formatTimeRange(effectiveStart, effectiveDuration)}
           </span>
           <button
             type="button"
@@ -164,6 +334,14 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
           {task.title}
         </div>
       </div>
+
+      {/* Bottom resize handle */}
+      <div
+        data-resize-handle="bottom"
+        className={styles.resizeHandleBottom}
+        onPointerDown={(e) => handleResizeStart(e, 'bottom')}
+        aria-label="Resize duration"
+      />
     </div>
   );
 }
