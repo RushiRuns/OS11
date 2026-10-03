@@ -1,0 +1,352 @@
+/* Scheduler Panel Layout & Styles */
+.panelRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background-color: var(--surface-raised);
+  overflow: hidden;
+}
+
+/* Left-edge border resize handle (320px - 520px) */
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 30;
+  background-color: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.resizeHandle:hover,
+.resizeHandleActive {
+  background-color: var(--accent-primary);
+  opacity: 0.5;
+}
+
+/* Header */
+.header {
+  padding: var(--space-4) var(--space-4) var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--surface-raised);
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.headerTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.plannedSummary {
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+.unplacedCount {
+  color: var(--text-muted);
+}
+
+.allPlaced {
+  color: var(--status-success, #28c840);
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+  padding: var(--space-1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.closeButton:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+/* Scroll Container */
+.scrollContainer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  scroll-behavior: smooth;
+}
+
+/* 24-Hour Grid */
+.gridRoot {
+  position: relative;
+  width: 100%;
+}
+
+.gridOver {
+  background-color: var(--accent-subtle, rgba(59, 130, 246, 0.03));
+}
+
+.hourRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: stretch;
+  pointer-events: none;
+}
+
+.gutterCell {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
+  padding-top: var(--space-1);
+  flex-shrink: 0;
+}
+
+.gutterLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  line-height: 1;
+  user-select: none;
+}
+
+.hourContentArea {
+  flex: 1;
+  position: relative;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.halfHourLine {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--border-subtle);
+  opacity: 0.35;
+}
+
+/* NowLine */
+.nowLineContainer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 18;
+  pointer-events: none;
+}
+
+.nowLineDot {
+  position: absolute;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-primary);
+}
+
+.nowLineBar {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  height: 2px;
+  background-color: var(--accent-primary);
+}
+
+/* Drop Preview Ghost Block */
+.ghostBlock {
+  position: absolute;
+  right: 8px;
+  border-radius: var(--radius-sm);
+  border: 2px dashed var(--accent-primary);
+  background-color: var(--accent-subtle, rgba(59, 130, 246, 0.12));
+  pointer-events: none;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+}
+
+.ghostRange {
+  font-size: var(--text-xs);
+  color: var(--accent-primary);
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+
+/* Scheduled Time Block */
+.timeBlock {
+  position: absolute;
+  right: 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-primary);
+  z-index: 12;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.timeBlock:active {
+  cursor: grabbing;
+}
+
+.timeBlockSelected {
+  box-shadow: 0 0 0 2px var(--accent-primary);
+  border-color: var(--accent-primary);
+  z-index: 16;
+}
+
+.timeBlockHovered {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.timeBlockCompleted {
+  opacity: 0.6;
+  background-color: var(--surface-hover);
+}
+
+.timeBlockCompleted .timeBlockTitle {
+  text-decoration: line-through;
+}
+
+.timeBlockDragging {
+  opacity: 0.4 !important;
+}
+
+/* Priority Stripes */
+.priorityP1 {
+  border-left-color: var(--priority-p1, #ef4444);
+}
+
+.priorityP2 {
+  border-left-color: var(--priority-p2, #f59e0b);
+}
+
+.priorityP3 {
+  border-left-color: var(--priority-p3, #3b82f6);
+}
+
+.priorityP4 {
+  border-left-color: var(--priority-p4, #6b7280);
+}
+
+.timeBlockContent {
+  padding: var(--space-1) var(--space-2);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  overflow: hidden;
+}
+
+.timeBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timeBlockRange {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.timeBlockTitle {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.timeBlockRemoveBtn {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.timeBlock:hover .timeBlockRemoveBtn,
+.timeBlock:focus-within .timeBlockRemoveBtn {
+  opacity: 1;
+}
+
+.timeBlockRemoveBtn:hover {
+  color: var(--status-danger, #ef4444);
+  background-color: var(--surface-hover);
+}
+
+/* Resize Handles (Top & Bottom) */
+.resizeHandleTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  cursor: ns-resize;
+  z-index: 25;
+}
+
+.resizeHandleBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  cursor: ns-resize;
+  z-index: 25;
+}
+
+.timeBlockResizing {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  z-index: 20;
+}
+
+.timeBlockCompact .timeBlockTitle {
+  font-size: 11px;
+}

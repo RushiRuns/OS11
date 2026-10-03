@@ -15,6 +15,8 @@ export interface TaskListHeaderProps {
   isMyDayList?: boolean;
   isSuggestionsOpen?: boolean;
   onToggleSuggestions?: () => void;
+  isSchedulerOpen?: boolean;
+  onToggleScheduler?: () => void;
   suggestionsCount?: number;
 }
 
@@ -26,6 +28,8 @@ export function TaskListHeader({
   isMyDayList = false,
   isSuggestionsOpen = false,
   onToggleSuggestions,
+  isSchedulerOpen = false,
+  onToggleScheduler,
   suggestionsCount,
 }: TaskListHeaderProps): React.ReactElement {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -115,33 +119,75 @@ export function TaskListHeader({
 
         <div className={styles.headerControls}>
           {isMyDayList && (
-            <Tooltip
-              content={suggestionsCount ? `Suggestions (${suggestionsCount})` : 'Suggestions'}
-              side="bottom"
-            >
-              <Button
-                variant={isSuggestionsOpen ? 'primary' : 'ghost'}
-                size="sm"
-                className={styles.iconBtn}
-                onClick={onToggleSuggestions}
-                aria-label="Toggle suggestions"
+            <>
+              <Tooltip
+                content={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Scheduler</span>
+                    <kbd style={{ fontSize: '10px', opacity: 0.8 }}>
+                      {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
+                        ? '⌘⇧S'
+                        : 'Ctrl+Shift+S'}
+                    </kbd>
+                  </div>
+                }
+                side="bottom"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <Button
+                  variant={isSchedulerOpen ? 'primary' : 'ghost'}
+                  size="sm"
+                  className={styles.iconBtn}
+                  onClick={onToggleScheduler}
+                  aria-label="Toggle scheduler panel"
                 >
-                  <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
-                  <path d="M9 18h6" />
-                  <path d="M10 22h4" />
-                </svg>
-              </Button>
-            </Tooltip>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <line x1="16" x2="16" y1="2" y2="6" />
+                    <line x1="8" x2="8" y1="2" y2="6" />
+                    <line x1="3" x2="21" y1="10" y2="10" />
+                    <circle cx="12" cy="16" r="2" />
+                    <path d="M12 15v1l1 .5" />
+                  </svg>
+                </Button>
+              </Tooltip>
+
+              <Tooltip
+                content={suggestionsCount ? `Suggestions (${suggestionsCount})` : 'Suggestions'}
+                side="bottom"
+              >
+                <Button
+                  variant={isSuggestionsOpen ? 'primary' : 'ghost'}
+                  size="sm"
+                  className={styles.iconBtn}
+                  onClick={onToggleSuggestions}
+                  aria-label="Toggle suggestions"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+                    <path d="M9 18h6" />
+                    <path d="M10 22h4" />
+                  </svg>
+                </Button>
+              </Tooltip>
+            </>
           )}
 
           <Suspense

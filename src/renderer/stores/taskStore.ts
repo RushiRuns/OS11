@@ -2,18 +2,28 @@ import { create } from 'zustand';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/task.js';
 import { taskServiceAdapter } from '../services/task-service-adapter.js';
 import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
+import { useAppStore } from './app-store.js';
+
+export type RightSlotActive = 'scheduler' | 'suggestions' | 'detail' | null;
+export type RightSlotPrevious = 'scheduler' | 'suggestions' | null;
 
 export interface TaskStoreState {
   tasksById: Record<string, Task>;
   loading: boolean;
   error: string | null;
   selectedTaskId: string | null;
+  rightSlotActive: RightSlotActive;
+  rightSlotPrevious: RightSlotPrevious;
 
   // Primary Actions
   loadTasks: () => Promise<void>;
   loadTasksByList: (listId: string) => Promise<void>;
   appendTasks: (tasks: Task[]) => void;
   setSelectedTaskId: (id: string | null) => void;
+  setRightSlot: (slot: RightSlotActive) => void;
+  toggleRightSlotPeer: (peer: 'scheduler' | 'suggestions') => void;
+  openDetail: (taskId: string) => void;
+  closeDetail: () => void;
 
   // Optimistic Mutations (PERFORMANCE.md §11)
   createTask: (payload: CreateTaskPayload) => Promise<Task>;
@@ -41,6 +51,8 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
   loading: false,
   error: null,
   selectedTaskId: null,
+  rightSlotActive: null,
+  rightSlotPrevious: null,
 
   loadTasks: async () => {
     set({ loading: true, error: null });
@@ -84,8 +96,63 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     });
   },
 
+  setRightSlot: (slot: RightSlotActive) => {
+    set({ rightSlotActive: slot });
+  },
+
+  toggleRightSlotPeer: (peer: 'scheduler' | 'suggestions') => {
+    set((state) => {
+      if (state.rightSlotActive === peer) {
+        return {
+          rightSlotActive: null,
+          rightSlotPrevious: null,
+        };
+      }
+      return {
+        selectedTaskId: null,
+        rightSlotActive: peer,
+        rightSlotPrevious: null,
+      };
+    });
+  },
+
+  openDetail: (taskId: string) => {
+    set((state) => {
+      const prevPeer: RightSlotPrevious =
+        state.rightSlotActive === 'scheduler' || state.rightSlotActive === 'suggestions'
+          ? state.rightSlotActive
+          : state.rightSlotPrevious;
+      return {
+        selectedTaskId: taskId,
+        rightSlotActive: 'detail',
+        rightSlotPrevious: prevPeer,
+      };
+    });
+  },
+
+  closeDetail: () => {
+    let isMyDay = false;
+    try {
+      isMyDay = useAppStore.getState().activeListId === 'smart_my_day';
+    } catch {
+      // ignore
+    }
+    set((state) => {
+      const nextSlot = isMyDay && state.rightSlotPrevious ? state.rightSlotPrevious : null;
+      return {
+        selectedTaskId: null,
+        rightSlotActive: nextSlot,
+        rightSlotPrevious: null,
+      };
+    });
+  },
+
   setSelectedTaskId: (id: string | null) => {
-    set({ selectedTaskId: id });
+    if (id) {
+      get().openDetail(id);
+    } else {
+      get().closeDetail();
+    }
   },
 
   createTask: async (payload: CreateTaskPayload): Promise<Task> => {
