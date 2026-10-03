@@ -105,3 +105,39 @@
   left: var(--space-6);
   z-index: 50;
 }
+
+/* My Day Drag-to-Unschedule Target Cue */
+.unscheduleTarget {
+  outline: 2px dashed var(--accent-muted, rgba(99, 102, 241, 0.4)) !important;
+  outline-offset: -4px;
+  background-color: var(--accent-subtle, rgba(99, 102, 241, 0.05)) !important;
+}
+
+.unscheduleBadge {
+  position: sticky;
+  top: 16px;
+  margin: 0 auto 12px auto;
+  width: fit-content;
+  background: var(--surface-raised, #2a2a2e);
+  color: var(--text-secondary, #aaa);
+  border: 1px dashed var(--accent-muted, rgba(99, 102, 241, 0.5));
+  padding: 6px 16px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--text-xs, 12px);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

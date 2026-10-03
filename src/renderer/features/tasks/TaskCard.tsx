@@ -140,6 +140,11 @@ export const TaskCard = memo(function TaskCard({
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: task.id,
     disabled: disableDrag,
+    data: {
+      type: 'task-row',
+      taskId: task.id,
+      task,
+    },
   });
 
   // No transform/transition here on purpose: TaskList now shows a floating

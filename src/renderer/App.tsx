@@ -31,7 +31,7 @@ import { useAttachmentStore } from './stores/attachmentStore.js';
 import { useTagStore } from './stores/tagStore.js';
 import {
   DndContext,
-  closestCenter,
+  DragOverlay,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -41,6 +41,16 @@ import {
 } from '@dnd-kit/core';
 import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
+import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
+import { toISODate } from '../shared/utils/date.js';
+import {
+  placeBlock,
+  snapToGrid,
+  yToMinutes,
+  defaultDuration,
+  type BlockInterval,
+} from '../shared/utils/schedulerMath.js';
 import { ipc, invoke } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '../shared/types/task.js';
@@ -405,60 +415,241 @@ export function App(): React.ReactElement {
     return '0px';
   }, [activeListId, rightSlotActive, schedulerPanelWidth, liveSelectedTask]);
 
+  const [activeDragItem, setActiveDragItem] = useState<{ type: string; task?: Task } | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+
   const handleAppDragStart = (event: DragStartEvent) => {
-    console.log('[DragDrop] Drag start:', event.active.id);
+    useSchedulerUiStore.getState().setIsDragging(true);
+    const activeData = event.active.data?.current;
+    if (activeData?.type === 'time-block') {
+      setActiveDragItem({
+        type: 'time-block',
+        task: activeData.task as Task,
+      });
+    } else {
+      setActiveDragItem(null);
+    }
   };
 
   const handleAppDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (over) {
-      console.log('[DragDrop] Hover target detected:', over.id, 'from active:', active.id);
-      const overData = over.data?.current as PlannedDropData | undefined;
+    const { active, over, delta } = event;
+    const overIdStr = over ? String(over.id) : null;
+    setDragOverTarget(overIdStr);
+
+    const isTimeBlock = active.data?.current?.type === 'time-block';
+
+    if (overIdStr === 'scheduler-grid') {
+      const activeTop =
+        active.rect.current.translated?.top ??
+        (active.rect.current.initial ? active.rect.current.initial.top + delta.y : null);
+      const gridTop = over?.rect?.top ?? 0;
+
+      if (activeTop !== null && over?.rect) {
+        const relativeY = activeTop - gridTop;
+        const desiredStart = snapToGrid(yToMinutes(relativeY, 48));
+
+        let duration = 30;
+        let taskId = '';
+        let task: Task | undefined;
+        let allowShrink = false;
+
+        if (isTimeBlock) {
+          task = active.data?.current?.task as Task;
+          taskId = task?.id ?? String(active.id).replace(/^block:/, '');
+          duration = task?.scheduled_duration_min ?? 30;
+          allowShrink = false;
+        } else {
+          taskId = String(active.id);
+          task = useTaskStore.getState().tasksById[taskId];
+          if (task) {
+            // Guard: completed tasks cannot be newly dragged in; subtasks cannot be dragged in v1
+            if (task.is_completed === 1 || task.parent_task_id !== null) {
+              useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+              return;
+            }
+            duration = defaultDuration(task);
+            allowShrink = true;
+          }
+        }
+
+        if (task) {
+          const today = toISODate(new Date());
+          const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
+            .filter(
+              (t): t is Task =>
+                t.id !== taskId &&
+                t.my_day_date === today &&
+                t.is_trashed === 0 &&
+                typeof t.scheduled_start_min === 'number' &&
+                typeof t.scheduled_duration_min === 'number'
+            )
+            .map((t) => ({
+              id: t.id,
+              start: t.scheduled_start_min!,
+              duration: t.scheduled_duration_min!,
+            }));
+
+          const placed = placeBlock(others, desiredStart, duration, { allowShrink });
+          if (placed) {
+            useSchedulerUiStore.getState().setDragPreviewMinutes({
+              startMin: placed.start,
+              durationMin: placed.duration,
+              isValid: true,
+            });
+          } else {
+            useSchedulerUiStore.getState().setDragPreviewMinutes({
+              startMin: Math.max(0, desiredStart),
+              durationMin: duration,
+              isValid: false,
+            });
+          }
+        }
+      }
+    } else {
+      useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+    }
+
+    if (isTimeBlock) {
+      if (overIdStr === 'scheduler-grid' || overIdStr === 'my-day-list-drop-zone') {
+        document.body.classList.remove('dnd-cursor-not-allowed');
+      } else {
+        document.body.classList.add('dnd-cursor-not-allowed');
+      }
+    } else {
+      const overData = over?.data?.current as PlannedDropData | undefined;
       if (overData?.type === 'planned-group' && overData.kind === 'overdue') {
         document.body.classList.add('dnd-cursor-not-allowed');
       } else {
         document.body.classList.remove('dnd-cursor-not-allowed');
       }
-    } else {
-      document.body.classList.remove('dnd-cursor-not-allowed');
     }
   };
 
   const handleAppDragEnd = async (event: DragEndEvent) => {
     document.body.classList.remove('dnd-cursor-not-allowed');
-    const { active, over } = event;
-    console.log('[DragDrop] Drag end event:', { activeId: active.id, overId: over?.id });
-    if (!over || active.id === over.id) return;
+    useSchedulerUiStore.getState().setIsDragging(false);
+    useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+    setActiveDragItem(null);
+    setDragOverTarget(null);
+
+    const { active, over, delta } = event;
+    if (!over) return;
 
     const overIdStr = String(over.id);
-    const activeTaskId = String(active.id);
+    const isTimeBlock = active.data?.current?.type === 'time-block';
+    const rawActiveId = String(active.id);
+    const activeTaskId = isTimeBlock ? rawActiveId.replace(/^block:/, '') : rawActiveId;
+    const task = useTaskStore.getState().tasksById[activeTaskId];
+    if (!task) return;
+
+    if (overIdStr === 'scheduler-grid') {
+      const activeTop =
+        active.rect.current.translated?.top ??
+        (active.rect.current.initial ? active.rect.current.initial.top + delta.y : null);
+      const gridTop = over.rect?.top ?? 0;
+      if (activeTop === null || !over.rect) return;
+
+      const relativeY = activeTop - gridTop;
+      const desiredStart = snapToGrid(yToMinutes(relativeY, 48));
+
+      const today = toISODate(new Date());
+      const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
+        .filter(
+          (t): t is Task =>
+            t.id !== activeTaskId &&
+            t.my_day_date === today &&
+            t.is_trashed === 0 &&
+            typeof t.scheduled_start_min === 'number' &&
+            typeof t.scheduled_duration_min === 'number'
+        )
+        .map((t) => ({
+          id: t.id,
+          start: t.scheduled_start_min!,
+          duration: t.scheduled_duration_min!,
+        }));
+
+      if (isTimeBlock) {
+        const prevStart = task.scheduled_start_min;
+        const prevDuration = task.scheduled_duration_min;
+        const duration = prevDuration ?? 30;
+        const placed = placeBlock(others, desiredStart, duration, { allowShrink: false });
+        if (!placed) return;
+
+        if (placed.start !== prevStart || placed.duration !== prevDuration) {
+          await useTaskStore.getState().updateTimeBlock(activeTaskId, placed.start, placed.duration);
+          if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+            useUndoRedoStore.getState().pushAction({
+              description: `Moved "${task.title}"`,
+              undoFn: async () => {
+                await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
+              },
+              redoFn: async () => {
+                await useTaskStore.getState().updateTimeBlock(activeTaskId, placed.start, placed.duration);
+              },
+            });
+          }
+        }
+      } else {
+        // Guard: completed tasks cannot be newly dragged in; subtasks cannot be dragged in v1
+        if (task.is_completed === 1 || task.parent_task_id !== null) return;
+
+        const duration = defaultDuration(task);
+        const placed = placeBlock(others, desiredStart, duration, { allowShrink: true });
+        if (!placed) return;
+
+        await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
+        useUndoRedoStore.getState().pushAction({
+          description: `Scheduled "${task.title}"`,
+          undoFn: async () => {
+            await useTaskStore.getState().unscheduleTask(activeTaskId);
+          },
+          redoFn: async () => {
+            await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
+          },
+        });
+      }
+      return;
+    }
+
+    if (overIdStr === 'my-day-list-drop-zone') {
+      if (isTimeBlock) {
+        const prevStart = task.scheduled_start_min;
+        const prevDuration = task.scheduled_duration_min;
+        await useTaskStore.getState().unscheduleTask(activeTaskId);
+        if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+          useUndoRedoStore.getState().pushAction({
+            description: `Unscheduled "${task.title}"`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
+            },
+            redoFn: async () => {
+              await useTaskStore.getState().unscheduleTask(activeTaskId);
+            },
+          });
+        }
+      }
+      return;
+    }
+
+    if (isTimeBlock) {
+      // Drop time-block anywhere else is cancelled
+      return;
+    }
 
     if (overIdStr.startsWith('list:')) {
       const targetListId = overIdStr.slice(5);
-      console.log('[DragDrop] Drop commit on list:', targetListId, 'with payload:', {
-        taskId: activeTaskId,
-        target: overIdStr,
-      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
       return;
     }
 
     if (overIdStr.startsWith('project:')) {
       const targetProjectId = overIdStr.slice(8);
-      console.log('[DragDrop] Drop commit on project:', targetProjectId, 'with payload:', {
-        taskId: activeTaskId,
-        target: overIdStr,
-      });
       await useTaskStore.getState().updateTask({ id: activeTaskId, project_id: targetProjectId });
       return;
     }
 
     if (overIdStr.startsWith('tag:')) {
       const targetTagId = overIdStr.slice(4);
-      console.log('[DragDrop] Drop commit on tag:', targetTagId, 'with payload:', {
-        taskId: activeTaskId,
-        target: overIdStr,
-      });
       await useTagStore.getState().addTagToTask(activeTaskId, targetTagId);
       return;
     }
@@ -472,7 +663,6 @@ export function App(): React.ReactElement {
       const todayStr = toISODateOnly(new Date());
       const resolvedTargetDate = resolvePlannedDrop(target, overData, todayStr);
       if (!resolvedTargetDate) {
-        // No-op: same group, same date, or invalid/overdue drop target
         return;
       }
 
@@ -526,7 +716,7 @@ export function App(): React.ReactElement {
       ) : (
         <DndContext
           sensors={dndSensors}
-          collisionDetection={closestCenter}
+          collisionDetection={schedulerCollisionDetection}
           onDragStart={handleAppDragStart}
           onDragOver={handleAppDragOver}
           onDragEnd={handleAppDragEnd}
@@ -618,6 +808,21 @@ export function App(): React.ReactElement {
               </AnimatePresence>
             </div>
           </div>
+
+          {/* Time Block Floating Drag Overlay */}
+          <DragOverlay dropAnimation={null}>
+            {activeDragItem?.type === 'time-block' && activeDragItem.task ? (
+              <TimeBlockDragOverlay
+                task={activeDragItem.task}
+                isOverGrid={dragOverTarget === 'scheduler-grid'}
+                isOverList={dragOverTarget === 'my-day-list-drop-zone'}
+                isOutside={
+                  dragOverTarget !== 'scheduler-grid' &&
+                  dragOverTarget !== 'my-day-list-drop-zone'
+                }
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
 

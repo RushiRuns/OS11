@@ -204,6 +204,15 @@
   font-family: var(--font-mono);
 }
 
+.ghostBlockInvalid {
+  border-color: var(--accent-danger, #ef4444);
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+.ghostBlockInvalid .ghostRange {
+  color: var(--accent-danger, #ef4444);
+}
+
 /* Scheduled Time Block */
 .timeBlock {
   position: absolute;
@@ -246,6 +255,32 @@
 
 .timeBlockDragging {
   opacity: 0.4 !important;
+}
+
+/* Drag Overlay Preview */
+.dragOverlayBlock {
+  position: relative !important;
+  right: auto !important;
+  top: auto !important;
+  left: auto !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+  pointer-events: none !important;
+  cursor: grabbing !important;
+  z-index: 1000 !important;
+  transition: opacity var(--transition-fast) !important;
+}
+
+.dragOverlayOverGrid {
+  opacity: 0.65 !important;
+}
+
+.dragOverlayOverList {
+  opacity: 1 !important;
+}
+
+.dragOverlayOutside {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
 }
 
 /* Priority Stripes */

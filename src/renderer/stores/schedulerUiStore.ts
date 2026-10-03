@@ -25,6 +25,7 @@ function getInitialWidth(): number {
 export interface DragPreviewState {
   startMin: number;
   durationMin: number;
+  isValid?: boolean;
 }
 
 export interface SchedulerUiState {

@@ -60,7 +60,7 @@ export function SchedulerGrid(): React.ReactElement {
       {/* Ghost Drop Preview */}
       {dragPreviewMinutes && (
         <div
-          className={styles.ghostBlock}
+          className={`${styles.ghostBlock} ${dragPreviewMinutes.isValid === false ? styles.ghostBlockInvalid : ''}`}
           style={{
             top: `${dragPreviewMinutes.startMin * PIXELS_PER_MINUTE}px`,
             height: `${Math.max(18, dragPreviewMinutes.durationMin * PIXELS_PER_MINUTE - 2)}px`,

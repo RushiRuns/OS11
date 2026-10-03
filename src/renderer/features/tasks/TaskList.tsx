@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useDeferredValue, useCallback, useM
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   useDndMonitor,
+  useDroppable,
   DragOverlay,
   type DragStartEvent,
   type DragEndEvent,
@@ -132,7 +133,24 @@ export function TaskList({
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
+  const isMyDay = propIsMyDayList ?? (activeListId === 'smart_my_day');
+  const [isTimeBlockDragging, setIsTimeBlockDragging] = useState(false);
+
   const parentRef = useRef<HTMLDivElement>(null);
+
+  const { setNodeRef: setMyDayListDropRef, isOver: isOverMyDayList } = useDroppable({
+    id: 'my-day-list-drop-zone',
+    data: { type: 'my-day-list' },
+    disabled: !isMyDay || !isTimeBlockDragging,
+  });
+
+  const setCombinedListRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      (parentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      setMyDayListDropRef(node);
+    },
+    [setMyDayListDropRef]
+  );
 
   const tasksById = useTaskStore((state) => state.tasksById);
   const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(new Set());
@@ -453,6 +471,11 @@ export function TaskList({
   );
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (event.active.data?.current?.type === 'time-block') {
+      setIsTimeBlockDragging(true);
+      return;
+    }
+    setIsTimeBlockDragging(false);
     setDraggingTaskId(String(event.active.id));
   };
 
@@ -463,10 +486,21 @@ export function TaskList({
       return;
     }
 
-    const overIdStr = String(over.id);
-    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
+    if (active.data?.current?.type === 'time-block') {
       setDropIndicator(null);
-      return; // Handled by App.tsx (sidebar list/project/tag drop targets)
+      return;
+    }
+
+    const overIdStr = String(over.id);
+    if (
+      overIdStr === 'scheduler-grid' ||
+      overIdStr === 'my-day-list-drop-zone' ||
+      overIdStr.startsWith('list:') ||
+      overIdStr.startsWith('project:') ||
+      overIdStr.startsWith('tag:')
+    ) {
+      setDropIndicator(null);
+      return; // Handled by App.tsx (sidebar list/project/tag or scheduler drop targets)
     }
 
     const overRect = over.rect;
@@ -498,11 +532,19 @@ export function TaskList({
     const { active, over, delta } = event;
     setDraggingTaskId(null);
     setDropIndicator(null);
+    setIsTimeBlockDragging(false);
 
     if (!over || active.id === over.id) return;
+    if (active.data?.current?.type === 'time-block') return;
 
     const overIdStr = String(over.id);
-    if (overIdStr.startsWith('list:') || overIdStr.startsWith('project:') || overIdStr.startsWith('tag:')) {
+    if (
+      overIdStr === 'scheduler-grid' ||
+      overIdStr === 'my-day-list-drop-zone' ||
+      overIdStr.startsWith('list:') ||
+      overIdStr.startsWith('project:') ||
+      overIdStr.startsWith('tag:')
+    ) {
       return; // Handled by App.tsx
     }
 
@@ -542,6 +584,7 @@ export function TaskList({
     onDragOver: handleDragOver,
     onDragEnd: handleDragEnd,
     onDragCancel: () => {
+      setIsTimeBlockDragging(false);
       setDraggingTaskId(null);
       setDropIndicator(null);
     },
@@ -576,7 +619,6 @@ export function TaskList({
     }
   })();
 
-  const isMyDay = propIsMyDayList ?? (activeListId === 'smart_my_day');
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const calculatedSuggestionsCount = useMemo(() => {
     if (!isMyDay) return 0;
@@ -621,7 +663,15 @@ export function TaskList({
         items={allTaskIds}
         strategy={verticalListSortingStrategy}
       >
-        <div ref={parentRef} className={styles.virtualScrollArea}>
+        <div
+          ref={setCombinedListRef}
+          className={`${styles.virtualScrollArea} ${isMyDay && isTimeBlockDragging && isOverMyDayList ? styles.unscheduleTarget : ''}`}
+        >
+          {isMyDay && isTimeBlockDragging && isOverMyDayList && (
+            <div className={styles.unscheduleBadge} aria-hidden="true">
+              Drop to unschedule
+            </div>
+          )}
           {flattenedIncomplete.length === 0 && completedTasks.length === 0 ? (
             <EmptyState
               title="All clear"
