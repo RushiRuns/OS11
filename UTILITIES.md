@@ -162,6 +162,7 @@
 | `calculateNextOccurrence` | `src/shared/utils/recurrence.ts` | Calculates next occurrence for fixed (due_date) vs after-completion recurrence basis |
 | `getTagShape` / `getTagShapeClass` | `src/shared/utils/tag-shape.ts` | Deterministic geometric shape hashing (`circle`, `square`, `triangle`) and CSS class assignment for color-blind accessible tags |
 | `createZipArchive` / `extractZipArchive` | `src/main/utils/zip-util.ts` | Zero-dependency PKZip archive packaging and extraction using Node.js `node:zlib` with CRC-32 checksums |
+| `snapToGrid`, `yToMinutes`, `minutesToY`, `defaultDuration`, `clampBlock`, `overlaps`, `placeBlock`, `resizeLimits` | `src/shared/utils/schedulerMath.ts` | Pure mathematical grid snap, time coordinate conversion, block clamping, collision detection, and placement algorithms |
 
 ---
 
