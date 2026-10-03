@@ -57,6 +57,9 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:increment-pomodoro` — Increment the pomodoro count of a task upon completed focus interval.
 - `tasks:get-history` — Retrieve chronological edit history diffs for a specific task.
 - `tasks:restore-version` — Rollback task attributes to previous state recorded in a history entry.
+- `tasks:set-time-block` — Schedule task to a time slot with start minute (0..1439) and duration (15..480).
+- `tasks:clear-time-block` — Clear scheduled time block from task (nulls scheduled_start_min and scheduled_duration_min).
+- `tasks:rollover-to-today` — Atomically roll over incomplete tasks to today with time blocks cleared.
 
 ### LISTS
 Custom lists and smart list settings.
