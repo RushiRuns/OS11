@@ -94,6 +94,8 @@ CREATE TABLE tasks (
   sort_order          REAL NOT NULL DEFAULT 0,    -- fractional indexing for manual sort
   my_day_date         TEXT,                       -- date added to My Day (YYYY-MM-DD)
   pomodoro_count      INTEGER NOT NULL DEFAULT 0,
+  scheduled_start_min INTEGER CHECK (scheduled_start_min IS NULL OR (scheduled_start_min >= 0 AND scheduled_start_min < 1440)),
+  scheduled_duration_min INTEGER CHECK (scheduled_duration_min IS NULL OR (scheduled_duration_min >= 15 AND scheduled_duration_min <= 480)),
   is_trashed          INTEGER NOT NULL DEFAULT 0,
   trashed_at          TEXT,
   created_at          TEXT NOT NULL,
@@ -114,6 +116,7 @@ CREATE INDEX idx_tasks_is_trashed    ON tasks(is_trashed);
 - `parent_task_id` supports unlimited subtask nesting. Depth enforced in domain logic.
 - `sort_order` uses fractional indexing — reordering one task never rewrites all others.
 - `my_day_date` stores which day a task was added to My Day. Tasks where `my_day_date < today` surface in the midnight rollover prompt.
+- `scheduled_start_min` and `scheduled_duration_min` represent time blocks assigned to today's My Day task (minutes since local midnight, duration 15-480 min). Both columns are set together or both null. They are cleared when a task is removed from My Day or during day rollover.
 - `assignee_device_id` is a placeholder column. It is created now but remains null in Phase 1.
 
 ---

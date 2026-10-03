@@ -52,6 +52,9 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:get-completed` — Fetch completed tasks.
 - `tasks:add-to-my-day` — Add task to My Day for specified or current date.
 - `tasks:remove-from-my-day` — Remove task from My Day.
+- `tasks:set-time-block` — Set scheduled start minute and duration minute on a My Day task.
+- `tasks:clear-time-block` — Clear scheduled start minute and duration minute on a task.
+- `tasks:rollover-to-today` — Move tasks to today's My Day and clear their time blocks in one atomic transaction.
 - `tasks:reorder` — Update `sort_order` using fractional indexing.
 - `tasks:batch-update` — Perform atomic update on multiple task IDs.
 - `tasks:increment-pomodoro` — Increment the pomodoro count of a task upon completed focus interval.

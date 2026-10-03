@@ -59,3 +59,16 @@
 - [ ] **13. `ARCHITECTURE.md` rules verified & committed to git**
   - Layer Order and process boundaries verified.
   - Changes staged, clean linter run (`npm run lint`), and committed with conventional commit message.
+
+---
+
+## Architectural Decision Log
+
+### Phase 13 - My Day Scheduler Panel
+- **Decision 1-3**: Scheduling lives exclusively in a right-side panel on the My Day view. The My Day list itself is the source of truth and unscheduled pool.
+- **Decision 4-5**: Stored as two nullable columns (`scheduled_start_min`, `scheduled_duration_min`) on `tasks`. Does not touch `due_time`.
+- **Decision 6-9**: Default duration is `estimated_minutes` (rounded up to 15, clamped 15-480) or 30 min. 15-min grid snap. Overlaps forbidden.
+- **Decision 10-12**: Day navigation removed (always today). Time blocks cleared on day rollover or removal from My Day.
+- **Decision 15-16**: Standalone Agenda page removed. Goals promoted to top-level sidebar view (`view_goals`), with Habits as an internal tab.
+- **Decision 17**: Right-side slot coordinates between Detail Panel, Suggestions, and Scheduler (peer switching, transient detail restore).
+
