@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import styles from './Button.module.css';
 
 export type ButtonVariant = 'primary' | 'ghost' | 'danger';
@@ -10,14 +10,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   children: React.ReactNode;
 }
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  className = '',
-  disabled = false,
-  children,
-  ...props
-}: ButtonProps): React.ReactElement {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    className = '',
+    disabled = false,
+    children,
+    ...props
+  },
+  ref
+): React.ReactElement {
   const variantClass =
     variant === 'ghost'
       ? styles.variantGhost
@@ -29,6 +32,7 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       type="button"
       className={`${styles.button} ${variantClass} ${sizeClass} ${className}`}
       disabled={disabled}
@@ -37,6 +41,7 @@ export function Button({
       {children}
     </button>
   );
-}
+});
 
 export default Button;
+

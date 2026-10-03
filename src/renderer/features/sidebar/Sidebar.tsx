@@ -938,10 +938,17 @@ export function Sidebar(): React.ReactElement {
                     }
                   }}
                 >
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     className={styles.groupHeaderButton}
                     onClick={() => toggleAreaExpand(area.id)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+                        e.preventDefault();
+                        toggleAreaExpand(area.id);
+                      }
+                    }}
                     onContextMenu={(e) => handleAreaContextMenu(e, area)}
                     aria-expanded={isOpen}
                     aria-label={`Area ${area.name}, ${areaProjects.length} projects`}
@@ -983,7 +990,7 @@ export function Sidebar(): React.ReactElement {
                         +
                       </button>
                     </div>
-                  </button>
+                  </div>
 
                   {isOpen && (
                     <div className={styles.groupItems}>
