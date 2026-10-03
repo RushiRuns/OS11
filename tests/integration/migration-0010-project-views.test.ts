@@ -35,7 +35,10 @@ describe('Integration: Migration 0010 - Project Curated Views', () => {
     // 1. Copy migrations 0001 to 0009
     const migrationFiles = fs
       .readdirSync(realMigrationsDir)
-      .filter((f) => f.endsWith('.sql') && !f.startsWith('0010'))
+      .filter((f) => {
+        const m = f.match(/^(\d+)_/);
+        return m ? parseInt(m[1], 10) < 10 : false;
+      })
       .sort();
 
     for (const file of migrationFiles) {

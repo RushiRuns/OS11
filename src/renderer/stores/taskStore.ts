@@ -28,6 +28,13 @@ export interface TaskStoreState {
   promoteSubtask: (id: string) => Promise<Task>;
   reorderTask: (id: string, sortOrder: number) => Promise<Task>;
 
+  // Time-Blocking Scheduler Actions
+  scheduleTask: (id: string, startMin: number, durationMin: number) => Promise<Task>;
+  updateTimeBlock: (id: string, startMin: number, durationMin: number) => Promise<Task>;
+  unscheduleTask: (id: string) => Promise<Task>;
+  rollOverToToday: (ids: string[]) => Promise<void>;
+  ensureDayRollover: () => Promise<void>;
+
   // Rollback
   rollbackUpdate: (id: string, previousState: Task | null) => void;
 }
@@ -395,6 +402,129 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     }
   },
 
+  scheduleTask: async (id: string, startMin: number, durationMin: number): Promise<Task> => {
+    const current = get().tasksById[id];
+    if (!current) throw new Error(`Task ${id} not found.`);
+
+    const optimistic: Task = {
+      ...current,
+      scheduled_start_min: startMin,
+      scheduled_duration_min: durationMin,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [id]: optimistic },
+    }));
+
+    try {
+      const persisted = await taskServiceAdapter.setTimeBlock(id, startMin, durationMin);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: persisted },
+      }));
+      return persisted;
+    } catch (err) {
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: current },
+      }));
+      throw err;
+    }
+  },
+
+  updateTimeBlock: async (id: string, startMin: number, durationMin: number): Promise<Task> => {
+    const current = get().tasksById[id];
+    if (!current) throw new Error(`Task ${id} not found.`);
+
+    const optimistic: Task = {
+      ...current,
+      scheduled_start_min: startMin,
+      scheduled_duration_min: durationMin,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [id]: optimistic },
+    }));
+
+    try {
+      const persisted = await taskServiceAdapter.setTimeBlock(id, startMin, durationMin);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: persisted },
+      }));
+      return persisted;
+    } catch (err) {
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: current },
+      }));
+      throw err;
+    }
+  },
+
+  unscheduleTask: async (id: string): Promise<Task> => {
+    const current = get().tasksById[id];
+    if (!current) throw new Error(`Task ${id} not found.`);
+
+    const optimistic: Task = {
+      ...current,
+      scheduled_start_min: null,
+      scheduled_duration_min: null,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [id]: optimistic },
+    }));
+
+    try {
+      const persisted = await taskServiceAdapter.clearTimeBlock(id);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: persisted },
+      }));
+      return persisted;
+    } catch (err) {
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: current },
+      }));
+      throw err;
+    }
+  },
+
+  rollOverToToday: async (ids: string[]): Promise<void> => {
+    const today = new Date().toISOString().split('T')[0];
+    const previousState: Record<string, Task> = {};
+    set((state) => {
+      const next = { ...state.tasksById };
+      for (const id of ids) {
+        if (next[id]) {
+          previousState[id] = next[id];
+          next[id] = {
+            ...next[id],
+            my_day_date: today,
+            scheduled_start_min: null,
+            scheduled_duration_min: null,
+            updated_at: new Date().toISOString(),
+          };
+        }
+      }
+      return { tasksById: next };
+    });
+
+    try {
+      await taskServiceAdapter.rollOverToToday(ids);
+    } catch (err) {
+      set((state) => ({
+        tasksById: { ...state.tasksById, ...previousState },
+      }));
+      throw err;
+    }
+  },
+
+  ensureDayRollover: async (): Promise<void> => {
+    try {
+      await taskServiceAdapter.ensureDayRollover();
+      await get().loadTasks();
+    } catch (err) {
+      console.warn('[TaskStore] ensureDayRollover failed:', err);
+    }
+  },
+
   rollbackUpdate: (id: string, previousState: Task | null) => {
     set((state) => {
       const next = { ...state.tasksById };
@@ -511,5 +641,48 @@ export function useAllActiveTasks(): Task[] {
     return Object.values(state.tasksById)
       .filter((t) => t.is_trashed === 0 && t.parent_task_id === null)
       .sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+export function useScheduledTasks(): Task[] {
+  return useTaskStore((state) => {
+    const today = new Date().toISOString().split('T')[0];
+    return Object.values(state.tasksById)
+      .filter(
+        (t) =>
+          t.my_day_date === today &&
+          t.is_trashed === 0 &&
+          typeof t.scheduled_start_min === 'number' &&
+          typeof t.scheduled_duration_min === 'number'
+      )
+      .sort((a, b) => (a.scheduled_start_min ?? 0) - (b.scheduled_start_min ?? 0));
+  });
+}
+
+export function usePlannedMinutes(): number {
+  return useTaskStore((state) => {
+    const today = new Date().toISOString().split('T')[0];
+    return Object.values(state.tasksById)
+      .filter(
+        (t) =>
+          t.my_day_date === today &&
+          t.is_trashed === 0 &&
+          typeof t.scheduled_start_min === 'number' &&
+          typeof t.scheduled_duration_min === 'number'
+      )
+      .reduce((sum, t) => sum + (t.scheduled_duration_min ?? 0), 0);
+  });
+}
+
+export function useUnplacedCount(): number {
+  return useTaskStore((state) => {
+    const today = new Date().toISOString().split('T')[0];
+    return Object.values(state.tasksById).filter(
+      (t) =>
+        t.my_day_date === today &&
+        t.is_trashed === 0 &&
+        t.is_completed === 0 &&
+        (t.scheduled_start_min === null || t.scheduled_start_min === undefined)
+    ).length;
   });
 }

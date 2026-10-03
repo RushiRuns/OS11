@@ -23,6 +23,8 @@ export interface Task {
   created_by_device: string;
   sort_order: number;
   my_day_date?: string | null;
+  scheduled_start_min?: number | null;
+  scheduled_duration_min?: number | null;
   pomodoro_count: number;
   is_habit?: number;
   is_trashed: number;

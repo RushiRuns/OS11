@@ -56,6 +56,10 @@ export const IPC = {
     RESTORE_VERSION: 'tasks:restore-version',
     GET_BY_AREA: 'tasks:get-by-area',
     GET_INBOX: 'tasks:get-inbox',
+    SET_TIME_BLOCK: 'tasks:set-time-block',
+    CLEAR_TIME_BLOCK: 'tasks:clear-time-block',
+    ROLLOVER_TO_TODAY: 'tasks:rollover-to-today',
+    ENSURE_DAY_ROLLOVER: 'tasks:ensure-day-rollover',
   },
   AREAS: {
     GET_ALL: 'areas:get-all',
