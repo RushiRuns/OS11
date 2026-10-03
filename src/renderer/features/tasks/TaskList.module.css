@@ -57,8 +57,8 @@
 }
 
 .taskListContainer[data-dragging="true"] .virtualItem {
-  transition: none;
-  animation: none;
+  transition: none !important;
+  animation: none !important;
 }
 
 /* Completed Section */

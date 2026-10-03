@@ -29,8 +29,8 @@ export const schedulerCollisionDetection: CollisionDetection = (args) => {
   let isPointerOverScheduler = false;
   if (schedulerGridContainer) {
     const gridRect =
-      droppableRects.get(schedulerGridContainer.id) ??
-      schedulerGridContainer.node.current?.getBoundingClientRect();
+      schedulerGridContainer.node.current?.getBoundingClientRect() ??
+      droppableRects.get(schedulerGridContainer.id);
     if (
       gridRect &&
       pointerCoordinates.x >= gridRect.left &&
@@ -58,8 +58,8 @@ export const schedulerCollisionDetection: CollisionDetection = (args) => {
     );
     if (myDayListContainer) {
       const listRect =
-        droppableRects.get(myDayListContainer.id) ??
-        myDayListContainer.node.current?.getBoundingClientRect();
+        myDayListContainer.node.current?.getBoundingClientRect() ??
+        droppableRects.get(myDayListContainer.id);
       if (
         listRect &&
         pointerCoordinates.x >= listRect.left &&

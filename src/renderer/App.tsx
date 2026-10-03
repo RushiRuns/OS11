@@ -43,6 +43,7 @@ import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
 import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
+import { TaskRowDragOverlay } from './features/tasks/TaskRowDragOverlay.js';
 import { HOUR_HEIGHT } from './features/lists/scheduler/useSchedulerLayout.js';
 import { toISODate } from '../shared/utils/date.js';
 import {
@@ -422,7 +423,11 @@ export function App(): React.ReactElement {
     return '0px';
   }, [activeListId, rightSlotActive, schedulerPanelWidth, liveSelectedTask]);
 
-  const [activeDragItem, setActiveDragItem] = useState<{ type: string; task?: Task } | null>(null);
+  const [activeDragItem, setActiveDragItem] = useState<{
+    type: 'time-block' | 'task-row';
+    task?: Task;
+    subtaskCount?: { completed: number; total: number };
+  } | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
 
   const handleAppDragStart = (event: DragStartEvent) => {
@@ -433,8 +438,22 @@ export function App(): React.ReactElement {
         type: 'time-block',
         task: activeData.task as Task,
       });
+    } else if (activeData?.type === 'task-row' && activeData.task) {
+      setActiveDragItem({
+        type: 'task-row',
+        task: activeData.task as Task,
+        subtaskCount: activeData.subtaskCount,
+      });
     } else {
-      setActiveDragItem(null);
+      const task = useTaskStore.getState().tasksById[String(event.active.id)];
+      if (task) {
+        setActiveDragItem({
+          type: 'task-row',
+          task,
+        });
+      } else {
+        setActiveDragItem(null);
+      }
     }
   };
 
@@ -480,7 +499,7 @@ export function App(): React.ReactElement {
         }
 
         if (task) {
-          const today = toISODate(new Date());
+          const today = task.my_day_date ?? toISODate(new Date());
           const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
             .filter(
               (t): t is Task =>
@@ -559,7 +578,7 @@ export function App(): React.ReactElement {
       const relativeY = activeTop - gridTop;
       const desiredStart = snapToGrid(yToMinutes(relativeY, HOUR_HEIGHT));
 
-      const today = toISODate(new Date());
+      const today = task.my_day_date ?? toISODate(new Date());
       const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
         .filter(
           (t): t is Task =>
@@ -734,6 +753,7 @@ export function App(): React.ReactElement {
             data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
             data-detail={effectiveFocusMode || !isRightSlotVisible ? 'hidden' : 'visible'}
             data-focus={effectiveFocusMode ? 'active' : 'inactive'}
+            data-dragging={Boolean(activeDragItem) ? 'true' : 'false'}
           >
             {/* Column 1: Sidebar (Critical path) */}
             <div className={layoutStyles.sidebarCol}>
@@ -816,7 +836,7 @@ export function App(): React.ReactElement {
             </div>
           </div>
 
-          {/* Time Block Floating Drag Overlay */}
+          {/* Centralized Floating Drag Overlay */}
           <DragOverlay dropAnimation={null}>
             {activeDragItem?.type === 'time-block' && activeDragItem.task ? (
               <TimeBlockDragOverlay
@@ -827,6 +847,11 @@ export function App(): React.ReactElement {
                   dragOverTarget !== 'scheduler-grid' &&
                   dragOverTarget !== 'my-day-list-drop-zone'
                 }
+              />
+            ) : activeDragItem?.type === 'task-row' && activeDragItem.task ? (
+              <TaskRowDragOverlay
+                task={activeDragItem.task}
+                subtaskCount={activeDragItem.subtaskCount}
               />
             ) : null}
           </DragOverlay>

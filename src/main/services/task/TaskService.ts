@@ -351,8 +351,12 @@ export class TaskService {
       throw new ValidationError('Cannot schedule a trashed task.');
     }
     const today = this.getEffectiveTodayDate();
-    if (task.my_day_date !== today) {
+    const calendarToday = new Date().toISOString().split('T')[0];
+    if (!task.my_day_date || (task.my_day_date !== today && task.my_day_date !== calendarToday)) {
       throw new ValidationError('Task must be in My Day for today to be scheduled.');
+    }
+    if (task.my_day_date !== today) {
+      this.taskRepo.addToMyDay(id, today);
     }
     if (task.is_completed === 1) {
       throw new ValidationError('Cannot schedule a completed task.');

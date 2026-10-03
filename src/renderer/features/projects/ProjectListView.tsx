@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   PointerSensor,
   useSensor,
@@ -14,6 +15,7 @@ import {
 import type { Project, Section, Task } from '@shared/types/index.js';
 import { between } from '@shared/utils/fractional-index.js';
 import { TaskCard } from '../tasks/TaskCard.js';
+import { TaskRowDragOverlay } from '../tasks/TaskRowDragOverlay.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { useTaskStore } from '../../stores/taskStore.js';
@@ -81,6 +83,9 @@ export function ProjectListView({
   const allActiveTaskIds = useMemo(() => activeTasks.map((t) => t.id), [activeTasks]);
   const allCompletedTaskIds = useMemo(() => completedTasks.map((t) => t.id), [completedTasks]);
 
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const draggingTask = useMemo(() => activeTasks.find((t) => t.id === draggingTaskId) ?? null, [activeTasks, draggingTaskId]);
+
   const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -132,7 +137,16 @@ export function ProjectListView({
 
       {/* Active Tasks Reorderable Stream */}
       {activeTasks.length > 0 ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={(e) => setDraggingTaskId(String(e.active.id))}
+          onDragEnd={(e) => {
+            setDraggingTaskId(null);
+            handleDragEnd(e);
+          }}
+          onDragCancel={() => setDraggingTaskId(null)}
+        >
           <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
             <div className={styles.tasksList} role="list" aria-label="Active tasks">
               {activeTasks.map((task) => (
@@ -160,6 +174,9 @@ export function ProjectListView({
               ))}
             </div>
           </SortableContext>
+          <DragOverlay dropAnimation={null}>
+            {draggingTask ? <TaskRowDragOverlay task={draggingTask} /> : null}
+          </DragOverlay>
         </DndContext>
       ) : completedTasks.length === 0 ? (
         <div className={styles.emptyContainer}>

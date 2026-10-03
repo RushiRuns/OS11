@@ -178,15 +178,15 @@ export const TaskCard = memo(function TaskCard({
       type: 'task-row',
       taskId: task.id,
       task,
+      subtaskCount,
     },
   });
 
-  // No transform/transition here on purpose: TaskList now shows a floating
-  // DragOverlay preview that follows the pointer plus a separate drop-line
-  // indicator, instead of this row sliding around in place. This row just
-  // hides itself while it's the one being dragged.
+  // Keep a semi-transparent placeholder in place with exact layout dimensions
+  // so TanStack Virtualizer does not suffer height shifts or re-measurement layout jumps.
+  // The floating preview is handled by the root DragOverlay in App.tsx.
   const sortableStyle: React.CSSProperties = {
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.35 : 1,
     marginLeft: depth > 0 ? `${depth * 28 - 12}px` : undefined,
   };
 

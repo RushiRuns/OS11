@@ -249,7 +249,11 @@ export function registerTaskHandlers(taskService = new TaskService()): void {
         if (!payload || typeof payload !== 'object' || typeof payload.id !== 'string') {
           return { ok: false, error: 'Invalid payload: id must be a string' };
         }
-        const data = taskService.scheduleTask(payload.id, payload.startMin, payload.durationMin);
+        const existing = taskService.getById(payload.id);
+        const data =
+          typeof existing?.scheduled_start_min === 'number'
+            ? taskService.updateTimeBlock(payload.id, payload.startMin, payload.durationMin)
+            : taskService.scheduleTask(payload.id, payload.startMin, payload.durationMin);
         return { ok: true, data };
       } catch (err: unknown) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
