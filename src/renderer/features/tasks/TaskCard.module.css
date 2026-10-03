@@ -471,3 +471,31 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Scheduler Time Chip */
+.timeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs, 4px);
+  background: var(--accent-subtle, rgba(59, 130, 246, 0.12));
+  color: var(--accent-primary, #3b82f6);
+  font-size: var(--text-xs, 12px);
+  font-weight: 500;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  border: 1px solid var(--accent-muted, rgba(59, 130, 246, 0.25));
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  line-height: 1.4;
+}
+
+.timeChip:hover {
+  background: var(--accent-muted, rgba(59, 130, 246, 0.2));
+  border-color: var(--accent-primary, #3b82f6);
+}
+
+.rowHighlightedFromBlock {
+  box-shadow: 0 0 0 1px var(--accent-primary, #3b82f6) !important;
+  background-color: var(--surface-hover) !important;
+}

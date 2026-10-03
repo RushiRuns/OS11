@@ -59,6 +59,7 @@ export const IPC = {
     RESTORE_VERSION: 'tasks:restore-version',
     GET_BY_AREA: 'tasks:get-by-area',
     GET_INBOX: 'tasks:get-inbox',
+    CHANGED: 'tasks:changed',
   },
   AREAS: {
     GET_ALL: 'areas:get-all',

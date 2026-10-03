@@ -43,6 +43,7 @@ import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
 import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
+import { HOUR_HEIGHT } from './features/lists/scheduler/useSchedulerLayout.js';
 import { toISODate } from '../shared/utils/date.js';
 import {
   placeBlock,
@@ -253,9 +254,14 @@ export function App(): React.ReactElement {
       }
     };
 
+    const unsubTasksChanged = ipc.on(IPC.TASKS.CHANGED, () => {
+      useTaskStore.getState().loadTasks();
+    });
+
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      unsubTasksChanged?.();
       unsubFocus?.();
       unsubTheme?.();
       unsubAccent?.();
@@ -446,7 +452,7 @@ export function App(): React.ReactElement {
 
       if (activeTop !== null && over?.rect) {
         const relativeY = activeTop - gridTop;
-        const desiredStart = snapToGrid(yToMinutes(relativeY, 48));
+        const desiredStart = snapToGrid(yToMinutes(relativeY, HOUR_HEIGHT));
 
         let duration = 30;
         let taskId = '';
@@ -550,7 +556,7 @@ export function App(): React.ReactElement {
       if (activeTop === null || !over.rect) return;
 
       const relativeY = activeTop - gridTop;
-      const desiredStart = snapToGrid(yToMinutes(relativeY, 48));
+      const desiredStart = snapToGrid(yToMinutes(relativeY, HOUR_HEIGHT));
 
       const today = toISODate(new Date());
       const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)

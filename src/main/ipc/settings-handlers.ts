@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import { IPC } from '@shared/ipc-channels.js';
 import { SettingsService } from '../services/settings/SettingsService.js';
 import { ThemeService } from '../services/settings/ThemeService.js';
@@ -38,6 +38,9 @@ export function registerSettingsHandlers(
         service.applyLoginItem(Boolean(value));
       } else {
         service.set(key, value);
+        if (key === 'day_starts_at') {
+          app.emit('os11:day_starts_at_changed');
+        }
       }
       return { ok: true, data: true };
     } catch (err: unknown) {

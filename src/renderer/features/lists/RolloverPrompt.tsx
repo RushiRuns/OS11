@@ -4,7 +4,7 @@ import { useTaskStore } from '../../stores/taskStore.js';
 import styles from './RolloverPrompt.module.css';
 
 export function RolloverPrompt(): React.ReactElement | null {
-  const { tasksById, updateTask } = useTaskStore();
+  const { tasksById, updateTask, rollOverToToday } = useTaskStore();
   const [isDismissed, setIsDismissed] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -46,12 +46,14 @@ export function RolloverPrompt(): React.ReactElement | null {
   };
 
   const handleKeepSelected = async () => {
-    for (const task of expiredTasks) {
-      if (selectedIds.has(task.id)) {
-        await updateTask({ id: task.id, my_day_date: today });
-      } else {
-        await updateTask({ id: task.id, my_day_date: null });
-      }
+    const keepIds = expiredTasks.filter((t) => selectedIds.has(t.id)).map((t) => t.id);
+    const dismissTasks = expiredTasks.filter((t) => !selectedIds.has(t.id));
+
+    if (keepIds.length > 0) {
+      await rollOverToToday(keepIds, today);
+    }
+    for (const task of dismissTasks) {
+      await updateTask({ id: task.id, my_day_date: null });
     }
     setIsDismissed(true);
   };

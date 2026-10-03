@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useUndoRedoStore } from '../../hooks/useUndoRedo.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
@@ -125,6 +126,34 @@ export function TaskContextMenu({
             <span className={styles.itemIcon}>☀️</span>
             <span>{isInMyDay ? 'Remove from My Day' : 'Add to My Day'}</span>
           </button>
+
+          {/* Unschedule Time Block */}
+          {typeof task.scheduled_start_min === 'number' && (
+            <button
+              type="button"
+              className={styles.item}
+              onClick={async () => {
+                const prevStart = task.scheduled_start_min;
+                const prevDuration = task.scheduled_duration_min;
+                await useTaskStore.getState().unscheduleTask(task.id);
+                if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+                  useUndoRedoStore.getState().pushAction({
+                    description: `Unscheduled "${task.title}"`,
+                    undoFn: async () => {
+                      await useTaskStore.getState().updateTimeBlock(task.id, prevStart, prevDuration);
+                    },
+                    redoFn: async () => {
+                      await useTaskStore.getState().unscheduleTask(task.id);
+                    },
+                  });
+                }
+                onClose();
+              }}
+            >
+              <span className={styles.itemIcon}>⏱️</span>
+              <span>Unschedule</span>
+            </button>
+          )}
 
           {/* Set Due Date */}
           <button

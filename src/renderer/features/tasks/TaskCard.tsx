@@ -8,6 +8,9 @@ import { TagPicker } from '../tags/TagPicker.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
+import { useTaskStore } from '../../stores/taskStore.js';
+import { useSchedulerUiStore } from '../../stores/schedulerUiStore.js';
+import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
 import type { Task } from '@shared/types/task.js';
 import { getTagShapeClass } from '@shared/utils/tag-shape.js';
 import styles from './TaskCard.module.css';
@@ -130,8 +133,39 @@ export const TaskCard = memo(function TaskCard({
     return formatDateTime(task.due_date, task.due_time, task.all_day);
   }, [task.due_date, task.due_time, task.all_day]);
 
+  const isMyDayView = useAppStore(state => state.activeListId === 'smart_my_day');
+  const hasScheduledTime =
+    isMyDayView &&
+    typeof task.scheduled_start_min === 'number' &&
+    typeof task.scheduled_duration_min === 'number';
+
+  const scheduledTimeRange = useMemo(() => {
+    if (!hasScheduledTime) return null;
+    return formatTimeRange(task.scheduled_start_min!, task.scheduled_duration_min!);
+  }, [hasScheduledTime, task.scheduled_start_min, task.scheduled_duration_min]);
+
+  const hoveredBlockId = useSchedulerUiStore(state => state.hoveredBlockId);
+  const isHoveredFromBlock = hoveredBlockId === task.id;
+
+  const handleTimeChipClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const slotActive = useTaskStore.getState().rightSlotActive;
+    if (slotActive !== 'scheduler') {
+      useTaskStore.getState().toggleRightSlotPeer('scheduler');
+    }
+    useSchedulerUiStore.getState().setSelectedBlockId(task.id);
+    setTimeout(() => {
+      const el = document.querySelector(`[data-task-id="${task.id}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.classList.add('os11-timeblock-flash');
+        setTimeout(() => el.classList.remove('os11-timeblock-flash'), 1200);
+      }
+    }, 150);
+  };
+
   const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
-  const hasMetadataRow = Boolean(formattedDueDate || taskTags.length > 0 || hasSubtaskBadge);
+  const hasMetadataRow = Boolean(hasScheduledTime || formattedDueDate || taskTags.length > 0 || hasSubtaskBadge);
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -262,11 +296,17 @@ export const TaskCard = memo(function TaskCard({
       // a card to attach them - that is a different feature and still needs them.
       className={`${styles.taskCard} ${getPriorityClass(task.priority)} ${
         isSelected ? styles.taskCardSelected : ''
-      }`}
+      } ${isHoveredFromBlock ? styles.rowHighlightedFromBlock : ''}`}
       data-multiselect={isMultiSelectActive || isMultiSelected ? 'active' : 'inactive'}
       data-dragging={isDragging ? 'true' : 'false'}
       data-filedrop={fileOver ? 'true' : 'false'}
       onClick={handleClick}
+      onMouseEnter={() => {
+        if (hasScheduledTime) useSchedulerUiStore.getState().setHoveredBlockId(task.id);
+      }}
+      onMouseLeave={() => {
+        if (hasScheduledTime) useSchedulerUiStore.getState().setHoveredBlockId(null);
+      }}
       onContextMenu={e => {
         e.preventDefault();
         onContextMenu?.(e, task);
@@ -430,9 +470,36 @@ export const TaskCard = memo(function TaskCard({
             </div>
           )}
 
-          {/* Row 3: Unified Metadata Row: [Due Date] · [Tags] · [Subtask Progress] */}
+          {/* Row 3: Unified Metadata Row: [Scheduled Time] · [Due Date] · [Tags] · [Subtask Progress] */}
           {hasMetadataRow && (
             <div className={styles.metadataRow}>
+              {hasScheduledTime && scheduledTimeRange && (
+                <>
+                  <span
+                    className={styles.timeChip}
+                    onClick={handleTimeChipClick}
+                    onMouseEnter={() => useSchedulerUiStore.getState().setHoveredBlockId(task.id)}
+                    onMouseLeave={() => useSchedulerUiStore.getState().setHoveredBlockId(null)}
+                    title="Click to view block in scheduler"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleTimeChipClick(e as any);
+                      }
+                    }}
+                  >
+                    ⏱️ {scheduledTimeRange}
+                  </span>
+                  {(formattedDueDate || taskTags.length > 0 || hasSubtaskBadge) && (
+                    <span className={styles.metaDot} aria-hidden="true">
+                      ·
+                    </span>
+                  )}
+                </>
+              )}
+
               {formattedDueDate && (
                 <span
                   className={`${styles.metaDate} ${isOverdue ? styles.metaDateOverdue : ''}`}

@@ -340,12 +340,16 @@ export class TaskRepository extends BaseRepository {
       }
     }
 
+    const isRemovingFromMyDay = actualFields.my_day_date === null && current.my_day_date !== null;
+    const finalStartMin = isRemovingFromMyDay ? null : (current.scheduled_start_min ?? null);
+    const finalDurationMin = isRemovingFromMyDay ? null : (current.scheduled_duration_min ?? null);
+
     const updated: Task = {
       ...current,
       ...actualFields,
       id, // Preserve id
-      scheduled_start_min: current.scheduled_start_min ?? null,
-      scheduled_duration_min: current.scheduled_duration_min ?? null,
+      scheduled_start_min: finalStartMin,
+      scheduled_duration_min: finalDurationMin,
       area_id: actualFields.area_id !== undefined ? actualFields.area_id : current.area_id,
       all_day: actualFields.all_day !== undefined
         ? (typeof actualFields.all_day === 'boolean' ? (actualFields.all_day ? 1 : 0) : actualFields.all_day)
@@ -389,6 +393,10 @@ export class TaskRepository extends BaseRepository {
 
     if (this.hasAreaId()) {
       setClauses += ', area_id = @area_id';
+    }
+
+    if (this.hasTimeBlock()) {
+      setClauses += ', scheduled_start_min = @scheduled_start_min, scheduled_duration_min = @scheduled_duration_min';
     }
 
     const stmt = this.db.prepare(`

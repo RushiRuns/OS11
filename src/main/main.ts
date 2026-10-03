@@ -16,8 +16,62 @@ import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts.
 import { initAutoUpdater } from './services/updater.js';
 import { SettingsRepository } from './repositories/SettingsRepository.js';
 import { TaskRepository } from './repositories/TaskRepository.js';
+import { TaskService } from './services/task/TaskService.js';
 import { setupGlobalDevTools } from './devtools.js';
 import { IPC } from '@shared/ipc-channels.js';
+
+let rolloverTimer: NodeJS.Timeout | null = null;
+
+export function runEnsureDayRollover(): void {
+  try {
+    const taskService = new TaskService();
+    const cleared = taskService.ensureDayRollover();
+    if (cleared > 0) {
+      console.log(`[OS11 Main] ensureDayRollover: cleared ${cleared} stale scheduled time block(s).`);
+      const mainWindow = getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC.TASKS.CHANGED);
+      }
+    }
+  } catch (err) {
+    console.error('[OS11 Main] Failed to execute ensureDayRollover:', err);
+  }
+}
+
+export function scheduleNextDayRolloverTimer(): void {
+  if (rolloverTimer) {
+    clearTimeout(rolloverTimer);
+    rolloverTimer = null;
+  }
+
+  try {
+    const settingsRepo = new SettingsRepository();
+    const dayStartsAt = settingsRepo.get<string>('day_starts_at', '00:00');
+    const [hStr, mStr] = dayStartsAt.split(':');
+    const targetH = parseInt(hStr, 10) || 0;
+    const targetM = parseInt(mStr, 10) || 0;
+
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(targetH, targetM, 0, 0);
+
+    if (next.getTime() <= now.getTime()) {
+      next.setDate(next.getDate() + 1);
+    }
+
+    const msUntil = Math.max(1000, next.getTime() - now.getTime());
+    rolloverTimer = setTimeout(() => {
+      runEnsureDayRollover();
+      scheduleNextDayRolloverTimer();
+    }, msUntil);
+  } catch (err) {
+    console.error('[OS11 Main] Failed to schedule rollover timer:', err);
+  }
+}
+
+app.on('os11:day_starts_at_changed' as any, () => {
+  scheduleNextDayRolloverTimer();
+});
 
 export async function bootstrapMainProcess(): Promise<void> {
   try {
@@ -45,9 +99,17 @@ export async function bootstrapMainProcess(): Promise<void> {
     console.log('[OS11 Main] Setting up universal DevTools access...');
     setupGlobalDevTools();
 
+    // 4c. Idempotently clear stale time blocks from previous days and schedule midnight rollover timer
+    runEnsureDayRollover();
+    scheduleNextDayRolloverTimer();
+
     // 5. Create main window (hidden on create per PERFORMANCE.md §1)
     console.log('[OS11 Main] Creating MainWindow (hidden)...');
     const mainWindow = createMainWindow();
+
+    mainWindow.on('focus', () => {
+      runEnsureDayRollover();
+    });
 
     // 6. Create omnibar window (hidden on create)
     console.log('[OS11 Main] Creating OmnibarWindow (hidden)...');
@@ -138,8 +200,10 @@ app.on('window-all-closed', () => {
 // Power Monitor: adjust and trigger overdue timers after system sleep
 if (typeof powerMonitor !== 'undefined' && powerMonitor.on) {
   powerMonitor.on('resume', () => {
-    console.log('[OS11 Main] System resumed from sleep; recalculating reminder schedules...');
+    console.log('[OS11 Main] System resumed from sleep; recalculating reminder schedules and day rollover...');
     getReminderService()?.rescheduleAfterSleep();
+    runEnsureDayRollover();
+    scheduleNextDayRolloverTimer();
   });
 }
 

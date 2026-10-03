@@ -385,3 +385,20 @@
 .timeBlockCompact .timeBlockTitle {
   font-size: 11px;
 }
+
+@keyframes timeBlockFlashKeyframes {
+  0% {
+    box-shadow: 0 0 0 4px var(--accent-primary);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--accent-primary);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+:global(.os11-timeblock-flash) {
+  animation: timeBlockFlashKeyframes 1.2s ease-out !important;
+  z-index: 30 !important;
+}
