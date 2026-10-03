@@ -35,11 +35,13 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
+  type Active,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
   type DragOverEvent,
 } from '@dnd-kit/core';
-import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
+import { AppPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { schedulerCollisionDetection } from './features/lists/scheduler/schedulerCollision.js';
 import { TimeBlockDragOverlay } from './features/lists/scheduler/TimeBlockDragOverlay.js';
@@ -90,6 +92,72 @@ function ViewSkeleton(): React.ReactElement {
       </div>
     </div>
   );
+}
+
+// Stable reference. An inline options object makes useSensor/useSensors return new objects on
+// every App render, which re-creates every draggable's listeners in the middle of a drag.
+const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
+
+type GridPlacement =
+  | { kind: 'blocked' }
+  | {
+      kind: 'ok';
+      task: Task;
+      isTimeBlock: boolean;
+      desiredStart: number;
+      duration: number;
+      placed: ReturnType<typeof placeBlock>;
+    };
+
+/**
+ * Single source of truth for "where would this drag land in the scheduler grid".
+ * Used by the live ghost preview (onDragMove) AND by the actual drop (onDragEnd), so the
+ * preview can never disagree with where the block really ends up.
+ *
+ * `gridTop` is `over.rect.top`. dnd-kit's Rect compensates for scroll of the grid's scrollable
+ * ancestors, so scrolling the scheduler panel mid-drag stays correct.
+ */
+function resolveGridPlacement(
+  active: Active,
+  gridTop: number,
+  deltaY: number
+): GridPlacement | null {
+  const activeTop =
+    active.rect.current.translated?.top ??
+    (active.rect.current.initial ? active.rect.current.initial.top + deltaY : null);
+  if (activeTop === null) return null;
+
+  const isTimeBlock = active.data.current?.type === 'time-block';
+  const rawId = String(active.id);
+  const taskId = isTimeBlock ? rawId.replace(/^block:/, '') : rawId;
+  const task = useTaskStore.getState().tasksById[taskId];
+  if (!task) return null;
+
+  // Completed tasks and subtasks cannot be newly scheduled (v1 rule).
+  if (!isTimeBlock && (task.is_completed === 1 || task.parent_task_id !== null)) {
+    return { kind: 'blocked' };
+  }
+
+  const desiredStart = snapToGrid(yToMinutes(activeTop - gridTop, HOUR_HEIGHT));
+  const duration = isTimeBlock ? (task.scheduled_duration_min ?? 30) : defaultDuration(task);
+  const day = task.my_day_date ?? toISODate(new Date());
+  const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
+    .filter(
+      (t): t is Task =>
+        t.id !== taskId &&
+        t.my_day_date === day &&
+        t.is_trashed === 0 &&
+        typeof t.scheduled_start_min === 'number' &&
+        typeof t.scheduled_duration_min === 'number'
+    )
+    .map((t) => ({
+      id: t.id,
+      start: t.scheduled_start_min!,
+      duration: t.scheduled_duration_min!,
+    }));
+
+  const placed = placeBlock(others, desiredStart, duration, { allowShrink: !isTimeBlock });
+  return { kind: 'ok', task, isTimeBlock, desiredStart, duration, placed };
 }
 
 export function App(): React.ReactElement {
@@ -273,20 +341,11 @@ export function App(): React.ReactElement {
     };
   }, [fetchSystemInfo, togglePomodoroFocus, isFocusMode, isPomodoroFocus]);
 
+  // ONE pointer sensor. Two sensors on the same event name overwrite each other in dnd-kit
+  // (see dndSensors.ts), and no inline options objects, so these stay referentially stable.
   const dndSensors = useSensors(
-    useSensor(RowPointerSensor, {
-      activationConstraint: {
-        distance: 2,
-      },
-    }),
-    useSensor(BlockPointerSensor, {
-      activationConstraint: {
-        distance: 3,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(AppPointerSensor),
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR_OPTIONS)
   );
 
   if (isOmnibar) {
@@ -457,106 +516,73 @@ export function App(): React.ReactElement {
     }
   };
 
-  const handleAppDragOver = (event: DragOverEvent) => {
-    const { active, over, delta } = event;
-    const overIdStr = over ? String(over.id) : null;
-    setDragOverTarget(overIdStr);
-
-    const isTimeBlock = active.data?.current?.type === 'time-block';
-
-    if (overIdStr === 'scheduler-grid') {
-      const activeTop =
-        active.rect.current.translated?.top ??
-        (active.rect.current.initial ? active.rect.current.initial.top + delta.y : null);
-      const gridTop = over?.rect?.top ?? 0;
-
-      if (activeTop !== null && over?.rect) {
-        const relativeY = activeTop - gridTop;
-        const desiredStart = snapToGrid(yToMinutes(relativeY, HOUR_HEIGHT));
-
-        let duration = 30;
-        let taskId = '';
-        let task: Task | undefined;
-        let allowShrink = false;
-
-        if (isTimeBlock) {
-          task = active.data?.current?.task as Task;
-          taskId = task?.id ?? String(active.id).replace(/^block:/, '');
-          duration = task?.scheduled_duration_min ?? 30;
-          allowShrink = false;
-        } else {
-          taskId = String(active.id);
-          task = useTaskStore.getState().tasksById[taskId];
-          if (task) {
-            // Guard: completed tasks cannot be newly dragged in; subtasks cannot be dragged in v1
-            if (task.is_completed === 1 || task.parent_task_id !== null) {
-              useSchedulerUiStore.getState().setDragPreviewMinutes(null);
-              return;
-            }
-            duration = defaultDuration(task);
-            allowShrink = true;
-          }
-        }
-
-        if (task) {
-          const today = task.my_day_date ?? toISODate(new Date());
-          const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
-            .filter(
-              (t): t is Task =>
-                t.id !== taskId &&
-                t.my_day_date === today &&
-                t.is_trashed === 0 &&
-                typeof t.scheduled_start_min === 'number' &&
-                typeof t.scheduled_duration_min === 'number'
-            )
-            .map((t) => ({
-              id: t.id,
-              start: t.scheduled_start_min!,
-              duration: t.scheduled_duration_min!,
-            }));
-
-          const placed = placeBlock(others, desiredStart, duration, { allowShrink });
-          if (placed) {
-            useSchedulerUiStore.getState().setDragPreviewMinutes({
-              startMin: placed.start,
-              durationMin: placed.duration,
-              isValid: true,
-            });
-          } else {
-            useSchedulerUiStore.getState().setDragPreviewMinutes({
-              startMin: Math.max(0, desiredStart),
-              durationMin: duration,
-              isValid: false,
-            });
-          }
-        }
-      }
-    } else {
-      useSchedulerUiStore.getState().setDragPreviewMinutes(null);
-    }
-
-    if (isTimeBlock) {
-      if (overIdStr === 'scheduler-grid' || overIdStr === 'my-day-list-drop-zone') {
-        document.body.classList.remove('dnd-cursor-not-allowed');
-      } else {
-        document.body.classList.add('dnd-cursor-not-allowed');
-      }
-    } else {
-      const overData = over?.data?.current as PlannedDropData | undefined;
-      if (overData?.type === 'planned-group' && overData.kind === 'overdue') {
-        document.body.classList.add('dnd-cursor-not-allowed');
-      } else {
-        document.body.classList.remove('dnd-cursor-not-allowed');
-      }
-    }
-  };
-
-  const handleAppDragEnd = async (event: DragEndEvent) => {
+  const resetDragUi = () => {
     document.body.classList.remove('dnd-cursor-not-allowed');
     useSchedulerUiStore.getState().setIsDragging(false);
     useSchedulerUiStore.getState().setDragPreviewMinutes(null);
     setActiveDragItem(null);
     setDragOverTarget(null);
+  };
+
+  // Fires only when the hovered droppable CHANGES, not as the pointer moves inside one.
+  // Keep position-dependent work out of here (see handleAppDragMove).
+  const handleAppDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    const overIdStr = over ? String(over.id) : null;
+    setDragOverTarget(overIdStr);
+
+    const isTimeBlock = active.data?.current?.type === 'time-block';
+    let notAllowed: boolean;
+    if (isTimeBlock) {
+      notAllowed = overIdStr !== 'scheduler-grid' && overIdStr !== 'my-day-list-drop-zone';
+    } else {
+      const overData = over?.data?.current as PlannedDropData | undefined;
+      notAllowed = overData?.type === 'planned-group' && overData.kind === 'overdue';
+      if (overIdStr === 'scheduler-grid') {
+        // Completed tasks and subtasks cannot be scheduled: say so with the cursor instead of
+        // silently doing nothing on drop.
+        const dragged = useTaskStore.getState().tasksById[String(active.id)];
+        notAllowed = !dragged || dragged.is_completed === 1 || dragged.parent_task_id !== null;
+      }
+    }
+    document.body.classList.toggle('dnd-cursor-not-allowed', notAllowed);
+
+    if (overIdStr !== 'scheduler-grid') {
+      useSchedulerUiStore.getState().setDragPreviewMinutes(null);
+    }
+  };
+
+  // Fires on every pointer move. This is what keeps the ghost block glued to the cursor.
+  const handleAppDragMove = (event: DragMoveEvent) => {
+    const { active, over, delta } = event;
+    const ui = useSchedulerUiStore.getState();
+
+    if (over?.id !== 'scheduler-grid') {
+      if (ui.dragPreviewMinutes !== null) ui.setDragPreviewMinutes(null);
+      return;
+    }
+
+    const plan = resolveGridPlacement(active, over.rect.top, delta.y);
+    let next: { startMin: number; durationMin: number; isValid: boolean } | null = null;
+    if (plan?.kind === 'ok') {
+      next = plan.placed
+        ? { startMin: plan.placed.start, durationMin: plan.placed.duration, isValid: true }
+        : { startMin: Math.max(0, plan.desiredStart), durationMin: plan.duration, isValid: false };
+    }
+
+    const prev = ui.dragPreviewMinutes;
+    if (
+      prev?.startMin === next?.startMin &&
+      prev?.durationMin === next?.durationMin &&
+      prev?.isValid === next?.isValid
+    ) {
+      return; // same snapped slot: skip the store write so the grid does not re-render per pixel
+    }
+    ui.setDragPreviewMinutes(next);
+  };
+
+  const handleAppDragEnd = async (event: DragEndEvent) => {
+    resetDragUi();
 
     const { active, over, delta } = event;
     if (!over) return;
@@ -569,71 +595,40 @@ export function App(): React.ReactElement {
     if (!task) return;
 
     if (overIdStr === 'scheduler-grid') {
-      const activeTop =
-        active.rect.current.translated?.top ??
-        (active.rect.current.initial ? active.rect.current.initial.top + delta.y : null);
-      const gridTop = over.rect?.top ?? 0;
-      if (activeTop === null || !over.rect) return;
+      const plan = resolveGridPlacement(active, over.rect.top, delta.y);
+      if (plan?.kind !== 'ok' || !plan.placed) return;
+      const placed = plan.placed;
 
-      const relativeY = activeTop - gridTop;
-      const desiredStart = snapToGrid(yToMinutes(relativeY, HOUR_HEIGHT));
-
-      const today = task.my_day_date ?? toISODate(new Date());
-      const others: BlockInterval[] = Object.values(useTaskStore.getState().tasksById)
-        .filter(
-          (t): t is Task =>
-            t.id !== activeTaskId &&
-            t.my_day_date === today &&
-            t.is_trashed === 0 &&
-            typeof t.scheduled_start_min === 'number' &&
-            typeof t.scheduled_duration_min === 'number'
-        )
-        .map((t) => ({
-          id: t.id,
-          start: t.scheduled_start_min!,
-          duration: t.scheduled_duration_min!,
-        }));
-
-      if (isTimeBlock) {
+      if (plan.isTimeBlock) {
         const prevStart = task.scheduled_start_min;
         const prevDuration = task.scheduled_duration_min;
-        const duration = prevDuration ?? 30;
-        const placed = placeBlock(others, desiredStart, duration, { allowShrink: false });
-        if (!placed) return;
+        if (placed.start === prevStart && placed.duration === prevDuration) return;
 
-        if (placed.start !== prevStart || placed.duration !== prevDuration) {
-          await useTaskStore.getState().updateTimeBlock(activeTaskId, placed.start, placed.duration);
-          if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
-            useUndoRedoStore.getState().pushAction({
-              description: `Moved "${task.title}"`,
-              undoFn: async () => {
-                await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
-              },
-              redoFn: async () => {
-                await useTaskStore.getState().updateTimeBlock(activeTaskId, placed.start, placed.duration);
-              },
-            });
-          }
+        await useTaskStore.getState().updateTimeBlock(activeTaskId, placed.start, placed.duration);
+        if (typeof prevStart === 'number' && typeof prevDuration === 'number') {
+          useUndoRedoStore.getState().pushAction({
+            description: `Moved "${task.title}"`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
+            },
+            redoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(activeTaskId, placed.start, placed.duration);
+            },
+          });
         }
-      } else {
-        // Guard: completed tasks cannot be newly dragged in; subtasks cannot be dragged in v1
-        if (task.is_completed === 1 || task.parent_task_id !== null) return;
-
-        const duration = defaultDuration(task);
-        const placed = placeBlock(others, desiredStart, duration, { allowShrink: true });
-        if (!placed) return;
-
-        await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
-        useUndoRedoStore.getState().pushAction({
-          description: `Scheduled "${task.title}"`,
-          undoFn: async () => {
-            await useTaskStore.getState().unscheduleTask(activeTaskId);
-          },
-          redoFn: async () => {
-            await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
-          },
-        });
+        return;
       }
+
+      await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
+      useUndoRedoStore.getState().pushAction({
+        description: `Scheduled "${task.title}"`,
+        undoFn: async () => {
+          await useTaskStore.getState().unscheduleTask(activeTaskId);
+        },
+        redoFn: async () => {
+          await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
+        },
+      });
       return;
     }
 
@@ -745,7 +740,9 @@ export function App(): React.ReactElement {
           collisionDetection={schedulerCollisionDetection}
           onDragStart={handleAppDragStart}
           onDragOver={handleAppDragOver}
+          onDragMove={handleAppDragMove}
           onDragEnd={handleAppDragEnd}
+          onDragCancel={resetDragUi}
         >
           <div
             className={layoutStyles.shellGrid}

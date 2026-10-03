@@ -37,6 +37,7 @@ export interface TaskStoreState {
   makeSubtask: (id: string, parentId: string) => Promise<Task>;
   promoteSubtask: (id: string) => Promise<Task>;
   reorderTask: (id: string, sortOrder: number) => Promise<Task>;
+  moveTask: (id: string, target: { parentId?: string | null; sortOrder: number }) => Promise<Task>;
   scheduleTask: (id: string, startMin: number, durationMin: number) => Promise<Task>;
   updateTimeBlock: (id: string, startMin: number, durationMin: number) => Promise<Task>;
   unscheduleTask: (id: string) => Promise<Task>;
@@ -45,6 +46,12 @@ export interface TaskStoreState {
   // Rollback
   rollbackUpdate: (id: string, previousState: Task | null) => void;
 }
+
+// A drag-drop move persists in up to two IPC calls. While one is in flight a reload must not
+// run: the change event fired by the first write would replace the optimistic sort_order with
+// stale rows and the dropped task would flicker back for a frame.
+let pendingMoves = 0;
+let reloadAfterMoves = false;
 
 export const useTaskStore = create<TaskStoreState>((set, get) => ({
   tasksById: {},
@@ -55,6 +62,10 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
   rightSlotPrevious: null,
 
   loadTasks: async () => {
+    if (pendingMoves > 0) {
+      reloadAfterMoves = true;
+      return;
+    }
     set({ loading: true, error: null });
     try {
       const taskList = await taskServiceAdapter.getAll();
@@ -463,6 +474,53 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
         get().rollbackUpdate(id, previousSnapshot);
       }
       throw err;
+    }
+  },
+
+  moveTask: async (id, { parentId, sortOrder }) => {
+    const existing = get().tasksById[id];
+    if (!existing) throw new Error(`moveTask: unknown task ${id}`);
+    const previousSnapshot = { ...existing };
+
+    // undefined means "leave the parent alone".
+    const currentParentId = existing.parent_task_id ?? null;
+    const newParent: string | null | undefined =
+      parentId !== currentParentId ? parentId : undefined;
+
+    // One synchronous optimistic write: parent and position change in the same render, so the
+    // row jumps once, straight to its final slot.
+    set((state) => ({
+      tasksById: {
+        ...state.tasksById,
+        [id]: {
+          ...state.tasksById[id],
+          ...(newParent !== undefined ? { parent_task_id: newParent } : {}),
+          sort_order: sortOrder,
+        },
+      },
+    }));
+
+    pendingMoves += 1;
+    try {
+      // The intermediate response is intentionally NOT written to the store: it still carries
+      // the old sort_order and would flash the row back for a frame.
+      if (newParent === null) {
+        await taskServiceAdapter.promoteSubtask(id);
+      } else if (newParent !== undefined) {
+        await taskServiceAdapter.makeSubtask(id, newParent);
+      }
+      const persisted = await taskServiceAdapter.reorder(id, sortOrder);
+      set((state) => ({ tasksById: { ...state.tasksById, [id]: persisted } }));
+      return persisted;
+    } catch (err) {
+      get().rollbackUpdate(id, previousSnapshot);
+      throw err;
+    } finally {
+      pendingMoves -= 1;
+      if (pendingMoves === 0 && reloadAfterMoves) {
+        reloadAfterMoves = false;
+        void get().loadTasks();
+      }
     }
   },
 

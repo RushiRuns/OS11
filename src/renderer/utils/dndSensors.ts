@@ -1,46 +1,64 @@
 import { PointerSensor } from '@dnd-kit/core';
 
 /**
- * Custom PointerSensor for task rows:
- * - Distance constraint is 2px (allows click / double-click to work cleanly).
- * - Ignores pointer events that initiate on a time-block or resize handle.
+ * ONE pointer sensor for the whole shared DndContext.
+ *
+ * Why one: dnd-kit builds each draggable's `listeners` by reducing every sensor's
+ * activators into an object keyed by event name. Two sensors that both listen on
+ * `onPointerDown` overwrite each other and only the LAST one is ever attached. With
+ * [RowPointerSensor, BlockPointerSensor] every draggable, task rows included, ran
+ * BlockPointerSensor's guard, which rejects anything that is not a time block. Task rows
+ * could therefore never start a drag.
+ *
+ * Routing by target now happens inside this one class instead:
+ * - activation distance is 2px for task rows and 3px for time blocks
+ * - clicks, double-clicks, checkboxes, buttons, inputs and resize handles never start a drag
+ * - only the primary button starts a drag (right-click stays a context menu)
  */
-export class RowPointerSensor extends PointerSensor {
+
+const BLOCK_SELECTOR = '[data-dnd-kind="time-block"]';
+const RESIZE_SELECTOR = '[data-resize-handle]';
+// Deliberately no [role="button"]: dnd-kit's own `attributes` put role="button" on the
+// draggable root, so including it would block every time-block drag.
+const INTERACTIVE_SELECTOR =
+  'input, textarea, select, button, a[href], [contenteditable=""], [contenteditable="true"], [data-no-dnd]';
+
+const ROW_DRAG_DISTANCE_PX = 2;
+const BLOCK_DRAG_DISTANCE_PX = 3;
+
+type PointerSensorCtorProps = ConstructorParameters<typeof PointerSensor>[0];
+
+function shouldStartDrag(event: PointerEvent): boolean {
+  if (!event.isPrimary || event.button !== 0) return false;
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return false;
+  if (target.closest(RESIZE_SELECTOR) || target.closest(INTERACTIVE_SELECTOR)) return false;
+  return true;
+}
+
+export class AppPointerSensor extends PointerSensor {
+  constructor(props: PointerSensorCtorProps) {
+    const target = props.event.target instanceof Element ? props.event.target : null;
+    const distance = target?.closest(BLOCK_SELECTOR) ? BLOCK_DRAG_DISTANCE_PX : ROW_DRAG_DISTANCE_PX;
+    super({ ...props, options: { ...props.options, activationConstraint: { distance } } });
+  }
+
   static activators = [
     {
       eventName: 'onPointerDown' as const,
-      handler: ({ nativeEvent: event }: { nativeEvent: PointerEvent }) => {
-        const target = event.target as HTMLElement | null;
-        if (!target) return true;
-        // Do not activate row drag if initiating on time block or resize handle
-        if (target.closest('[data-dnd-kind="time-block"]') || target.closest('[data-resize-handle]')) {
-          return false;
-        }
+      handler: (
+        { nativeEvent: event }: { nativeEvent: PointerEvent },
+        { onActivation }: { onActivation?: (args: { event: PointerEvent }) => void }
+      ) => {
+        if (!shouldStartDrag(event)) return false;
+        onActivation?.({ event });
         return true;
       },
     },
   ];
 }
 
-/**
- * Custom PointerSensor for time blocks:
- * - Distance constraint is 3px (distinguishes click for popover from drag).
- * - Only activates for pointer events targeting [data-dnd-kind="time-block"].
- * - Ignores resize handles (which use direct pointer capture).
- */
-export class BlockPointerSensor extends PointerSensor {
-  static activators = [
-    {
-      eventName: 'onPointerDown' as const,
-      handler: ({ nativeEvent: event }: { nativeEvent: PointerEvent }) => {
-        const target = event.target as HTMLElement | null;
-        if (!target) return false;
-        // Do not activate block drag if clicking resize handle
-        if (target.closest('[data-resize-handle]')) {
-          return false;
-        }
-        return Boolean(target.closest('[data-dnd-kind="time-block"]'));
-      },
-    },
-  ];
-}
+/** @deprecated Same class. Kept so any other importer keeps compiling. Never register two of these in one DndContext. */
+export const RowPointerSensor = AppPointerSensor;
+/** @deprecated Same class. Kept so any other importer keeps compiling. Never register two of these in one DndContext. */
+export const BlockPointerSensor = AppPointerSensor;

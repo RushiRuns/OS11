@@ -5,7 +5,7 @@ import {
   useDroppable,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragMoveEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -54,6 +54,156 @@ export interface FlattenedTaskItem {
   subtaskCount: { completed: number; total: number };
 }
 
+// --- Drag-and-drop geometry ---------------------------------------------------
+// Pixels of horizontal drag that equal one indent level. Matches the 28px per-depth indent
+// TaskCard already uses, so the drop line lines up with where a card at that depth would sit.
+const INDENT_PX = 28;
+// How far in from the list's left edge a depth-0 drop line starts (past chevron + checkbox).
+// Nudge this one number if the line looks offset from your cards.
+const INDENT_LINE_BASE_PADDING = 40;
+// Keep in sync with the virtualizer gap in createTaskListVirtualizerOptions.
+const ROW_GAP_PX = 8;
+
+export interface DropPlan {
+  parentId: string | null;
+  prevSiblingId: string | null;
+  nextSiblingId: string | null;
+  depth: number;
+  lineTop: number; // viewport-relative Y of the insertion point
+  isNoop: boolean; // dropping here would leave the task exactly where it already is
+}
+
+function isExternalDropTarget(id: string): boolean {
+  return (
+    id === 'scheduler-grid' ||
+    id === 'my-day-list-drop-zone' ||
+    id.startsWith('list:') ||
+    id.startsWith('project:') ||
+    id.startsWith('tag:')
+  );
+}
+
+interface PlanDropArgs {
+  items: Array<Pick<FlattenedTaskItem, 'task' | 'depth'>>; // rows exactly as rendered
+  activeId: string;
+  overId: string;
+  deltaX: number; // total horizontal pointer travel since the drag started
+  activeRect: { top: number; height: number } | null;
+  overRect: { top: number; height: number };
+  indentPx: number;
+  rowGapPx: number;
+}
+
+/**
+ * Pure drop planning (no React, no store) so it can be unit tested.
+ *
+ * Depth rule (same model as dnd-kit's sortable-tree and Todoist): the dragged row STARTS at
+ * its current depth and horizontal travel adds or removes levels, clamped to what the
+ * insertion gap allows:
+ *   maxDepth = (row above the gap).depth + 1   -> can become that row's child
+ *   minDepth = (row below the gap).depth       -> cannot steal the row below from its parent
+ * So a plain vertical drag is a reorder. Dragging right nests, dragging left outdents, and
+ * both work in place (pointer still over the dragged row's own slot).
+ *
+ * The dragged row and its visible subtree move as one unit, so none of them can be the anchor
+ * or the new parent (that would create a cycle).
+ *
+ * Subtasks whose parent is not in the current list (My Day, Important, ...) are rendered as
+ * depth-0 rows. They are treated as roots here, so reordering them never detaches their real
+ * parent.
+ */
+export function planDrop({
+  items,
+  activeId,
+  overId,
+  deltaX,
+  activeRect,
+  overRect,
+  indentPx,
+  rowGapPx,
+}: PlanDropArgs): DropPlan | null {
+  const activeIndex = items.findIndex((i) => i.task.id === activeId);
+  const overIndex = items.findIndex((i) => i.task.id === overId);
+  if (activeIndex === -1 || overIndex === -1) return null;
+  const activeItem = items[activeIndex];
+
+  let subtreeEnd = activeIndex + 1;
+  while (subtreeEnd < items.length && items[subtreeEnd].depth > activeItem.depth) subtreeEnd++;
+
+  // Hovering inside the dragged row's own subtree: nothing sensible to drop onto.
+  if (overIndex > activeIndex && overIndex < subtreeEnd) return null;
+
+  const visible = [...items.slice(0, activeIndex), ...items.slice(subtreeEnd)];
+  const byId = new Map(items.map((i) => [i.task.id, i]));
+  const displayParentId = (t: PlanDropArgs['items'][number]['task']): string | null =>
+    t.parent_task_id && byId.has(t.parent_task_id) ? t.parent_task_id : null;
+
+  let gapIndex: number;
+  let lineTop: number;
+  if (overId === activeId) {
+    // Pointer still over the dragged row's own slot: the gap is where it already sits.
+    gapIndex = activeIndex;
+    lineTop = overRect.top - rowGapPx / 2;
+  } else {
+    const overVisible =
+      overIndex < activeIndex ? overIndex : overIndex - (subtreeEnd - activeIndex);
+    const activeCenterY = activeRect
+      ? activeRect.top + activeRect.height / 2
+      : overRect.top + overRect.height / 2;
+    const insertBefore = activeCenterY < overRect.top + overRect.height / 2;
+    gapIndex = insertBefore ? overVisible : overVisible + 1;
+    lineTop = insertBefore
+      ? overRect.top - rowGapPx / 2
+      : overRect.top + overRect.height + rowGapPx / 2;
+  }
+
+  const prev = gapIndex > 0 ? visible[gapIndex - 1] : null;
+  const next = gapIndex < visible.length ? visible[gapIndex] : null;
+  const maxDepth = prev ? prev.depth + 1 : 0;
+  const minDepth = next ? next.depth : 0;
+  const projected = activeItem.depth + Math.round(deltaX / indentPx);
+  const depth = Math.min(maxDepth, Math.max(minDepth, projected));
+
+  // New parent = the ancestor of the row above the gap that sits at (depth - 1).
+  let parentId: string | null = null;
+  if (depth > 0 && prev) {
+    let cursor: (typeof items)[number] | undefined = prev;
+    while (cursor && cursor.depth > depth - 1) {
+      const pid = displayParentId(cursor.task);
+      cursor = pid ? byId.get(pid) : undefined;
+    }
+    parentId = cursor ? cursor.task.id : null;
+  }
+
+  // Nearest siblings under that parent, scanning outward from the gap. A sibling's own
+  // nested rows are skipped automatically because their parent differs.
+  const findSiblings = (gap: number, parent: string | null) => {
+    let prevId: string | null = null;
+    for (let i = gap - 1; i >= 0; i--) {
+      if (displayParentId(visible[i].task) === parent) {
+        prevId = visible[i].task.id;
+        break;
+      }
+    }
+    let nextId: string | null = null;
+    for (let i = gap; i < visible.length; i++) {
+      if (displayParentId(visible[i].task) === parent) {
+        nextId = visible[i].task.id;
+        break;
+      }
+    }
+    return { prevId, nextId };
+  };
+
+  const { prevId, nextId } = findSiblings(gapIndex, parentId);
+  const currentParent = displayParentId(activeItem.task);
+  const current = findSiblings(activeIndex, currentParent);
+  const isNoop =
+    parentId === currentParent && prevId === current.prevId && nextId === current.nextId;
+
+  return { parentId, prevSiblingId: prevId, nextSiblingId: nextId, depth, lineTop, isNoop };
+}
+
 export function computeTaskItemEstimate(item?: {
   task?: { notes?: string | null };
   hasSubtasks?: boolean;
@@ -78,7 +228,7 @@ export function createTaskListVirtualizerOptions<TElement extends Element>(
     getScrollElement,
     getItemKey: (index: number) => items[index]?.task.id ?? index,
     estimateSize: (index: number) => computeTaskItemEstimate(items[index]),
-    gap: 8,
+    gap: ROW_GAP_PX,
     overscan: 10,
   };
 }
@@ -103,8 +253,7 @@ export function TaskList({
     restoreTask,
     duplicateTask,
     makeSubtask,
-    promoteSubtask,
-    reorderTask,
+    moveTask,
   } = useTaskStore();
 
   const { selectAll } = useSelectionStore();
@@ -233,10 +382,13 @@ export function TaskList({
 
   // Filter & Sort (deferred value avoids blocking user inputs)
   const deferredConfig = useDeferredValue(filterConfig);
-  const filteredIncomplete = useFilteredTasks(
-    activeTasks.filter((t) => t.is_completed === 0),
-    deferredConfig
+  // Memoised: an inline .filter() hands useFilteredTasks a new array every render, which
+  // re-flattens the tree and re-keys the virtualizer on every drag-indicator update.
+  const incompleteActive = useMemo(
+    () => activeTasks.filter((t) => t.is_completed === 0),
+    [activeTasks]
   );
+  const filteredIncomplete = useFilteredTasks(incompleteActive, deferredConfig);
 
   // Hierarchical tree flattening with indentation depth and collapse state
   const flattenedIncomplete = useMemo(() => {
@@ -298,7 +450,10 @@ export function TaskList({
     return result;
   }, [filteredIncomplete, tasksById, collapsedParentIds]);
 
-  const allTaskIds = flattenedIncomplete.map((item) => item.task.id);
+  const allTaskIds = useMemo(
+    () => flattenedIncomplete.map((item) => item.task.id),
+    [flattenedIncomplete]
+  );
 
   // TanStack Virtualizer with dynamic measurement, getItemKey by task.id, and uniform 8px gap
   const virtualizer = useVirtualizer(
@@ -368,35 +523,7 @@ export function TaskList({
   });
 
   // --- Outliner-style drop planning ----------------------------------------
-  // Pixels of horizontal drag that equal one indent level. Matches the 28px
-  // per-depth indent TaskCard already uses, so the drop-line indent lines up
-  // visually with where a card at that depth would actually sit.
-  const INDENT_PX = 28;
-  // How far in from the list's left edge a depth-0 drop line should start.
-  // This should line up with where a depth-0 card's title text begins
-  // (past the chevron + checkbox). Nudge this one number if the line looks
-  // offset from your cards.
-  const INDENT_LINE_BASE_PADDING = 40;
-
-  interface DropPlan {
-    parentId: string | null;
-    prevSiblingId: string | null;
-    nextSiblingId: string | null;
-    depth: number;
-    lineTop: number; // viewport-relative Y of the insertion point
-  }
-
-  // Given the task being dragged, whatever row dnd-kit currently reports as
-  // "over", and how far the pointer has moved horizontally since the drag
-  // started, work out: which two siblings the dropped task would land
-  // between, and how deep it would nest.
-  //
-  // Depth rule (matches Todoist/Workflowy-style outliners): by default
-  // (no leftward drag) the task nests as a CHILD of whatever row sits
-  // directly above the insertion point - that's what makes nesting the
-  // "easy" outcome instead of something you have to precisely aim for.
-  // Dragging left "outdents" it - each INDENT_PX of leftward movement steps
-  // it back out one level, down to top-level (depth 0).
+  // The geometry lives in planDrop() at the top of this file (pure, unit-testable).
   const computeDropPlan = useCallback(
     (
       activeId: string,
@@ -404,70 +531,25 @@ export function TaskList({
       deltaX: number,
       activeRect: { top: number; height: number } | null,
       overRect: { top: number; height: number }
-    ): DropPlan | null => {
-      const visible = flattenedIncomplete.filter((i) => i.task.id !== activeId);
-      const overIndex = visible.findIndex((i) => i.task.id === overId);
-      if (overIndex === -1) return null;
-
-      const activeCenterY = activeRect
-        ? activeRect.top + activeRect.height / 2
-        : overRect.top + overRect.height / 2;
-      const overCenterY = overRect.top + overRect.height / 2;
-      const insertBefore = activeCenterY < overCenterY;
-
-      // The "anchor" is whichever visible row will sit directly ABOVE the
-      // dropped task once it lands - that row's depth caps how deep we can nest.
-      const anchorItem = insertBefore
-        ? (overIndex > 0 ? visible[overIndex - 1] : null)
-        : visible[overIndex];
-
-      const anchorDepth = anchorItem ? anchorItem.depth : -1;
-      const maxDepth = anchorItem ? anchorDepth + 1 : 0;
-
-      const leftSteps = Math.max(0, Math.round(-deltaX / INDENT_PX));
-      const depth = Math.max(0, Math.min(maxDepth, maxDepth - leftSteps));
-
-      let parentTask: Task | null = null;
-      if (depth > 0 && anchorItem) {
-        let current: Task | undefined = anchorItem.task;
-        let currentDepth = anchorDepth;
-        while (current && currentDepth > depth - 1) {
-          const pid: string | null = current.parent_task_id ?? null;
-          current = pid ? tasksById[pid] : undefined;
-          currentDepth -= 1;
-        }
-        parentTask = current ?? null;
-      }
-      const parentId = parentTask ? parentTask.id : null;
-
-      // Find the actual prev/next siblings under that parent, scanning
-      // outward from the insertion gap (skips over any of a sibling's own
-      // nested descendants automatically, since those have a different
-      // parent_task_id).
-      const gapIndex = insertBefore ? overIndex : overIndex + 1;
-      let prevSiblingId: string | null = null;
-      for (let i = gapIndex - 1; i >= 0; i--) {
-        const pid = visible[i].task.parent_task_id ?? null;
-        if (pid === parentId) {
-          prevSiblingId = visible[i].task.id;
-          break;
-        }
-      }
-      let nextSiblingId: string | null = null;
-      for (let i = gapIndex; i < visible.length; i++) {
-        const pid = visible[i].task.parent_task_id ?? null;
-        if (pid === parentId) {
-          nextSiblingId = visible[i].task.id;
-          break;
-        }
-      }
-
-      const lineTop = insertBefore ? overRect.top : overRect.top + overRect.height;
-
-      return { parentId, prevSiblingId, nextSiblingId, depth, lineTop };
-    },
-    [flattenedIncomplete, tasksById]
+    ): DropPlan | null =>
+      planDrop({
+        items: flattenedIncomplete,
+        activeId,
+        overId,
+        deltaX,
+        activeRect,
+        overRect,
+        indentPx: INDENT_PX,
+        rowGapPx: ROW_GAP_PX,
+      }),
+    [flattenedIncomplete]
   );
+
+  const clearDragState = () => {
+    setIsTimeBlockDragging(false);
+    setDraggingTaskId(null);
+    setDropIndicator(null);
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     if (event.active.data?.current?.type === 'time-block') {
@@ -478,115 +560,110 @@ export function TaskList({
     setDraggingTaskId(String(event.active.id));
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
+  // onDragMove, NOT onDragOver. dnd-kit only fires onDragOver when the hovered row CHANGES, so
+  // horizontal travel (indent / outdent) and crossing a row's midpoint never reached it and the
+  // drop line sat frozen while the drop itself used different numbers.
+  const handleDragMove = (event: DragMoveEvent) => {
     const { active, over, delta } = event;
-    if (!over || active.id === over.id) {
-      setDropIndicator(null);
-      return;
-    }
-
-    if (active.data?.current?.type === 'time-block') {
-      setDropIndicator(null);
-      return;
-    }
-
-    const overIdStr = String(over.id);
     if (
-      overIdStr === 'scheduler-grid' ||
-      overIdStr === 'my-day-list-drop-zone' ||
-      overIdStr.startsWith('list:') ||
-      overIdStr.startsWith('project:') ||
-      overIdStr.startsWith('tag:')
+      !over ||
+      active.data?.current?.type === 'time-block' ||
+      isExternalDropTarget(String(over.id))
     ) {
       setDropIndicator(null);
-      return; // Handled by App.tsx (sidebar list/project/tag or scheduler drop targets)
-    }
-
-    const overRect = over.rect;
-    if (!overRect) {
-      setDropIndicator(null);
-      return;
-    }
-    const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
-
-    const plan = computeDropPlan(String(active.id), overIdStr, delta.x, activeRect, overRect);
-    if (!plan) {
-      setDropIndicator(null);
       return;
     }
 
+    const plan = computeDropPlan(
+      String(active.id),
+      String(over.id),
+      delta.x,
+      active.rect.current.translated ?? active.rect.current.initial ?? null,
+      over.rect
+    );
     const containerRect = parentRef.current?.getBoundingClientRect();
-    if (!containerRect) {
+    // No line when the drop would change nothing: nothing flashes at the start of a drag.
+    if (!plan || plan.isNoop || !containerRect) {
       setDropIndicator(null);
       return;
     }
 
     const left = containerRect.left + INDENT_LINE_BASE_PADDING + plan.depth * INDENT_PX;
-    const width = Math.max(40, containerRect.right - left - 16);
-
-    setDropIndicator({ top: plan.lineTop, left, width, depth: plan.depth });
+    const nextIndicator = {
+      top: plan.lineTop,
+      left,
+      width: Math.max(40, containerRect.right - left - 16),
+      depth: plan.depth,
+    };
+    // Same slot as the previous frame: return the old object so React skips the re-render.
+    setDropIndicator((prev) =>
+      prev &&
+      prev.top === nextIndicator.top &&
+      prev.left === nextIndicator.left &&
+      prev.width === nextIndicator.width
+        ? prev
+        : nextIndicator
+    );
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over, delta } = event;
-    setDraggingTaskId(null);
-    setDropIndicator(null);
-    setIsTimeBlockDragging(false);
+    clearDragState();
 
-    if (!over || active.id === over.id) return;
-    if (active.data?.current?.type === 'time-block') return;
-
+    if (!over || active.data?.current?.type === 'time-block') return;
     const overIdStr = String(over.id);
-    if (
-      overIdStr === 'scheduler-grid' ||
-      overIdStr === 'my-day-list-drop-zone' ||
-      overIdStr.startsWith('list:') ||
-      overIdStr.startsWith('project:') ||
-      overIdStr.startsWith('tag:')
-    ) {
-      return; // Handled by App.tsx
-    }
-
-    const overRect = over.rect;
-    if (!overRect) return;
-    const activeRect = active.rect.current.translated ?? active.rect.current.initial ?? null;
-
-    const plan = computeDropPlan(String(active.id), overIdStr, delta.x, activeRect, overRect);
-    if (!plan) return;
+    if (isExternalDropTarget(overIdStr)) return; // handled by App.tsx
 
     const activeId = String(active.id);
     const activeTask = tasksById[activeId];
-    if (!activeTask) return;
+    if (!activeTask || activeTask.is_completed === 1) return;
 
-    const currentParentId = activeTask.parent_task_id ?? null;
+    const plan = computeDropPlan(
+      activeId,
+      overIdStr,
+      delta.x,
+      active.rect.current.translated ?? active.rect.current.initial ?? null,
+      over.rect
+    );
+    if (!plan || plan.isNoop) return;
 
-    try {
-      if (plan.parentId !== currentParentId) {
-        if (plan.parentId === null) {
-          await promoteSubtask(activeId);
-        } else {
-          await makeSubtask(activeId, plan.parentId);
-        }
-      }
+    // Compare against the parent that is actually DISPLAYED. A subtask whose real parent is
+    // not in this list shows as a root, and reordering it must not promote (detach) it.
+    const prevParentId = activeTask.parent_task_id ?? null;
+    const displayedParentId =
+      prevParentId && allTaskIds.includes(prevParentId) ? prevParentId : null;
+    const parentChanged = plan.parentId !== displayedParentId;
 
-      const prevSibling = plan.prevSiblingId ? tasksById[plan.prevSiblingId] : null;
-      const nextSibling = plan.nextSiblingId ? tasksById[plan.nextSiblingId] : null;
-      const newSortOrder = between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null);
-      await reorderTask(activeId, newSortOrder);
-    } catch (err) {
-      console.error('Failed to move task:', err);
-    }
+    const prevSibling = plan.prevSiblingId ? tasksById[plan.prevSiblingId] : null;
+    const nextSibling = plan.nextSiblingId ? tasksById[plan.nextSiblingId] : null;
+    const newSortOrder = between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null);
+
+    const prevSortOrder = activeTask.sort_order;
+    const nextParentId = parentChanged ? plan.parentId : undefined; // undefined = leave parent alone
+
+    // One store write for parent + position, so the row jumps once instead of hopping twice.
+    // Errors roll back inside the store and propagate; nothing is swallowed here.
+    await moveTask(activeId, { parentId: nextParentId, sortOrder: newSortOrder });
+
+    pushAction({
+      description: `Moved "${activeTask.title}"`,
+      undoFn: async () => {
+        await moveTask(activeId, {
+          parentId: parentChanged ? prevParentId : undefined,
+          sortOrder: prevSortOrder,
+        });
+      },
+      redoFn: async () => {
+        await moveTask(activeId, { parentId: nextParentId, sortOrder: newSortOrder });
+      },
+    });
   };
 
   useDndMonitor({
     onDragStart: handleDragStart,
-    onDragOver: handleDragOver,
+    onDragMove: handleDragMove,
     onDragEnd: handleDragEnd,
-    onDragCancel: () => {
-      setIsTimeBlockDragging(false);
-      setDraggingTaskId(null);
-      setDropIndicator(null);
-    },
+    onDragCancel: clearDragState,
   });
 
   const headerTitle = (() => {
