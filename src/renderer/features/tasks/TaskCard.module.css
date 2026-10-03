@@ -471,3 +471,30 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Scheduled Time Chip */
+.timeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  color: var(--accent-primary);
+  background-color: var(--accent-subtle, rgba(59, 130, 246, 0.08));
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  cursor: default;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.timeChipHovered {
+  background-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+.timeChipIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

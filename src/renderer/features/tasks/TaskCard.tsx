@@ -10,6 +10,9 @@ import { IPC } from '@shared/ipc-channels.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import type { Task } from '@shared/types/task.js';
 import { getTagShapeClass } from '@shared/utils/tag-shape.js';
+import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
+import { useSchedulerUiStore } from '../../stores/schedulerUiStore.js';
+import { useModuleStore } from '../../stores/moduleStore.js';
 import styles from './TaskCard.module.css';
 
 export interface TaskCardProps {
@@ -130,8 +133,25 @@ export const TaskCard = memo(function TaskCard({
     return formatDateTime(task.due_date, task.due_time, task.all_day);
   }, [task.due_date, task.due_time, task.all_day]);
 
+  const isAgendaEnabled = useModuleStore((s) => s.modulesByName['agenda'] ?? true);
+  const hoveredBlockId = useSchedulerUiStore((s) => s.hoveredBlockId);
+  const setHoveredBlockId = useSchedulerUiStore((s) => s.setHoveredBlockId);
+  const isTimeBlockHovered = hoveredBlockId === task.id;
+
+  const hasScheduledTime =
+    isAgendaEnabled &&
+    typeof task.scheduled_start_min === 'number' &&
+    typeof task.scheduled_duration_min === 'number';
+
+  const formattedTimeRange = useMemo(() => {
+    if (!hasScheduledTime) return null;
+    return formatTimeRange(task.scheduled_start_min!, task.scheduled_duration_min!);
+  }, [hasScheduledTime, task.scheduled_start_min, task.scheduled_duration_min]);
+
   const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
-  const hasMetadataRow = Boolean(formattedDueDate || taskTags.length > 0 || hasSubtaskBadge);
+  const hasMetadataRow = Boolean(
+    formattedDueDate || taskTags.length > 0 || hasSubtaskBadge || formattedTimeRange
+  );
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -437,7 +457,39 @@ export const TaskCard = memo(function TaskCard({
                 </span>
               )}
 
-              {formattedDueDate && (taskTags.length > 0 || hasSubtaskBadge) && (
+              {formattedDueDate && (formattedTimeRange || taskTags.length > 0 || hasSubtaskBadge) && (
+                <span className={styles.metaDot} aria-hidden="true">
+                  ·
+                </span>
+              )}
+
+              {formattedTimeRange && (
+                <span
+                  className={`${styles.timeChip} ${isTimeBlockHovered ? styles.timeChipHovered : ''}`}
+                  title={`Scheduled: ${formattedTimeRange}`}
+                  onMouseEnter={() => setHoveredBlockId(task.id)}
+                  onMouseLeave={() => setHoveredBlockId(null)}
+                >
+                  <span className={styles.timeChipIcon} aria-hidden="true">
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </span>
+                  <span>{formattedTimeRange}</span>
+                </span>
+              )}
+
+              {formattedTimeRange && (taskTags.length > 0 || hasSubtaskBadge) && (
                 <span className={styles.metaDot} aria-hidden="true">
                   ·
                 </span>

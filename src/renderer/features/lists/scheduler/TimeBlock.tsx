@@ -4,6 +4,7 @@ import type { Task } from '@shared/types/task.js';
 import { PIXELS_PER_MINUTE, GUTTER_WIDTH, formatTimeRange } from './useSchedulerLayout.js';
 import { useTaskStore } from '../../../stores/taskStore.js';
 import { useSchedulerUiStore } from '../../../stores/schedulerUiStore.js';
+import { useUndoRedoStore } from '../../../hooks/useUndoRedo.js';
 import styles from './SchedulerPanel.module.css';
 
 interface TimeBlockProps {
@@ -37,9 +38,22 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
 
   const handleUnschedule = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const prevStart = task.scheduled_start_min;
+    const prevDuration = task.scheduled_duration_min;
     useTaskStore.getState().unscheduleTask(task.id).catch(console.error);
     if (isSelected) {
       setSelectedBlockId(null);
+    }
+    if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+      useUndoRedoStore.getState().pushAction({
+        description: `Unscheduled "${task.title}"`,
+        undoFn: async () => {
+          await useTaskStore.getState().updateTimeBlock(task.id, prevStart, prevDuration);
+        },
+        redoFn: async () => {
+          await useTaskStore.getState().unscheduleTask(task.id);
+        },
+      });
     }
   };
 
@@ -57,8 +71,21 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       e.stopPropagation();
+      const prevStart = task.scheduled_start_min;
+      const prevDuration = task.scheduled_duration_min;
       useTaskStore.getState().unscheduleTask(task.id).catch(console.error);
       setSelectedBlockId(null);
+      if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+        useUndoRedoStore.getState().pushAction({
+          description: `Unscheduled "${task.title}"`,
+          undoFn: async () => {
+            await useTaskStore.getState().updateTimeBlock(task.id, prevStart, prevDuration);
+          },
+          redoFn: async () => {
+            await useTaskStore.getState().unscheduleTask(task.id);
+          },
+        });
+      }
     } else if (e.key === 'Escape') {
       setSelectedBlockId(null);
     } else if (e.key === 'Enter') {

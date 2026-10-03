@@ -239,7 +239,34 @@ export function App(): React.ReactElement {
 
     window.addEventListener('keydown', handleKeyDown);
 
+    // Day Rollover Lifecycle Hooks
+    useTaskStore.getState().ensureDayRollover().catch(console.error);
+
+    const handleWindowFocus = () => {
+      useTaskStore.getState().ensureDayRollover().catch(console.error);
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
+    const unsubRollover = ipc.on(IPC.TASKS.ENSURE_DAY_ROLLOVER, () => {
+      useTaskStore.getState().ensureDayRollover().catch(console.error);
+    });
+
+    let rolloverTimerId: ReturnType<typeof setTimeout> | null = null;
+    const scheduleNextRollover = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
+      const delayMs = Math.max(1000, tomorrow.getTime() - now.getTime());
+      rolloverTimerId = setTimeout(async () => {
+        await useTaskStore.getState().ensureDayRollover().catch(console.error);
+        scheduleNextRollover();
+      }, delayMs);
+    };
+    scheduleNextRollover();
+
     return () => {
+      if (rolloverTimerId) clearTimeout(rolloverTimerId);
+      window.removeEventListener('focus', handleWindowFocus);
+      unsubRollover?.();
       unsubFocus?.();
       unsubTheme?.();
       unsubAccent?.();
@@ -526,9 +553,31 @@ export function App(): React.ReactElement {
 
       if (dragPreview) {
         if (isTimeBlock) {
+          const prevStart = task.scheduled_start_min;
+          const prevDuration = task.scheduled_duration_min;
           await useTaskStore.getState().updateTimeBlock(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+          if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+            useUndoRedoStore.getState().pushAction({
+              description: `Rescheduled "${task.title}"`,
+              undoFn: async () => {
+                await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
+              },
+              redoFn: async () => {
+                await useTaskStore.getState().updateTimeBlock(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+              },
+            });
+          }
         } else {
           await useTaskStore.getState().scheduleTask(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+          useUndoRedoStore.getState().pushAction({
+            description: `Scheduled "${task.title}"`,
+            undoFn: async () => {
+              await useTaskStore.getState().unscheduleTask(activeTaskId);
+            },
+            redoFn: async () => {
+              await useTaskStore.getState().scheduleTask(activeTaskId, dragPreview.startMin, dragPreview.durationMin);
+            },
+          });
         }
       }
       return;
@@ -537,7 +586,21 @@ export function App(): React.ReactElement {
     // 2. Drop on my-day-list-drop-zone (unschedule)
     if (overIdStr === 'my-day-list-drop-zone') {
       if (isTimeBlock) {
+        const task = useTaskStore.getState().tasksById[activeTaskId];
+        const prevStart = task?.scheduled_start_min;
+        const prevDuration = task?.scheduled_duration_min;
         await useTaskStore.getState().unscheduleTask(activeTaskId);
+        if (task && prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
+          useUndoRedoStore.getState().pushAction({
+            description: `Unscheduled "${task.title}"`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
+            },
+            redoFn: async () => {
+              await useTaskStore.getState().unscheduleTask(activeTaskId);
+            },
+          });
+        }
       }
       return;
     }

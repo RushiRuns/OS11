@@ -39,6 +39,9 @@ export interface TaskStoreState {
   promoteSubtask: (id: string) => Promise<Task>;
   reorderTask: (id: string, sortOrder: number) => Promise<Task>;
 
+  addToMyDay: (id: string, date?: string) => Promise<Task>;
+  removeFromMyDay: (id: string) => Promise<Task>;
+
   // Time-Blocking Scheduler Actions
   scheduleTask: (id: string, startMin: number, durationMin: number) => Promise<Task>;
   updateTimeBlock: (id: string, startMin: number, durationMin: number) => Promise<Task>;
@@ -256,6 +259,10 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       ...payload,
       updated_at: new Date().toISOString(),
     };
+    if (payload.my_day_date === null) {
+      optimistic.scheduled_start_min = null;
+      optimistic.scheduled_duration_min = null;
+    }
 
     set((state) => ({
       tasksById: { ...state.tasksById, [payload.id]: optimistic },
@@ -500,6 +507,63 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     } catch (err) {
       if (previousSnapshot) {
         get().rollbackUpdate(id, previousSnapshot);
+      }
+      throw err;
+    }
+  },
+
+  addToMyDay: async (id: string, date?: string): Promise<Task> => {
+    const today = date ?? new Date().toISOString().split('T')[0];
+    const current = get().tasksById[id];
+    const optimistic: Task = {
+      ...current,
+      my_day_date: today,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [id]: optimistic },
+    }));
+
+    try {
+      const persisted = await taskServiceAdapter.addToMyDay(id, today);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: persisted },
+      }));
+      return persisted;
+    } catch (err) {
+      if (current) {
+        set((state) => ({
+          tasksById: { ...state.tasksById, [id]: current },
+        }));
+      }
+      throw err;
+    }
+  },
+
+  removeFromMyDay: async (id: string): Promise<Task> => {
+    const current = get().tasksById[id];
+    const optimistic: Task = {
+      ...current,
+      my_day_date: null,
+      scheduled_start_min: null,
+      scheduled_duration_min: null,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [id]: optimistic },
+    }));
+
+    try {
+      const persisted = await taskServiceAdapter.removeFromMyDay(id);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [id]: persisted },
+      }));
+      return persisted;
+    } catch (err) {
+      if (current) {
+        set((state) => ({
+          tasksById: { ...state.tasksById, [id]: current },
+        }));
       }
       throw err;
     }

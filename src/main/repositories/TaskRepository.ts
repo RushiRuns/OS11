@@ -389,6 +389,12 @@ export class TaskRepository extends BaseRepository {
       setClauses += ', area_id = @area_id';
     }
 
+    if (this.hasTimeBlockCols() && sanitizedFields.my_day_date === null) {
+      setClauses += ', scheduled_start_min = NULL, scheduled_duration_min = NULL';
+      updated.scheduled_start_min = null;
+      updated.scheduled_duration_min = null;
+    }
+
     const stmt = this.db.prepare(`
       UPDATE tasks SET ${setClauses} WHERE id = @id
     `);
