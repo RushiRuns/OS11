@@ -107,4 +107,58 @@ describe('Integration: Database Schema Migration Runner', () => {
     version = db.pragma('user_version', { simple: true }) as number;
     expect(version).toBe(4);
   });
+
+  it('reconciles desynchronized user_version when physical schema lacks migration columns and brings database up to date', () => {
+    // 1. Run migrations up to v8 (initial schema through areas)
+    for (let i = 1; i <= 8; i++) {
+      const pad = String(i).padStart(4, '0');
+      const file = fs.readdirSync(realMigrationsDir).find((f) => f.startsWith(`${pad}_`));
+      if (file) {
+        fs.copyFileSync(path.join(realMigrationsDir, file), path.join(tempMigrationsDir, file));
+      }
+    }
+    runMigrations(db, tempMigrationsDir);
+    expect(db.pragma('user_version', { simple: true })).toBe(8);
+
+    // 2. Artificially bump user_version to 11 (simulating desync/crash/corrupted version bump)
+    db.pragma('user_version = 11');
+    expect(db.pragma('user_version', { simple: true })).toBe(11);
+
+    // 3. Add remaining migrations (9, 10, 11) to migrations directory
+    for (let i = 9; i <= 11; i++) {
+      const pad = String(i).padStart(4, '0');
+      const file = fs.readdirSync(realMigrationsDir).find((f) => f.startsWith(`${pad}_`));
+      if (file) {
+        fs.copyFileSync(path.join(realMigrationsDir, file), path.join(tempMigrationsDir, file));
+      }
+    }
+
+    // 4. Run migrations again - should detect that columns are missing, re-align version, and apply 9, 10, 11
+    runMigrations(db, tempMigrationsDir);
+
+    expect(db.pragma('user_version', { simple: true })).toBe(11);
+
+    // 5. Verify the missing columns from 9, 10, 11 actually exist now
+    const areaCols = db.prepare('PRAGMA table_info(areas)').all() as Array<{ name: string }>;
+    expect(areaCols.some((c) => c.name === 'is_default')).toBe(true);
+
+    const projectCols = db.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>;
+    expect(projectCols.some((c) => c.name === 'views')).toBe(true);
+
+    const taskCols = db.prepare('PRAGMA table_info(tasks)').all() as Array<{ name: string }>;
+    expect(taskCols.some((c) => c.name === 'scheduled_start_min')).toBe(true);
+    expect(taskCols.some((c) => c.name === 'scheduled_duration_min')).toBe(true);
+
+    // 6. Verify clearAllTimeBlocks SQL query prepares and executes without SqliteError
+    expect(() => {
+      db.prepare(`
+        UPDATE tasks
+        SET scheduled_start_min = NULL,
+            scheduled_duration_min = NULL,
+            updated_at = ?
+        WHERE scheduled_start_min IS NOT NULL
+      `).run(new Date().toISOString());
+    }).not.toThrow();
+  });
 });
+
