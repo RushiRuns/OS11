@@ -58,7 +58,7 @@ import type { Task } from '../shared/types/task.js';
 
 // Lazy views — loaded on-demand per PERFORMANCE.md §5 & vite.config.ts manualChunks
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard.js'));
-const Agenda = lazy(() => import('./features/agenda/Agenda.js'));
+const Goals = lazy(() => import('./features/goals/GoalsView.js'));
 const Projects = lazy(() => import('./features/projects/Projects.js'));
 const AreaView = lazy(() => import('./features/areas/AreaView.js'));
 const Settings = lazy(() => import('./features/settings/Settings.js'));
@@ -375,9 +375,10 @@ export function App(): React.ReactElement {
           </Suspense>
         );
       case 'view_agenda':
+      case 'view_goals':
         return (
           <Suspense fallback={<ViewSkeleton />}>
-            <Agenda />
+            <Goals />
           </Suspense>
         );
       case 'view_projects':

@@ -20,8 +20,9 @@ export const useAppStore = create<AppState>((set) => ({
   isSidebarVisible: true,
 
   setActiveListId: (id: string) => {
-    set({ activeListId: id });
-    useListStore.getState().setActiveList(id);
+    const resolvedId = id === 'view_agenda' ? 'view_goals' : id;
+    set({ activeListId: resolvedId });
+    useListStore.getState().setActiveList(resolvedId);
   },
 
   setSidebarVisible: (visible: boolean) => {

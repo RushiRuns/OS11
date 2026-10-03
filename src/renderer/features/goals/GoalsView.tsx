@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGoalStore } from '../../stores/goalStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useModuleStore } from '../../stores/moduleStore.js';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
+import { HabitTracker } from './HabitTracker.js';
 import type { Goal, CreateGoalPayload } from '../../../shared/types/index.js';
 import styles from './GoalsView.module.css';
 
 export function GoalsView(): React.ReactElement {
+  const isHabitsEnabled = useModuleStore((state) => state.isEnabled('habit_tracker'));
+  const [activeTab, setActiveTab] = useState<'goals' | 'habits'>('goals');
+  const effectiveTab = isHabitsEnabled && activeTab === 'habits' ? 'habits' : 'goals';
+
   const {
     goalsById,
     linksByGoalId,
@@ -97,9 +103,42 @@ export function GoalsView(): React.ReactElement {
   }, [linkingGoalId, linksByGoalId, tasksById]);
 
   return (
-    <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.headerRow}>
+    <div className={styles.pageContainer}>
+      {isHabitsEnabled && (
+        <div className={styles.topTabBar}>
+          <div className={styles.tabList} role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectiveTab === 'goals'}
+              className={`${styles.tabItem} ${effectiveTab === 'goals' ? styles.tabItemActive : ''}`}
+              onClick={() => setActiveTab('goals')}
+            >
+              <span>🎯</span>
+              <span>Goals</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectiveTab === 'habits'}
+              className={`${styles.tabItem} ${effectiveTab === 'habits' ? styles.tabItemActive : ''}`}
+              onClick={() => setActiveTab('habits')}
+            >
+              <span>🔁</span>
+              <span>Habits</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={styles.tabContent}>
+        {effectiveTab === 'habits' ? (
+          <HabitTracker />
+        ) : (
+          <div className={styles.container}>
+            {/* Header */}
+            <div className={styles.headerRow}>
         <div className={styles.titleWrap}>
           <h1 className={styles.title}>Goals & Objectives</h1>
           <p className={styles.subtitle}>
@@ -366,6 +405,9 @@ export function GoalsView(): React.ReactElement {
           </div>
         </div>
       )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

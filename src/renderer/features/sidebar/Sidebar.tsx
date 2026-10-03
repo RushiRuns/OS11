@@ -31,7 +31,7 @@ interface NavView {
 }
 
 const VIEWS: NavView[] = [
-  { id: 'view_agenda', label: 'Agenda', icon: '📆', moduleName: 'agenda' },
+  { id: 'view_goals', label: 'Goals', icon: '🎯', moduleName: 'goals_habits' },
   { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
 ];
 

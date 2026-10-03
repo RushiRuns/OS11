@@ -107,8 +107,8 @@ export default defineConfig({
           if (id.includes('src/renderer/features/dashboard')) {
             return 'dashboard';
           }
-          if (id.includes('src/renderer/features/agenda')) {
-            return 'agenda';
+          if (id.includes('src/renderer/features/goals')) {
+            return 'goals';
           }
           if (id.includes('src/renderer/features/projects')) {
             return 'projects';

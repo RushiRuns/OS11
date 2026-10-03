@@ -168,7 +168,7 @@ import DetailPanel from './features/tasks/DetailPanel';
 
 // Lazy — not loaded until user opens these
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
-const Agenda     = lazy(() => import('./features/agenda/Agenda'));
+const Goals      = lazy(() => import('./features/goals/GoalsView'));
 const Projects   = lazy(() => import('./features/projects/Projects'));
 const Settings   = lazy(() => import('./features/settings/Settings'));
 const Pomodoro   = lazy(() => import('./features/pomodoro/PomodoroView'));
@@ -185,7 +185,7 @@ build: {
     output: {
       manualChunks: {
         'dashboard':  ['./src/renderer/features/dashboard/Dashboard'],
-        'agenda':     ['./src/renderer/features/agenda/Agenda'],
+        'goals':      ['./src/renderer/features/goals/GoalsView'],
         'projects':   ['./src/renderer/features/projects/Projects'],
         'pomodoro':   ['./src/renderer/features/pomodoro/PomodoroView'],
       }

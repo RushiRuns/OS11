@@ -149,7 +149,8 @@ export const useListStore = create<ListStoreState>((set, get) => ({
   error: null,
 
   setActiveList: (id: string) => {
-    set({ activeListId: id });
+    const resolvedId = id === 'view_agenda' ? 'view_goals' : id;
+    set({ activeListId: resolvedId });
   },
 
   loadLists: async () => {
