@@ -31,13 +31,13 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
 } from '@dnd-kit/core';
+import { RowPointerSensor, BlockPointerSensor } from './utils/dndSensors.js';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ipc, invoke } from './services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
@@ -237,9 +237,14 @@ export function App(): React.ReactElement {
   }, [fetchSystemInfo, togglePomodoroFocus, isFocusMode, isPomodoroFocus]);
 
   const dndSensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(RowPointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 2,
+      },
+    }),
+    useSensor(BlockPointerSensor, {
+      activationConstraint: {
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor, {

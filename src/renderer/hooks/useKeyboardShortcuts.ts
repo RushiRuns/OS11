@@ -218,6 +218,16 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // Ctrl+Shift+S -> Toggle My Day Scheduler panel
+      if (modKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        const { activeListId } = useAppStore.getState();
+        if (activeListId === 'smart_my_day') {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('os11:toggle-scheduler'));
+          return;
+        }
+      }
+
       // Ctrl+P -> Priority cycle (0 -> 1 -> 2 -> 3 -> 4 -> 0)
       if (modKey && e.key.toLowerCase() === 'p' && selectedTask) {
         e.preventDefault();
