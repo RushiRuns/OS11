@@ -6,6 +6,22 @@ import { ProjectContextMenu } from '../../src/renderer/features/projects/Project
 import { CreateProjectModal } from '../../src/renderer/features/projects/CreateProjectModal.js';
 import type { Project, Task } from '../../src/shared/types/index.js';
 
+function mockTask(overrides: Partial<Task> & { id: string; title: string }): Task {
+  return {
+    all_day: 0,
+    priority: 0,
+    is_starred: 0,
+    created_by_device: 'local',
+    pomodoro_count: 0,
+    is_completed: 0,
+    is_trashed: 0,
+    sort_order: 0,
+    created_at: '2026-10-01T00:00:00Z',
+    updated_at: '2026-10-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
 describe('Parked and Stalled Projects', () => {
   const baseProject: Project = {
     id: 'proj-1',
@@ -24,45 +40,33 @@ describe('Parked and Stalled Projects', () => {
 
   it('detects a project as stalled if all tasks are in someday or waiting', () => {
     const tasks: Task[] = [
-      {
+      mockTask({
         id: 't-1',
         project_id: 'proj-1',
         title: 'Someday redesign icon',
         bucket: 'someday',
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 0,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
-      {
+      }),
+      mockTask({
         id: 't-2',
         project_id: 'proj-1',
         title: 'Waiting for client feedback',
         waiting_since: '2026-10-02',
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 1,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
+      }),
     ];
     expect(isStalled(baseProject, tasks)).toBe(true);
   });
 
   it('detects a project as NOT stalled if it has at least one actionable incomplete task', () => {
     const tasks: Task[] = [
-      {
+      mockTask({
         id: 't-1',
         project_id: 'proj-1',
         title: 'Review landing page draft',
         bucket: 'anytime',
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 0,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
+      }),
     ];
     expect(isStalled(baseProject, tasks)).toBe(false);
   });

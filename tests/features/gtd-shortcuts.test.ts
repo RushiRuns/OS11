@@ -5,6 +5,22 @@ import { KeyboardSettings } from '../../src/renderer/features/settings/KeyboardS
 import { useTaskStore } from '../../src/renderer/stores/taskStore.js';
 import type { Task } from '../../src/shared/types/task.js';
 
+function mockTask(overrides: Partial<Task> & { id: string; title: string }): Task {
+  return {
+    all_day: 0,
+    is_starred: 0,
+    created_by_device: 'local',
+    pomodoro_count: 0,
+    priority: 0,
+    is_completed: 0,
+    is_trashed: 0,
+    sort_order: 0,
+    created_at: '2026-10-01T00:00:00Z',
+    updated_at: '2026-10-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
 describe('Convenience Surfaces (GTD Shortcuts & Suggestions)', () => {
   it('instantiates KeyboardSettings containing GTD navigation shortcuts', () => {
     const el = React.createElement(KeyboardSettings);
@@ -21,51 +37,33 @@ describe('Convenience Surfaces (GTD Shortcuts & Suggestions)', () => {
   it('verifies suggestions ranking: due follow-up top, anytime included, someday excluded', () => {
     const today = new Date().toISOString().split('T')[0];
     const tasks: Record<string, Task> = {
-      't-someday': {
+      't-someday': mockTask({
         id: 't-someday',
         title: 'Learn Icelandic',
         bucket: 'someday',
         priority: 3,
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 1,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
-      't-anytime': {
+      }),
+      't-anytime': mockTask({
         id: 't-anytime',
         title: 'Draft proposal email',
         bucket: 'anytime',
-        priority: 0,
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 2,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
-      't-followup': {
+      }),
+      't-followup': mockTask({
         id: 't-followup',
         title: 'Waiting for sign-off from Dave',
         waiting_since: '2026-09-28',
         follow_up_date: today,
-        priority: 0,
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 3,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
-      't-due': {
+      }),
+      't-due': mockTask({
         id: 't-due',
         title: 'Submit tax documentation',
         due_date: today,
         priority: 1,
-        is_completed: 0,
-        is_trashed: 0,
         sort_order: 4,
-        created_at: '2026-10-01T00:00:00Z',
-        updated_at: '2026-10-01T00:00:00Z',
-      },
+      }),
     };
 
     useTaskStore.setState({ tasksById: tasks });

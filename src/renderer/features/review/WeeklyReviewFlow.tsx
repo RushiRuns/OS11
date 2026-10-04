@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useAppStore } from '../../stores/app-store.js';
@@ -149,11 +149,11 @@ export function WeeklyReviewFlow({ onFinish }: WeeklyReviewFlowProps): React.Rea
   // Actions for Step 1: Inbox Triage
   const handleAssignBucket = async (taskId: string, bucket: string | null, due_date?: string | null) => {
     try {
-      await invoke(IPC.GTD.SCHEDULE_TASK, {
-        taskId,
-        bucket,
-        due_date: due_date ?? null,
-      });
+      if (bucket) {
+        await invoke(IPC.TASKS.SET_BUCKET, { taskId, bucket });
+      } else if (due_date) {
+        await invoke(IPC.TASKS.SET_DATE, { taskId, due_date });
+      }
       useTaskStore.getState().loadTasks();
     } catch {
       if (bucket) {
@@ -168,7 +168,7 @@ export function WeeklyReviewFlow({ onFinish }: WeeklyReviewFlowProps): React.Rea
     const contact = window.prompt('Who are you waiting on?');
     if (contact === null) return;
     try {
-      await invoke(IPC.GTD.SCHEDULE_TASK, {
+      await invoke(IPC.TASKS.SET_WAITING, {
         taskId,
         waiting_on: contact.trim() || undefined,
         waiting_since: todayStr,
@@ -202,7 +202,7 @@ export function WeeklyReviewFlow({ onFinish }: WeeklyReviewFlowProps): React.Rea
   // Actions for Step 3: Waiting For
   const handleFollowUpToday = async (task: Task) => {
     try {
-      await invoke(IPC.GTD.SCHEDULE_TASK, {
+      await invoke(IPC.TASKS.SET_WAITING, {
         taskId: task.id,
         follow_up_date: todayStr,
       });

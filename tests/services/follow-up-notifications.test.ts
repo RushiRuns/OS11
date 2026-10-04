@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
-import fs from 'fs';
 import path from 'path';
 
 import { runMigrations } from '../../src/main/migrations/runner.js';

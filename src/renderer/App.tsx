@@ -173,7 +173,7 @@ export function App(): React.ReactElement {
   const isQuickAddModal =
     typeof window !== 'undefined' && window.location.hash.includes('quickadd-modal');
 
-  const { activeListId, systemInfo, fetchSystemInfo, isSidebarVisible, setSidebarVisible } =
+  const { activeListId, setActiveListId, systemInfo, fetchSystemInfo, isSidebarVisible, setSidebarVisible } =
     useAppStore();
 
   const selectedTaskId = useTaskStore(s => s.selectedTaskId);

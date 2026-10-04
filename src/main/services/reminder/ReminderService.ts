@@ -8,6 +8,7 @@ export class ReminderService {
   private notificationService: NotificationService;
   private taskRepository: TaskRepository;
   private activeTimers = new Map<string, NodeJS.Timeout>();
+  private followUpInterval?: NodeJS.Timeout;
 
   constructor(
     repository?: ReminderRepository,
