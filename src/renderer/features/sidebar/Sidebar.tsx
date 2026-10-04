@@ -37,6 +37,31 @@ const VIEWS: NavView[] = [
   { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
 ];
 
+const KNOWN_ICON_MAP: Record<string, string> = {
+  Layers: '⚡',
+  Archive: '📦',
+  Clock: '⏳',
+  inbox: '📥',
+  today: '☀️',
+  important: '⭐',
+  planned: '📅',
+  anytime: '⚡',
+  someday: '📦',
+  waiting_for: '⏳',
+  all: '📋',
+  completed: '✅',
+};
+
+function resolveListIcon(icon: string | null | undefined, smartType?: string | null): string | null {
+  if (icon && KNOWN_ICON_MAP[icon]) {
+    return KNOWN_ICON_MAP[icon];
+  }
+  if (!icon && smartType && KNOWN_ICON_MAP[smartType]) {
+    return KNOWN_ICON_MAP[smartType];
+  }
+  return icon ?? null;
+}
+
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 export function Sidebar(): React.ReactElement {
@@ -314,7 +339,10 @@ export function Sidebar(): React.ReactElement {
         type: 'smart',
         rawId: sl.id,
         order: sl.pinned_sort_order ?? sl.sort_order,
-        listModel: sl,
+        listModel: {
+          ...sl,
+          icon: resolveListIcon(sl.icon, sl.smart_type),
+        },
       });
     }
 

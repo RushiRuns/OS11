@@ -202,6 +202,10 @@
   --sidebar-width: 224px;
   --sidebar-min-width: 180px;
   --sidebar-max-width: 280px;
+  --sidebar-item-height: 28px;
+  --sidebar-item-spacing: var(--space-0-5);
+  --sidebar-area-spacing: var(--space-4);
+  --sidebar-section-spacing: var(--space-5);
   --detail-panel-width: 360px;
   --planned-calendar-width: 240px;
   --planned-header-height: 32px;
