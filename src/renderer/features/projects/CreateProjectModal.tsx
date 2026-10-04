@@ -3,6 +3,7 @@ import { Dialog } from '../../components/primitives/Dialog/Dialog.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useListStore } from '../../stores/listStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
+import { useModuleStore } from '../../stores/moduleStore.js';
 import type { Project, ProjectViewMode } from '@shared/types/index.js';
 import { EmojiPicker } from '../../components/EmojiPicker/EmojiPicker.js';
 import { renderViewIcon, CheckIcon } from './ProjectViewIcons.js';
@@ -48,6 +49,7 @@ export function CreateProjectModal({
   const { createProject, updateProject, setSelectedProjectId, addProjectFolder } = useProjectStore();
   const { listGroupsById, orderedGroupIds, createGroup } = useListStore();
   const { areasById, orderedAreaIds } = useAreaStore();
+  const isSomedayEnabled = useModuleStore((state) => state.isEnabled('someday'));
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -57,6 +59,7 @@ export function CreateProjectModal({
   const [defaultView, setDefaultView] = useState<ProjectViewMode>('list');
   const [groupId, setGroupId] = useState<string>('');
   const [areaId, setAreaId] = useState<string>('');
+  const [isSomeday, setIsSomeday] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -80,6 +83,7 @@ export function CreateProjectModal({
       );
       setGroupId(projectToEdit.group_id ?? '');
       setAreaId(projectToEdit.area_id ?? orderedAreaIds[0] ?? 'area_default');
+      setIsSomeday(projectToEdit.is_someday === 1 || projectToEdit.status === 'parked');
       setShowEmojiPicker(false);
       setIsSubmitting(false);
       setIsCreatingFolder(false);
@@ -93,6 +97,7 @@ export function CreateProjectModal({
       setDefaultView('list');
       setGroupId(initialGroupId ?? '');
       setAreaId(initialAreaId ?? orderedAreaIds[0] ?? 'area_default');
+      setIsSomeday(false);
       setShowEmojiPicker(false);
       setIsSubmitting(false);
       setIsCreatingFolder(false);
@@ -154,6 +159,8 @@ export function CreateProjectModal({
           views: selectedViews,
           area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
+          is_someday: isSomeday ? 1 : 0,
+          status: isSomeday ? 'parked' : (projectToEdit.status === 'parked' ? 'active' : projectToEdit.status),
         });
         onSaved?.(updated);
         onOpenChange(false);
@@ -167,6 +174,8 @@ export function CreateProjectModal({
           views: selectedViews,
           area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
+          is_someday: isSomeday ? 1 : 0,
+          status: isSomeday ? 'parked' : 'active',
         });
         setSelectedProjectId(created.id);
         onCreated?.(created);
@@ -387,6 +396,22 @@ export function CreateProjectModal({
             onChange={(e) => setDescription(e.target.value)}
           />
         </div>
+
+        {isSomedayEnabled && (
+          <div className={styles.fieldGroup}>
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                className={styles.checkboxInput}
+                checked={isSomeday}
+                onChange={(e) => setIsSomeday(e.target.checked)}
+              />
+              <span className={styles.checkboxLabel}>
+                Park project in Someday / Maybe (on hold, hidden from active focus)
+              </span>
+            </label>
+          </div>
+        )}
 
         <div className={styles.actions}>
           <button

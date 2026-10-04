@@ -5,6 +5,8 @@ import { ViewSwitcher, type ProjectViewMode } from './ViewSwitcher.js';
 import { exportProjectToCsv, exportProjectToMarkdown, exportProjectToPdf } from './projectExport.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useAppStore } from '../../stores/app-store.js';
+import { useModuleStore } from '../../stores/moduleStore.js';
+import { isStalled } from '@shared/utils/project-health.js';
 import styles from './ProjectHeader.module.css';
 import menuStyles from '../lists/ListContextMenu.module.css';
 
@@ -33,6 +35,8 @@ export function ProjectHeader({
 }: ProjectHeaderProps): React.ReactElement {
   const { archiveProject, updateProject, deleteProject } = useProjectStore();
   const setActiveListId = useAppStore((state) => state.setActiveListId);
+  const isSomedayEnabled = useModuleStore((state) => state.isEnabled('someday'));
+  const stalled = isStalled(project, tasks);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExportSubmenuOpen, setIsExportSubmenuOpen] = useState(false);
@@ -132,6 +136,16 @@ export function ProjectHeader({
             >
               {project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : 'Active'}
             </span>
+            {project.is_someday === 1 && (
+              <span className={styles.somedayBadge} title="Parked in Someday / Maybe">
+                📦 Someday / Maybe
+              </span>
+            )}
+            {stalled && (
+              <span className={styles.stalledBadge} title="No incomplete active tasks scheduled. Add a next action or park it in Someday.">
+                ⚠️ Stalled: no next action
+              </span>
+            )}
           </div>
           {project.description && <p className={styles.description}>{project.description}</p>}
         </div>
@@ -285,6 +299,25 @@ export function ProjectHeader({
                 <span>📦</span>
                 <span>{project.status === 'archived' ? 'Unarchive Project' : 'Archive Project'}</span>
               </button>
+
+              {isSomedayEnabled && (
+                <button
+                  type="button"
+                  className={menuStyles.menuItem}
+                  onMouseEnter={() => setIsExportSubmenuOpen(false)}
+                  onClick={async () => {
+                    setIsMenuOpen(false);
+                    if (project.is_someday === 1 || project.status === 'parked') {
+                      await updateProject(project.id, { is_someday: 0, status: 'active' });
+                    } else {
+                      await updateProject(project.id, { is_someday: 1, status: 'parked' });
+                    }
+                  }}
+                >
+                  <span>{project.is_someday === 1 ? '🚀' : '📦'}</span>
+                  <span>{project.is_someday === 1 ? 'Unpark Project' : 'Park in Someday'}</span>
+                </button>
+              )}
 
               <div className={menuStyles.separator} />
 

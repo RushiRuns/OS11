@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Project } from '@shared/types/index.js';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
+import { useModuleStore } from '../../stores/moduleStore.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import styles from '../lists/ListContextMenu.module.css';
@@ -39,6 +40,7 @@ export function ProjectContextMenu({
   const [showAreaSubmenu, setShowAreaSubmenu] = useState(false);
   const { areasById, orderedAreaIds } = useAreaStore();
   const updateProject = useProjectStore((state) => state.updateProject);
+  const isSomedayEnabled = useModuleStore((state) => state.isEnabled('someday'));
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,6 +137,25 @@ export function ProjectContextMenu({
           <span>📦</span>
           <span>{project.status === 'archived' ? 'Unarchive Project' : 'Archive Project'}</span>
         </button>
+
+        {isSomedayEnabled && (
+          <button
+            type="button"
+            className={styles.menuItem}
+            onMouseEnter={() => setShowAreaSubmenu(false)}
+            onClick={async () => {
+              onClose();
+              if (project.is_someday === 1 || project.status === 'parked') {
+                await updateProject(project.id, { is_someday: 0, status: 'active' });
+              } else {
+                await updateProject(project.id, { is_someday: 1, status: 'parked' });
+              }
+            }}
+          >
+            <span>{project.is_someday === 1 ? '🚀' : '📦'}</span>
+            <span>{project.is_someday === 1 ? 'Unpark Project' : 'Park in Someday'}</span>
+          </button>
+        )}
 
         <div className={styles.separator} />
 
