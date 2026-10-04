@@ -119,6 +119,9 @@ export default defineConfig({
           if (id.includes('src/renderer/features/pomodoro')) {
             return 'pomodoro';
           }
+          if (id.includes('src/renderer/features/gtd')) {
+            return 'gtd';
+          }
         },
       },
     },

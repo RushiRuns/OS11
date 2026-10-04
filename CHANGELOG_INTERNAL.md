@@ -3,6 +3,18 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 8: Lazy GTD Views & Chunk Splitting
+- **What was built:**
+  - `src/renderer/features/gtd/AnytimeView.tsx` & `.module.css`: Anytime smart view displaying undated next actions with grouping by Area, Project, or None.
+  - `src/renderer/features/gtd/SomedayView.tsx` & `.module.css`: Someday / Maybe smart view supporting task incubation and parked project management with unpark actions.
+  - `src/renderer/features/gtd/WaitingForView.tsx` & `.module.css`: Waiting For smart view grouping overdue follow-ups, upcoming follow-ups, and unscheduled waiting items, with follow-up snooze (+2d, +1w) and clear actions.
+  - `src/renderer/features/gtd/WaitingPopover.tsx` & `.module.css`: Floating modal/popover for setting or modifying `waiting_on` and `follow_up_date`.
+  - `vite.config.ts`: Configured `manualChunks` to split `src/renderer/features/gtd` into a dedicated `'gtd'` chunk.
+  - `src/renderer/App.tsx`: Wired lazy routes for `smart_anytime`, `smart_someday`, and `smart_waiting_for`.
+  - `tests/features/gtd-views.test.ts`: Feature instantiation tests for Anytime, Someday, Waiting For views and WaitingPopover.
+- **What changed architecturally:**
+  - Dedicated `'gtd'` lazy chunk (`dist/assets/gtd-*.js`, 51.43 kB, 15.47 kB gzipped) cleanly isolated from initial JS entry chunk. Initial JS bundle dropped from 198 kB to **187.33 kB gzipped (191,829 bytes < 204,800 bytes)**, providing a generous 12.97 KB margin. All 72 test files and 516 tests pass.
+
 ### [2026-10-04] — GTD step 7: Inbox Triage List (Lazy Chunk)
 - **What was built:**
   - `src/renderer/features/inbox/InboxTriageList.tsx` & `.module.css`: Dedicated Inbox triage view providing keyboard-driven workflow (`1`/`t` Today, `2` Tomorrow, `3` Next week, `4`/`a` Anytime, `5`/`s` Someday, `w` Waiting, `c` Complete, `x` Trash, `e`/`Enter` Clarify details) and inline action buttons.

@@ -68,6 +68,9 @@ const Settings = lazy(() => import('./features/settings/Settings.js'));
 const Pomodoro = lazy(() => import('./features/pomodoro/PomodoroView.js'));
 const SchedulerPanel = lazy(() => import('./features/lists/scheduler/SchedulerPanel.js'));
 const InboxTriageList = lazy(() => import('./features/inbox/InboxTriageList.js'));
+const AnytimeView = lazy(() => import('./features/gtd/AnytimeView.js'));
+const SomedayView = lazy(() => import('./features/gtd/SomedayView.js'));
+const WaitingForView = lazy(() => import('./features/gtd/WaitingForView.js'));
 
 import {
   applyTheme,
@@ -437,6 +440,33 @@ export function App(): React.ReactElement {
       case 'smart_planned':
         return (
           <PlannedView onSelectTask={handleSelectTask} selectedTaskId={liveSelectedTask?.id} />
+        );
+      case 'smart_anytime':
+        return (
+          <Suspense fallback={<ViewSkeleton />}>
+            <AnytimeView
+              onSelectTask={handleSelectTask}
+              selectedTaskId={liveSelectedTask?.id}
+            />
+          </Suspense>
+        );
+      case 'smart_someday':
+        return (
+          <Suspense fallback={<ViewSkeleton />}>
+            <SomedayView
+              onSelectTask={handleSelectTask}
+              selectedTaskId={liveSelectedTask?.id}
+            />
+          </Suspense>
+        );
+      case 'smart_waiting_for':
+        return (
+          <Suspense fallback={<ViewSkeleton />}>
+            <WaitingForView
+              onSelectTask={handleSelectTask}
+              selectedTaskId={liveSelectedTask?.id}
+            />
+          </Suspense>
         );
       case 'view_dashboard':
         return (
