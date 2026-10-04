@@ -43,6 +43,11 @@ export const BoardCard = memo(function BoardCard({
   const sortable = useSortable({
     id: task.id,
     disabled: isOverlay,
+    data: {
+      type: 'task-row',
+      taskId: task.id,
+      task,
+    },
   });
 
   const { attributes, listeners, setNodeRef, isDragging } = sortable;

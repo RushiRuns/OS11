@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import { useAppStore } from '../../stores/app-store.js';
 import { useListStore, useSmartLists } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
@@ -60,6 +61,88 @@ function resolveListIcon(icon: string | null | undefined, smartType?: string | n
     return KNOWN_ICON_MAP[smartType];
   }
   return icon ?? null;
+}
+
+function AreaHeaderButton({
+  area,
+  isOpen,
+  areaProjectsCount,
+  onToggleExpand,
+  onContextMenu,
+  onSelectArea,
+  onNewProject,
+}: {
+  area: Area;
+  isOpen: boolean;
+  areaProjectsCount: number;
+  onToggleExpand: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onSelectArea: () => void;
+  onNewProject: () => void;
+}): React.ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `area:${area.id}`,
+    data: {
+      type: 'sidebar-item',
+      id: `area:${area.id}`,
+      areaId: area.id,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      role="button"
+      tabIndex={0}
+      className={`${styles.groupHeaderButton} ${isOver ? styles.groupDragOver : ''}`}
+      onClick={onToggleExpand}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+          e.preventDefault();
+          onToggleExpand();
+        }
+      }}
+      onContextMenu={onContextMenu}
+      aria-expanded={isOpen}
+      aria-label={`Area ${area.name}, ${areaProjectsCount} projects`}
+    >
+      <span className={styles.groupIcon}>{area.icon || '📁'}</span>
+      <span
+        className={styles.groupName}
+        title={`Open ${area.name} Overview`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectArea();
+        }}
+      >
+        {area.name}
+      </span>
+      <span
+        className={`${styles.groupChevron} ${
+          !isOpen ? styles.groupChevronCollapsed : ''
+        }`}
+      >
+        ▾
+      </span>
+      <div
+        className={styles.sectionHeaderActions}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className={styles.sectionActionBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNewProject();
+          }}
+          title={`New project in ${area.name}`}
+          aria-label={`New project in ${area.name}`}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
 }
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
@@ -999,59 +1082,19 @@ export function Sidebar(): React.ReactElement {
                     }
                   }}
                 >
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className={styles.groupHeaderButton}
-                    onClick={() => toggleAreaExpand(area.id)}
-                    onKeyDown={(e) => {
-                      if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
-                        e.preventDefault();
-                        toggleAreaExpand(area.id);
-                      }
-                    }}
+                  <AreaHeaderButton
+                    area={area}
+                    isOpen={isOpen}
+                    areaProjectsCount={areaProjects.length}
+                    onToggleExpand={() => toggleAreaExpand(area.id)}
                     onContextMenu={(e) => handleAreaContextMenu(e, area)}
-                    aria-expanded={isOpen}
-                    aria-label={`Area ${area.name}, ${areaProjects.length} projects`}
-                  >
-                    <span className={styles.groupIcon}>{area.icon || '📁'}</span>
-                    <span
-                      className={styles.groupName}
-                      title={`Open ${area.name} Overview`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveListId(`area:${area.id}`);
-                      }}
-                    >
-                      {area.name}
-                    </span>
-                    <span
-                      className={`${styles.groupChevron} ${
-                        !isOpen ? styles.groupChevronCollapsed : ''
-                      }`}
-                    >
-                      ▾
-                    </span>
-                    <div
-                      className={styles.sectionHeaderActions}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        className={styles.sectionActionBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setInitialProjectAreaId(area.id);
-                          setProjectToEdit(null);
-                          setIsCreateProjectModalOpen(true);
-                        }}
-                        title={`New project in ${area.name}`}
-                        aria-label={`New project in ${area.name}`}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
+                    onSelectArea={() => setActiveListId(`area:${area.id}`)}
+                    onNewProject={() => {
+                      setInitialProjectAreaId(area.id);
+                      setProjectToEdit(null);
+                      setIsCreateProjectModalOpen(true);
+                    }}
+                  />
 
                   {isOpen && (
                     <div className={styles.groupItems}>

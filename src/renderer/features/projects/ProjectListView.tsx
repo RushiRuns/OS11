@@ -1,11 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  DndContext,
-  DragOverlay,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
+  useDndMonitor,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -15,7 +10,6 @@ import {
 import type { Project, Section, Task } from '@shared/types/index.js';
 import { between } from '@shared/utils/fractional-index.js';
 import { TaskCard } from '../tasks/TaskCard.js';
-import { TaskRowDragOverlay } from '../tasks/TaskRowDragOverlay.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { useTaskStore } from '../../stores/taskStore.js';
@@ -61,12 +55,6 @@ export function ProjectListView({
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    })
-  );
-
   // Filter tasks into active and completed
   const activeTasks = useMemo(() => {
     return tasks
@@ -82,9 +70,6 @@ export function ProjectListView({
 
   const allActiveTaskIds = useMemo(() => activeTasks.map((t) => t.id), [activeTasks]);
   const allCompletedTaskIds = useMemo(() => completedTasks.map((t) => t.id), [completedTasks]);
-
-  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const draggingTask = useMemo(() => activeTasks.find((t) => t.id === draggingTaskId) ?? null, [activeTasks, draggingTaskId]);
 
   const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -117,6 +102,10 @@ export function ProjectListView({
     await reorderTask(String(active.id), newSortOrder);
   };
 
+  useDndMonitor({
+    onDragEnd: handleDragEnd,
+  });
+
   return (
     <div className={styles.listContainer}>
       {/* Quick Add Input Bar */}
@@ -137,47 +126,33 @@ export function ProjectListView({
 
       {/* Active Tasks Reorderable Stream */}
       {activeTasks.length > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={(e) => setDraggingTaskId(String(e.active.id))}
-          onDragEnd={(e) => {
-            setDraggingTaskId(null);
-            handleDragEnd(e);
-          }}
-          onDragCancel={() => setDraggingTaskId(null)}
-        >
-          <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
-            <div className={styles.tasksList} role="list" aria-label="Active tasks">
-              {activeTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                  allTaskIds={allActiveTaskIds}
-                  onSelect={(t) => {
-                    setFocusedTaskId(t.id);
-                    onSelectTask(t);
-                  }}
-                  onOpenDetail={(t) => onSelectTask(t)}
-                  onToggleComplete={toggleComplete}
-                  onToggleStar={toggleStar}
-                  onUpdateTitle={(id, title) => updateTask({ id, title })}
-                  onDelete={(id) => deleteTask(id)}
-                  onDuplicate={duplicateTask}
-                  onContextMenu={(e, t) => {
-                    e.preventDefault();
-                    setContextMenuTask(t);
-                    setContextMenuPos({ x: e.clientX, y: e.clientY });
-                  }}
-                />
-              ))}
-            </div>
-          </SortableContext>
-          <DragOverlay dropAnimation={null}>
-            {draggingTask ? <TaskRowDragOverlay task={draggingTask} /> : null}
-          </DragOverlay>
-        </DndContext>
+        <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
+          <div className={styles.tasksList} role="list" aria-label="Active tasks">
+            {activeTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                allTaskIds={allActiveTaskIds}
+                onSelect={(t) => {
+                  setFocusedTaskId(t.id);
+                  onSelectTask(t);
+                }}
+                onOpenDetail={(t) => onSelectTask(t)}
+                onToggleComplete={toggleComplete}
+                onToggleStar={toggleStar}
+                onUpdateTitle={(id, title) => updateTask({ id, title })}
+                onDelete={(id) => deleteTask(id)}
+                onDuplicate={duplicateTask}
+                onContextMenu={(e, t) => {
+                  e.preventDefault();
+                  setContextMenuTask(t);
+                  setContextMenuPos({ x: e.clientX, y: e.clientY });
+                }}
+              />
+            ))}
+          </div>
+        </SortableContext>
       ) : completedTasks.length === 0 ? (
         <div className={styles.emptyContainer}>
           <EmptyState

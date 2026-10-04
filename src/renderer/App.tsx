@@ -31,6 +31,7 @@ import { SchedulerSkeleton } from './features/lists/scheduler/SchedulerSkeleton.
 import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
 import { useTagStore } from './stores/tagStore.js';
+import { useProjectStore } from './stores/projectStore.js';
 import {
   DndContext,
   DragOverlay,
@@ -726,13 +727,54 @@ export function App(): React.ReactElement {
 
     if (overIdStr.startsWith('list:')) {
       const targetListId = overIdStr.slice(5);
-      await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
+      if (targetListId === 'smart_my_day') {
+        const today = toISODateOnly(new Date());
+        await useTaskStore.getState().updateTask({ id: activeTaskId, my_day_date: today });
+      } else if (targetListId === 'smart_anytime') {
+        await useTaskStore.getState().setBucket(activeTaskId, 'anytime');
+      } else if (targetListId === 'smart_someday') {
+        await useTaskStore.getState().setBucket(activeTaskId, 'someday');
+      } else if (targetListId === 'smart_waiting_for') {
+        const person = window.prompt('Waiting on whom or what?');
+        if (person && person.trim()) {
+          await useTaskStore.getState().setWaiting({ taskId: activeTaskId, waitingOn: person.trim() });
+        }
+      } else if (targetListId === 'list_inbox') {
+        await useTaskStore.getState().updateTask({
+          id: activeTaskId,
+          list_id: 'list_inbox',
+          project_id: null,
+          area_id: null,
+        });
+      } else if (targetListId === 'smart_important') {
+        await useTaskStore.getState().toggleStar(activeTaskId);
+      } else if (targetListId === 'smart_planned') {
+        const today = toISODateOnly(new Date());
+        await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: today });
+      } else {
+        await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
+      }
+      return;
+    }
+
+    if (overIdStr.startsWith('area:')) {
+      const targetAreaId = overIdStr.slice(5);
+      await useTaskStore.getState().updateTask({
+        id: activeTaskId,
+        area_id: targetAreaId,
+        project_id: null,
+      });
       return;
     }
 
     if (overIdStr.startsWith('project:')) {
       const targetProjectId = overIdStr.slice(8);
-      await useTaskStore.getState().updateTask({ id: activeTaskId, project_id: targetProjectId });
+      const proj = useProjectStore.getState().projectsById[targetProjectId];
+      await useTaskStore.getState().updateTask({
+        id: activeTaskId,
+        project_id: targetProjectId,
+        area_id: proj?.area_id ?? null,
+      });
       return;
     }
 

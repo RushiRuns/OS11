@@ -1,23 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  DndContext,
-  closestCorners,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
+  useDndMonitor,
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { Project, Section, Task } from '@shared/types/index.js';
 import { between } from '@shared/utils/fractional-index.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { BoardColumn } from './BoardColumn.js';
-import { BoardCard } from './BoardCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import styles from './ProjectBoardView.module.css';
 
@@ -73,14 +65,6 @@ export function ProjectBoardView({
     }
   }, [tasks, activeTaskId]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   // Non-trashed tasks
   const activeTasks = useMemo(() => {
@@ -167,6 +151,17 @@ export function ProjectBoardView({
       return;
     }
 
+    const overId = String(over.id);
+    if (
+      overId.startsWith('list:') ||
+      overId.startsWith('area:') ||
+      overId.startsWith('project:') ||
+      overId.startsWith('tag:')
+    ) {
+      setLocalTasks(tasks);
+      return;
+    }
+
     const currentTask = localTasks.find((t) => t.id === activeId);
     if (!currentTask) {
       setLocalTasks(tasks);
@@ -200,6 +195,13 @@ export function ProjectBoardView({
     setActiveTaskId(null);
     setLocalTasks(tasks);
   };
+
+  useDndMonitor({
+    onDragStart: handleDragStart,
+    onDragOver: handleDragOver,
+    onDragEnd: handleDragEnd,
+    onDragCancel: handleDragCancel,
+  });
 
   // Card creation in column
   const handleAddCard = async (sectionId: string, title: string) => {
@@ -236,21 +238,8 @@ export function ProjectBoardView({
     setIsAddingColumn(false);
   };
 
-  // Active task for DragOverlay
-  const activeDragTask = useMemo(() => {
-    if (!activeTaskId) return null;
-    return localTasks.find((t) => t.id === activeTaskId) ?? null;
-  }, [localTasks, activeTaskId]);
-
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
+    <>
       <div className={styles.boardContainer}>
         {/* Unassigned column if any tasks lack section */}
         {unassignedTasks.length > 0 && (
@@ -344,11 +333,6 @@ export function ProjectBoardView({
         </div>
       </div>
 
-      {/* Floating Drag Overlay */}
-      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
-        {activeDragTask ? <BoardCard task={activeDragTask} isOverlay /> : null}
-      </DragOverlay>
-
       {/* Task Context Menu */}
       <TaskContextMenu
         task={contextMenuTask}
@@ -380,7 +364,7 @@ export function ProjectBoardView({
         onOpenDetail={(t) => onSelectTask(t)}
         onDelete={(id) => deleteTask(id)}
       />
-    </DndContext>
+    </>
   );
 }
 
