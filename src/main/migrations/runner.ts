@@ -13,11 +13,46 @@ function hasColumn(db: Database.Database, tableName: string, columnName: string)
   return cols.some((c) => c.name === columnName);
 }
 
+function hasIndex(db: Database.Database, indexName: string): boolean {
+  const row = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?").get(indexName);
+  return Boolean(row);
+}
+
+function hasRow(db: Database.Database, tableName: string, columnName: string, value: string): boolean {
+  if (!hasTable(db, tableName)) return false;
+  const row = db.prepare(`SELECT 1 FROM ${tableName} WHERE ${columnName} = ? LIMIT 1`).get(value);
+  return Boolean(row);
+}
+
 function reconcileSchemaVersion(db: Database.Database, recordedVersion: number): number {
   if (recordedVersion <= 0) return 0;
 
   let verifiedVersion = recordedVersion;
 
+  if (
+    verifiedVersion >= 12 &&
+    (
+      !hasColumn(db, 'tasks', 'bucket') ||
+      !hasColumn(db, 'tasks', 'waiting_on') ||
+      !hasColumn(db, 'tasks', 'waiting_since') ||
+      !hasColumn(db, 'tasks', 'follow_up_date') ||
+      !hasColumn(db, 'tasks', 'follow_up_notified_on') ||
+      !hasColumn(db, 'tasks', 'reviewed_at') ||
+      !hasColumn(db, 'projects', 'is_someday') ||
+      !hasColumn(db, 'projects', 'reviewed_at') ||
+      !hasIndex(db, 'idx_tasks_bucket') ||
+      !hasIndex(db, 'idx_tasks_waiting') ||
+      !hasIndex(db, 'idx_tasks_inbox') ||
+      !hasIndex(db, 'idx_projects_someday') ||
+      !hasRow(db, 'modules', 'module_name', 'anytime') ||
+      !hasRow(db, 'modules', 'module_name', 'someday') ||
+      !hasRow(db, 'modules', 'module_name', 'waiting_for') ||
+      !hasRow(db, 'settings', 'key', 'gtd_someday_review_interval_days') ||
+      !hasRow(db, 'settings', 'key', 'gtd_auto_clear_waiting_on_complete')
+    )
+  ) {
+    verifiedVersion = 11;
+  }
   if (
     verifiedVersion >= 11 &&
     (!hasColumn(db, 'tasks', 'scheduled_start_min') || !hasColumn(db, 'tasks', 'scheduled_duration_min'))

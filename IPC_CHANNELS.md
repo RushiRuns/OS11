@@ -60,6 +60,16 @@ Task entity CRUD, completion toggling, filtering, and reordering.
 - `tasks:increment-pomodoro` — Increment the pomodoro count of a task upon completed focus interval.
 - `tasks:get-history` — Retrieve chronological edit history diffs for a specific task.
 - `tasks:restore-version` — Rollback task attributes to previous state recorded in a history entry.
+- `tasks:get-inbox` — Retrieve untriaged Inbox tasks with offset and limit pagination.
+- `tasks:get-anytime` — Retrieve active Anytime tasks with project and area context.
+- `tasks:get-someday` — Retrieve active Someday tasks and parked projects.
+- `tasks:get-waiting` — Retrieve active Waiting tasks with parent task titles.
+- `tasks:get-counts` — Retrieve GTD sidebar counts (inbox, anytime, waiting, follow_ups_due) in one query.
+- `tasks:set-bucket` — Assign or clear task Anytime/Someday bucket with date clearing.
+- `tasks:mark-waiting` — Mark task waiting with waiting_on and optional follow_up_date.
+- `tasks:resolve-waiting` — Resolve waiting status on a task and restore to active view.
+- `tasks:snooze-follow-up` — Reschedule follow-up check date on a waiting task.
+- `tasks:get-recent-waiting-on` — Retrieve recent unique waiting_on entries for typeahead suggestion.
 
 ### LISTS
 Custom lists and smart list settings.
@@ -89,6 +99,9 @@ Structured projects containing sections, milestones, and tasks.
 - `projects:archive` — Archive project status.
 - `projects:get-activity` — Retrieve notification history audit events for project tasks.
 - `projects:export-pdf` — Print project report to PDF via webContents.printToPDF.
+- `projects:set-someday` — Move project to Someday (parked) or activate back to active.
+- `projects:get-someday-impact` — Query open and dated task counts affected by parking a project.
+- `projects:get-stalled` — Retrieve IDs of active projects having zero live tasks.
 
 ### SECTIONS
 Named sections within a project.
@@ -190,6 +203,12 @@ Feature toggle engine for modular capability management.
 - `modules:set-active` — Enable or disable a feature module.
 - `modules:toggle` — Toggle a feature module on/off.
 - `modules:apply-preset` — Apply profile preset (`minimalist`, `gtd`, `focus`, `custom`).
+- `modules:get-disable-impact` — Query affected task and project counts before disabling a module.
+
+### REVIEW
+Periodic review workflows for GTD and backlog maintenance.
+- `review:get-gtd-steps` — Retrieve filtered step batches for Weekly Review (Inbox, Waiting, Someday, Stalled).
+- `review:mark-reviewed` — Timestamp reviewed_at on kept Someday tasks and parked projects.
 
 ### SECURITY
 App Lock and OS keychain passcode authentication.

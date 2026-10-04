@@ -17,4 +17,7 @@ export type ModuleName =
   | 'collaboration'
   | 'companion_sync'
   | 'calendar_integration'
-  | 'sound_effects';
+  | 'sound_effects'
+  | 'anytime'
+  | 'someday'
+  | 'waiting_for';

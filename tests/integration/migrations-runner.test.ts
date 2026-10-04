@@ -160,5 +160,96 @@ describe('Integration: Database Schema Migration Runner', () => {
       `).run(new Date().toISOString());
     }).not.toThrow();
   });
+
+  it('applies migration 0012_gtd_scheduling: columns, indexes, module seeds, settings, and reconciles v12', () => {
+    // 1. Run migrations up to v11
+    for (let i = 1; i <= 11; i++) {
+      const pad = String(i).padStart(4, '0');
+      const file = fs.readdirSync(realMigrationsDir).find((f) => f.startsWith(`${pad}_`));
+      if (file) {
+        fs.copyFileSync(path.join(realMigrationsDir, file), path.join(tempMigrationsDir, file));
+      }
+    }
+    runMigrations(db, tempMigrationsDir);
+    expect(db.pragma('user_version', { simple: true })).toBe(11);
+
+    // 2. Copy 0012_gtd_scheduling.sql and run
+    const file12 = fs.readdirSync(realMigrationsDir).find((f) => f.startsWith('0012_'));
+    expect(file12).toBeDefined();
+    fs.copyFileSync(path.join(realMigrationsDir, file12!), path.join(tempMigrationsDir, file12!));
+
+    runMigrations(db, tempMigrationsDir);
+    expect(db.pragma('user_version', { simple: true })).toBe(12);
+
+    // 3. Verify tasks table columns
+    const taskCols = db.prepare('PRAGMA table_info(tasks)').all() as Array<{ name: string }>;
+    expect(taskCols.some((c) => c.name === 'bucket')).toBe(true);
+    expect(taskCols.some((c) => c.name === 'waiting_on')).toBe(true);
+    expect(taskCols.some((c) => c.name === 'waiting_since')).toBe(true);
+    expect(taskCols.some((c) => c.name === 'follow_up_date')).toBe(true);
+    expect(taskCols.some((c) => c.name === 'follow_up_notified_on')).toBe(true);
+    expect(taskCols.some((c) => c.name === 'reviewed_at')).toBe(true);
+
+    // 4. Verify projects table columns
+    const projectCols = db.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>;
+    expect(projectCols.some((c) => c.name === 'is_someday')).toBe(true);
+    expect(projectCols.some((c) => c.name === 'reviewed_at')).toBe(true);
+
+    // 5. Verify indexes
+    const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).toContain('idx_tasks_bucket');
+    expect(indexNames).toContain('idx_tasks_waiting');
+    expect(indexNames).toContain('idx_tasks_inbox');
+    expect(indexNames).toContain('idx_projects_someday');
+
+    // 6. Verify seeded module rows
+    const modules = db.prepare('SELECT module_name FROM modules').all() as Array<{ module_name: string }>;
+    const modNames = modules.map((m) => m.module_name);
+    expect(modNames).toContain('anytime');
+    expect(modNames).toContain('someday');
+    expect(modNames).toContain('waiting_for');
+
+    // 7. Verify seeded settings
+    const settingDays = db.prepare("SELECT value FROM settings WHERE key = 'gtd_someday_review_interval_days'").get() as { value: string };
+    expect(settingDays).toBeDefined();
+    expect(settingDays.value).toBe('14');
+
+    const settingWaiting = db.prepare("SELECT value FROM settings WHERE key = 'gtd_auto_clear_waiting_on_complete'").get() as { value: string };
+    expect(settingWaiting).toBeDefined();
+    expect(settingWaiting.value).toBe('true');
+
+    // 8. Verify seeded smart lists
+    const smartLists = db.prepare("SELECT id, smart_type FROM lists WHERE id IN ('smart_anytime', 'smart_someday', 'smart_waiting_for')").all() as Array<{ id: string; smart_type: string }>;
+    expect(smartLists.length).toBe(3);
+
+    // 9. Test reconciler: if user_version is bumped to 12 on a v11 db lacking bucket column, reconciler pulls back to 11
+    const testDb = new Database(':memory:');
+    const desyncTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'os11-desync-test-'));
+    try {
+      for (let i = 1; i <= 11; i++) {
+        const pad = String(i).padStart(4, '0');
+        const file = fs.readdirSync(realMigrationsDir).find((f) => f.startsWith(`${pad}_`));
+        if (file) {
+          fs.copyFileSync(path.join(realMigrationsDir, file), path.join(desyncTempDir, file));
+        }
+      }
+      runMigrations(testDb, desyncTempDir);
+      expect(testDb.pragma('user_version', { simple: true })).toBe(11);
+      
+      // Artificially bump to 12 when 0012 hasn't run
+      testDb.pragma('user_version = 12');
+      
+      // Now add 0012 to the directory
+      fs.copyFileSync(path.join(realMigrationsDir, file12!), path.join(desyncTempDir, file12!));
+
+      // Running migrations should detect missing v12 columns/rows, realign version to 11, then apply 12
+      runMigrations(testDb, desyncTempDir);
+      expect(testDb.pragma('user_version', { simple: true })).toBe(12);
+    } finally {
+      testDb.close();
+      fs.rmSync(desyncTempDir, { recursive: true, force: true });
+    }
+  });
 });
 

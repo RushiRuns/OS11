@@ -200,6 +200,13 @@ export class ProjectRepository extends BaseRepository {
         ? fields.pinned_sort_order
         : current.pinned_sort_order ?? 0;
 
+    const isSomedayVal =
+      fields.is_someday !== undefined
+        ? typeof fields.is_someday === 'boolean'
+          ? fields.is_someday ? 1 : 0
+          : fields.is_someday
+        : current.is_someday ?? 0;
+
     const updated: Project = {
       ...current,
       ...fields,
@@ -208,6 +215,7 @@ export class ProjectRepository extends BaseRepository {
       area_id: fields.area_id !== undefined ? fields.area_id : current.area_id,
       is_pinned: isPinnedVal,
       pinned_sort_order: pinnedSortOrderVal,
+      is_someday: isSomedayVal,
       updated_at: new Date().toISOString(),
     };
 

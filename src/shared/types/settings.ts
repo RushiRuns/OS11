@@ -48,6 +48,9 @@ export interface SettingsMap {
   // Sidebar Smart Lists
   sidebar_show_all_tasks: boolean;
   sidebar_show_completed: boolean;
+  // GTD Buckets
+  gtd_someday_review_interval_days: number;
+  gtd_auto_clear_waiting_on_complete: boolean;
 }
 
 export type SettingKey = keyof SettingsMap;

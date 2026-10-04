@@ -328,6 +328,24 @@ If a proposed implementation violates any of these, it is rejected and redesigne
 12. No hardcoded color, size, radius, or font value in any component file. Every visual value comes from a `var(--token)` defined in `tokens.css`.
 13. Framer Motion is used at exactly 4 permitted sites (checkbox, detail panel, list reorder, quick-add bar). Any new use of `framer-motion` outside these sites requires an ADR.
 14. Radix UI primitives are used for all components requiring WAI-ARIA semantics or focus trapping. Do not build a custom focus-trap or keyboard navigation handler from scratch.
+15. Single-Writer for Scheduling: Only `TaskSchedulingService` may write guarded scheduling fields (`bucket`, `waiting_on`, `waiting_since`, `follow_up_date`, `follow_up_notified_on`, `reviewed_at`) and date group fields (`due_date`, `due_time`, `all_day`, `recurrence_rule`). An automated architecture test enforces this constraint.
+16. GTD Code-Splitting Boundary: Modules in the main entry bundle must never statically import from `src/renderer/features/gtd` or `src/renderer/features/inbox`. Heavy views and triage flows must be loaded asynchronously via `React.lazy()` to maintain the < 200 KB initial JS bundle ceiling.
+
+---
+
+## GTD Scheduling Architecture
+
+```
+Renderer UI (TaskCard, DetailPanel, WhenPopover)
+  ↓  IPC only (TASKS.SET_BUCKET, TASKS.MARK_WAITING, etc.)
+TaskSchedulingService (Single writer for scheduling state)
+  ↓  One mapping pair: rowToSchedulingState / schedulingStateToColumns
+Pure Domain: applySchedulingCommand (27-row transition table, R1-R12)
+  ↓  Atomic transaction (task state + reminder cleanup + history diff)
+TaskRepository.applyScheduling (SchedulingColumns snake_case subset)
+  ↓
+SQLite DB (tasks, projects, modules, reminders)
+```
 
 ---
 
@@ -344,3 +362,4 @@ Consequences: ...
 ```
 
 When a prompt would introduce a new pattern, library, or structural change: write the ADR first, then build.
+- Latest: `ADR-0010-gtd-buckets-explicit-and-exclusive.md` (Rules R1 to R3, explicit curation, and date/bucket mutual exclusivity).

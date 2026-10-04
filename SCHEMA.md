@@ -96,6 +96,13 @@ CREATE TABLE tasks (
   pomodoro_count      INTEGER NOT NULL DEFAULT 0,
   scheduled_start_min INTEGER CHECK (scheduled_start_min IS NULL OR (scheduled_start_min >= 0 AND scheduled_start_min < 1440)),
   scheduled_duration_min INTEGER CHECK (scheduled_duration_min IS NULL OR (scheduled_duration_min >= 15 AND scheduled_duration_min <= 480)),
+  area_id             TEXT REFERENCES areas(id) ON DELETE SET NULL,
+  bucket              TEXT CHECK (bucket IN ('anytime', 'someday')), -- NULL = no bucket
+  waiting_on          TEXT,                       -- free text (who/what), max 120 chars
+  waiting_since       TEXT,                       -- ISO timestamp; presence defines "waiting"
+  follow_up_date      TEXT,                       -- YYYY-MM-DD local date
+  follow_up_notified_on TEXT,                     -- YYYY-MM-DD date of last follow-up notification
+  reviewed_at         TEXT,                       -- last reviewed ISO timestamp
   is_trashed          INTEGER NOT NULL DEFAULT 0,
   trashed_at          TEXT,
   created_at          TEXT NOT NULL,
@@ -110,6 +117,9 @@ CREATE INDEX idx_tasks_is_starred    ON tasks(is_starred);
 CREATE INDEX idx_tasks_is_completed  ON tasks(is_completed);
 CREATE INDEX idx_tasks_my_day_date   ON tasks(my_day_date);
 CREATE INDEX idx_tasks_is_trashed    ON tasks(is_trashed);
+CREATE INDEX idx_tasks_bucket        ON tasks(bucket, sort_order) WHERE bucket IS NOT NULL AND is_trashed = 0 AND is_completed = 0;
+CREATE INDEX idx_tasks_waiting       ON tasks(follow_up_date, waiting_since) WHERE waiting_since IS NOT NULL AND is_trashed = 0 AND is_completed = 0;
+CREATE INDEX idx_tasks_inbox         ON tasks(sort_order) WHERE area_id IS NULL AND project_id IS NULL AND parent_task_id IS NULL AND due_date IS NULL AND is_trashed = 0 AND is_completed = 0;
 ```
 
 **Notes:**
@@ -177,12 +187,16 @@ CREATE TABLE projects (
   status       TEXT NOT NULL DEFAULT 'active',    -- 'active' | 'archived' | 'completed'
   due_date     TEXT,
   default_view TEXT NOT NULL DEFAULT 'list',      -- 'list' | 'board' | 'timeline' | 'calendar' | 'table'
+  area_id      TEXT REFERENCES areas(id) ON DELETE SET NULL,
+  is_someday   INTEGER NOT NULL DEFAULT 0 CHECK (is_someday IN (0, 1)),
+  reviewed_at  TEXT,
   sort_order   REAL NOT NULL DEFAULT 0,
   created_at   TEXT NOT NULL,
   updated_at   TEXT NOT NULL
 );
 
 CREATE INDEX idx_projects_status ON projects(status);
+CREATE INDEX idx_projects_someday ON projects(is_someday) WHERE is_someday = 1;
 ```
 
 ---
@@ -440,6 +454,12 @@ CREATE TABLE settings (
 | `app_lock_enabled` | `boolean` | `false` |
 | `reduce_motion` | `boolean` | `false` |
 | `task_card_style` | `"default" \| "rich" \| "minimal"` | `"default"` |
+| `waiting_stale_days` | `number` | `7` |
+| `follow_up_notify_time` | `"HH:mm"` | `"09:00"` |
+| `show_someday_projects_in_sidebar` | `boolean` | `false` |
+| `show_stalled_marker` | `boolean` | `true` |
+| `triage_keys_enabled` | `boolean` | `true` |
+| `follow_ups` | `boolean` | `true` |
 
 ---
 
@@ -464,6 +484,9 @@ CREATE TABLE modules (
 | `dashboard` | 1 |
 | `file_attachments` | 1 |
 | `nlp_parsing` | 1 |
+| `anytime` | 0 |
+| `someday` | 0 |
+| `waiting_for` | 0 |
 | `vim_keybindings` | 0 |
 | `animated_backgrounds` | 0 |
 | `habit_tracker` | 0 |

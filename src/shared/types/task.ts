@@ -27,6 +27,12 @@ export interface Task {
   scheduled_duration_min?: number | null;
   pomodoro_count: number;
   is_habit?: number;
+  bucket?: 'anytime' | 'someday' | null;
+  waiting_on?: string | null;
+  waiting_since?: string | null;
+  follow_up_date?: string | null;
+  follow_up_notified_on?: string | null;
+  reviewed_at?: string | null;
   is_trashed: number;
   trashed_at?: string | null;
   created_at: string;
@@ -56,6 +62,12 @@ export interface CreateTaskPayload {
   my_day_date?: string | null;
   scheduled_start_min?: number | null;
   scheduled_duration_min?: number | null;
+  bucket?: 'anytime' | 'someday' | null;
+  waiting_on?: string | null;
+  waiting_since?: string | null;
+  follow_up_date?: string | null;
+  follow_up_notified_on?: string | null;
+  reviewed_at?: string | null;
 }
 
 export interface UpdateTaskPayload {
@@ -83,5 +95,11 @@ export interface UpdateTaskPayload {
   scheduled_start_min?: number | null;
   scheduled_duration_min?: number | null;
   pomodoro_count?: number;
+  bucket?: 'anytime' | 'someday' | null;
+  waiting_on?: string | null;
+  waiting_since?: string | null;
+  follow_up_date?: string | null;
+  follow_up_notified_on?: string | null;
+  reviewed_at?: string | null;
   updated_at?: string;
 }

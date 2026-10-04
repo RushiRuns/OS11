@@ -416,10 +416,13 @@ Each task supports:
 > **FEEL UI:** On a task card in the list view, only the fields that have data are rendered. A task with no due date shows no date field — not a greyed-out or empty one. The detail panel reveals the full structure on demand.
 
 ### 7.2 Smart Lists (Auto-Generated)
-Inspired by Microsoft To Do:
+Inspired by Microsoft To Do & GTD:
 - **My Day** — User curates daily focus tasks.
 - **Important** — All starred/flagged tasks.
 - **Planned** — Synchronized two-panel layout: a grouped, virtualized Timeline (Overdue, Today, Tomorrow, This Week by weekday, Next Week, Later by month) on the left and a persistent month grid Mini-Calendar with task density heatmap dots on the right, supporting drag-to-reschedule.
+- **Anytime** — Smart view of undated tasks explicitly marked as ready next actions (Module: Anytime).
+- **Someday** — Parked ideas and aspirational tasks without time constraints (Module: Someday).
+- **Waiting For** — Delegated or blocked tasks tracking external contacts and follow-up dates (Module: Waiting For).
 - **Assigned to Me** — Tasks assigned to this device's user (Phase 2).
 - **All Tasks** — Everything.
 - **Completed** — Finished tasks, grouped by date.
@@ -812,6 +815,9 @@ A dedicated **Settings → Modules** page where users enable/disable entire feat
 | Dashboard & Statistics | ✅ On | |
 | File Attachments | ✅ On | |
 | Natural Language Parsing | ✅ On | |
+| Anytime | ⬜ Off | Undated actionable tasks ready to execute |
+| Someday | ⬜ Off | Parked ideas and aspirational items |
+| Waiting For | ⬜ Off | Delegated or blocked tasks tracking external contacts |
 | Calendar Integration | ⬜ Off | Requires calendar account setup |
 | Animated Backgrounds | ⬜ Off | |
 | Habit Tracker | ⬜ Off | |
@@ -821,7 +827,7 @@ A dedicated **Settings → Modules** page where users enable/disable entire feat
 
 ### 19.2 Profile Presets
 - **Minimalist** — Only Tasks + My Day + Notifications. Everything else off.
-- **GTD Mode** — Tasks + Projects + Agenda + Goals. No social features.
+- **GTD Mode** — Tasks + Projects + Agenda + Goals + Anytime + Someday + Waiting For. No social features.
 - **Team Mode** — Full collaboration, projects, all on. *(Phase 2 features activate here)*
 - **Focus Mode** — Tasks + Pomodoro + Agenda. Minimal.
 - **Custom** — User-defined combination.

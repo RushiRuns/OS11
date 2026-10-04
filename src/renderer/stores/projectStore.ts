@@ -228,6 +228,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         fields.pinned_sort_order !== undefined
           ? fields.pinned_sort_order
           : existing.pinned_sort_order ?? 0,
+      is_someday:
+        fields.is_someday !== undefined
+          ? typeof fields.is_someday === 'boolean'
+            ? fields.is_someday ? 1 : 0
+            : fields.is_someday
+          : existing.is_someday ?? 0,
       updated_at: new Date().toISOString(),
     };
 

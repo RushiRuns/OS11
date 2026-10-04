@@ -6,7 +6,7 @@ export interface Project {
   description?: string | null;
   color?: string | null;
   icon?: string | null;
-  status: 'active' | 'archived' | 'completed';
+  status: 'active' | 'parked' | 'completed' | 'archived';
   due_date?: string | null;
   default_view: ProjectViewMode;
   views: ProjectViewMode[];
@@ -15,6 +15,9 @@ export interface Project {
   area_id?: string | null;
   is_pinned?: number;
   pinned_sort_order?: number;
+  is_someday?: number;
+  reviewed_at?: string | null;
+  isStalled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -24,7 +27,7 @@ export interface CreateProjectPayload {
   description?: string | null;
   color?: string | null;
   icon?: string | null;
-  status?: 'active' | 'archived' | 'completed';
+  status?: 'active' | 'parked' | 'completed' | 'archived';
   due_date?: string | null;
   default_view?: ProjectViewMode;
   views?: ProjectViewMode[];
@@ -33,6 +36,8 @@ export interface CreateProjectPayload {
   area_id?: string | null;
   is_pinned?: boolean | number;
   pinned_sort_order?: number;
+  is_someday?: boolean | number;
+  reviewed_at?: string | null;
 }
 
 export interface UpdateProjectPayload {
@@ -40,7 +45,7 @@ export interface UpdateProjectPayload {
   description?: string | null;
   color?: string | null;
   icon?: string | null;
-  status?: 'active' | 'archived' | 'completed';
+  status?: 'active' | 'parked' | 'completed' | 'archived';
   due_date?: string | null;
   default_view?: ProjectViewMode;
   views?: ProjectViewMode[];
@@ -49,4 +54,6 @@ export interface UpdateProjectPayload {
   area_id?: string | null;
   is_pinned?: boolean | number;
   pinned_sort_order?: number;
+  is_someday?: boolean | number;
+  reviewed_at?: string | null;
 }

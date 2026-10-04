@@ -3,6 +3,17 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 1: Data Model, Settings, Shared Types (Migration 0012 & Reconciler)
+- **What was built:**
+  - `src/main/migrations/0012_gtd_scheduling.sql`: Adds tasks columns (`bucket`, `waiting_on`, `waiting_since`, `follow_up_date`, `follow_up_notified_on`, `reviewed_at`) and projects columns (`is_someday`, `reviewed_at`); creates partial indexes `idx_tasks_bucket`, `idx_tasks_waiting`, `idx_tasks_inbox`, and `idx_projects_someday`; seeds modules (`anytime`, `someday`, `waiting_for`), settings (`gtd_someday_review_interval_days`, `gtd_auto_clear_waiting_on_complete`), and smart lists (`smart_anytime`, `smart_someday`, `smart_waiting_for`) using `INSERT OR IGNORE`.
+  - `src/main/migrations/runner.ts`: Added `hasIndex` and `hasRow` helper checks; updated `reconcileSchemaVersion` for v12 validating all new columns, indexes, and seeded records.
+  - `src/shared/types/Scheduling.ts`: Shared domain and DTO types (`SchedulingColumns`, `SchedulingState`, `SchedulingCommand`, `GtdCounts`, `ChangeReport`, IPC payloads).
+  - Updated shared types `task.ts`, `Project.ts`, `Module.ts`, and `settings.ts`.
+  - `tests/integration/migrations-runner.test.ts`: Added step tests for migration 0012 and schema desync reconciliation.
+- **What changed architecturally:**
+  - Upgraded schema version target to 12. Maintained zero-downtime, non-destructive migration pattern.
+  - Gzipped initial JS bundle verified: 197.46 kB (budget: 200.00 kB).
+
 ### [2026-10-03] — Planned view rebuilt: grouped timeline + persistent mini-calendar, replaces flat due-date list; WeeklyAgenda dropped from Phase 13 scope.
 - **What was built:**
   - `src/renderer/features/lists/PlannedView.tsx` + `PlannedView.module.css`: Split-panel layout container orchestrating the chronological timeline on the left and persistent month grid on the right with QuickAdd and Undo Toast.
