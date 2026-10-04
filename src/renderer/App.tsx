@@ -67,6 +67,7 @@ const AreaView = lazy(() => import('./features/areas/AreaView.js'));
 const Settings = lazy(() => import('./features/settings/Settings.js'));
 const Pomodoro = lazy(() => import('./features/pomodoro/PomodoroView.js'));
 const SchedulerPanel = lazy(() => import('./features/lists/scheduler/SchedulerPanel.js'));
+const InboxTriageList = lazy(() => import('./features/inbox/InboxTriageList.js'));
 
 import {
   applyTheme,
@@ -413,6 +414,15 @@ export function App(): React.ReactElement {
     }
 
     switch (activeListId) {
+      case 'list_inbox':
+        return (
+          <Suspense fallback={<ViewSkeleton />}>
+            <InboxTriageList
+              onSelectTask={handleSelectTask}
+              selectedTaskId={liveSelectedTask?.id}
+            />
+          </Suspense>
+        );
       case 'smart_my_day':
         return (
           <MyDayView

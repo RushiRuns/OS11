@@ -3,6 +3,16 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 7: Inbox Triage List (Lazy Chunk)
+- **What was built:**
+  - `src/renderer/features/inbox/InboxTriageList.tsx` & `.module.css`: Dedicated Inbox triage view providing keyboard-driven workflow (`1`/`t` Today, `2` Tomorrow, `3` Next week, `4`/`a` Anytime, `5`/`s` Someday, `w` Waiting, `c` Complete, `x` Trash, `e`/`Enter` Clarify details) and inline action buttons.
+  - Undo integration with `useUndoRedoStore` and custom toast feedback with undo trigger.
+  - Integrated `QuickAddBar` for fast capture to inbox without navigating away.
+  - `src/renderer/App.tsx`: Wired lazy-loaded `InboxTriageList` for `activeListId === 'list_inbox'`.
+  - `tests/features/inbox-triage.test.ts`: Feature and domain transition tests for inbox triage rules and keyboard triggers.
+- **What changed architecturally:**
+  - Code-split `InboxTriageList` into its own lazy chunk (`dist/assets/InboxTriageList-*.js`, 10.33 kB, 3.12 kB gzipped), keeping main entry chunk strictly under budget (initial JS bundle is 198.30 kB gzipped = 203,056 bytes < 204,800 bytes).
+
 ### [2026-10-04] — GTD step 6: Renderer Foundations
 - **What was built:**
   - `src/renderer/stores/countsStore.ts`: GTD counts store caching DB aggregate counts (`inbox`, `anytime`, `someday`, `waitingFor`, `waitingOverdue`, `stalledProjects`).
