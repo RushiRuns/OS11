@@ -73,6 +73,7 @@ const InboxTriageList = lazy(() => import('./features/inbox/InboxTriageList.js')
 const AnytimeView = lazy(() => import('./features/gtd/AnytimeView.js'));
 const SomedayView = lazy(() => import('./features/gtd/SomedayView.js'));
 const WaitingForView = lazy(() => import('./features/gtd/WaitingForView.js'));
+const WeeklyReviewFlow = lazy(() => import('./features/review/WeeklyReviewFlow.js'));
 
 import {
   applyTheme,
@@ -486,6 +487,12 @@ export function App(): React.ReactElement {
               onSelectTask={handleSelectTask}
               selectedTaskId={liveSelectedTask?.id}
             />
+          </Suspense>
+        );
+      case 'view_weekly_review':
+        return (
+          <Suspense fallback={<ViewSkeleton />}>
+            <WeeklyReviewFlow onFinish={() => setActiveListId('smart_my_day')} />
           </Suspense>
         );
       case 'view_dashboard':

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useGoalStore } from '../../stores/goalStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
+import { useAppStore } from '../../stores/app-store.js';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { HabitTracker } from './HabitTracker.js';
@@ -167,13 +168,23 @@ export function GoalsView(): React.ReactElement {
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            className={styles.dismissBtn}
-            onClick={() => setIsReviewDismissed(true)}
-          >
-            Dismiss
-          </button>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <button
+              type="button"
+              className={styles.dismissBtn}
+              onClick={() => useAppStore.getState().setActiveListId('view_weekly_review')}
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--text-on-accent)', borderColor: 'var(--accent)' }}
+            >
+              Start Review →
+            </button>
+            <button
+              type="button"
+              className={styles.dismissBtn}
+              onClick={() => setIsReviewDismissed(true)}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 

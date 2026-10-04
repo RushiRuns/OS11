@@ -119,7 +119,7 @@ export default defineConfig({
           if (id.includes('src/renderer/features/pomodoro')) {
             return 'pomodoro';
           }
-          if (id.includes('src/renderer/features/gtd')) {
+          if (id.includes('src/renderer/features/gtd') || id.includes('src/renderer/features/review')) {
             return 'gtd';
           }
         },

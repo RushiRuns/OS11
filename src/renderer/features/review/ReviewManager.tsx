@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
-import { WeeklyReviewModal } from './WeeklyReviewModal.js';
+import { useAppStore } from '../../stores/app-store.js';
 import { MonthlyReviewModal } from './MonthlyReviewModal.js';
 
 export function getIsoWeek(date: Date = new Date()): string {
@@ -20,8 +20,8 @@ export function getMonthString(date: Date = new Date()): string {
 }
 
 export function ReviewManager(): React.ReactElement | null {
-  const [isWeeklyOpen, setIsWeeklyOpen] = useState(false);
   const [isMonthlyOpen, setIsMonthlyOpen] = useState(false);
+  const setActiveListId = useAppStore((state) => state.setActiveListId);
 
   useEffect(() => {
     async function checkReviewSchedules() {
@@ -43,7 +43,7 @@ export function ReviewManager(): React.ReactElement | null {
 
         if (weeklyEnabled && now.getDay() === targetDay && currentTimeStr >= targetTime) {
           if (lastWeekly !== currentWeek) {
-            setIsWeeklyOpen(true);
+            setActiveListId('view_weekly_review');
             return;
           }
         }
@@ -66,7 +66,7 @@ export function ReviewManager(): React.ReactElement | null {
     checkReviewSchedules();
 
     // Event listeners for manual triggers from Settings or Command Palette
-    const handleStartWeekly = () => setIsWeeklyOpen(true);
+    const handleStartWeekly = () => setActiveListId('view_weekly_review');
     const handleStartMonthly = () => setIsMonthlyOpen(true);
 
     window.addEventListener('os11:start-weekly-review', handleStartWeekly);
@@ -76,19 +76,7 @@ export function ReviewManager(): React.ReactElement | null {
       window.removeEventListener('os11:start-weekly-review', handleStartWeekly);
       window.removeEventListener('os11:start-monthly-review', handleStartMonthly);
     };
-  }, []);
-
-  const handleCloseWeekly = async () => {
-    setIsWeeklyOpen(false);
-    try {
-      await invoke(IPC.SETTINGS.SET, {
-        key: 'last_weekly_review_week',
-        value: getIsoWeek(),
-      });
-    } catch {
-      // ignore
-    }
-  };
+  }, [setActiveListId]);
 
   const handleCloseMonthly = async () => {
     setIsMonthlyOpen(false);
@@ -104,7 +92,6 @@ export function ReviewManager(): React.ReactElement | null {
 
   return (
     <>
-      {isWeeklyOpen && <WeeklyReviewModal onClose={handleCloseWeekly} />}
       {isMonthlyOpen && <MonthlyReviewModal onClose={handleCloseMonthly} />}
     </>
   );
