@@ -165,7 +165,7 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
-  const hasMetadataRow = Boolean(hasScheduledTime || formattedDueDate || taskTags.length > 0 || hasSubtaskBadge);
+  const hasMetadataRow = Boolean(hasScheduledTime || formattedDueDate || task.bucket || task.waiting_on || taskTags.length > 0 || hasSubtaskBadge);
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -498,6 +498,37 @@ export const TaskCard = memo(function TaskCard({
                     </span>
                   )}
                 </>
+              )}
+
+              {task.bucket === 'anytime' && (
+                <span className={styles.metaAnytimeChip} title="Bucket: Anytime">
+                  ⚡ Anytime
+                </span>
+              )}
+
+              {task.bucket === 'someday' && (
+                <span className={styles.metaSomedayChip} title="Bucket: Someday">
+                  💡 Someday
+                </span>
+              )}
+
+              {task.waiting_on && (
+                <span
+                  className={`${styles.metaWaitingChip} ${
+                    task.follow_up_date && task.follow_up_date < new Date().toISOString().split('T')[0]
+                      ? styles.metaWaitingOverdue
+                      : ''
+                  }`}
+                  title={`Waiting on: ${task.waiting_on}${task.follow_up_date ? ` (follow up: ${task.follow_up_date})` : ''}`}
+                >
+                  ⏳ {task.waiting_on}
+                </span>
+              )}
+
+              {(task.bucket || task.waiting_on) && (formattedDueDate || taskTags.length > 0 || hasSubtaskBadge) && (
+                <span className={styles.metaDot} aria-hidden="true">
+                  ·
+                </span>
               )}
 
               {formattedDueDate && (

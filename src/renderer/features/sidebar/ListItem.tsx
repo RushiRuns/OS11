@@ -8,6 +8,7 @@ interface ListItemProps {
   isActive: boolean;
   taskCount?: number;
   droppableId?: string;
+  isStalled?: boolean;
   onClick: (listId: string) => void;
   onContextMenu?: (e: React.MouseEvent, list: List) => void;
   isDraggable?: boolean;
@@ -21,6 +22,7 @@ export const ListItem = memo(function ListItem({
   isActive,
   taskCount = 0,
   droppableId,
+  isStalled = false,
   onClick,
   onContextMenu,
   isDraggable = false,
@@ -77,10 +79,18 @@ export const ListItem = memo(function ListItem({
         />
       )}
       <span className={styles.label}>{list.name}</span>
+      {isStalled && (
+        <span
+          className={styles.stalledDot}
+          title="Stalled project: no next action scheduled"
+          aria-label="Stalled project: no next action scheduled"
+        />
+      )}
 
       {/* FEEL UI: Pending count badge only rendered when count > 0 */}
       {taskCount > 0 && <span className={styles.badge}>{taskCount}</span>}
     </button>
+
   );
 });
 

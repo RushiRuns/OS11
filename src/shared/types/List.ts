@@ -5,7 +5,11 @@ export type SmartListType =
   | 'planned'
   | 'assigned'
   | 'all'
-  | 'completed';
+  | 'completed'
+  | 'anytime'
+  | 'someday'
+  | 'waiting_for';
+
 
 export interface List {
   id: string;

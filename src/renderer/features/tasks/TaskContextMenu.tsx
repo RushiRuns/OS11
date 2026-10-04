@@ -3,6 +3,7 @@ import { useAreaStore } from '../../stores/areaStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useUndoRedoStore } from '../../hooks/useUndoRedo.js';
+import { useModuleStore } from '../../stores/moduleStore.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
@@ -52,6 +53,10 @@ export function TaskContextMenu({
   const areas = useAreaStore((state) => state.orderedAreaIds.map((id) => state.areasById[id]).filter(Boolean));
   const projects = useProjectStore((state) => Object.values(state.projectsById).filter((p) => p.status !== 'archived'));
   const updateTask = useTaskStore((state) => state.updateTask);
+  const isEnabled = useModuleStore((state) => state.isEnabled);
+  const setBucket = useTaskStore((state) => state.setBucket);
+  const setWaiting = useTaskStore((state) => state.setWaiting);
+  const clearWaiting = useTaskStore((state) => state.clearWaiting);
 
   useEffect(() => {
     setShowDatePicker(false);
@@ -164,6 +169,56 @@ export function TaskContextMenu({
             <span className={styles.itemIcon}>📅</span>
             <span>{task.due_date ? `Due: ${task.due_date}` : 'Set Due Date...'}</span>
           </button>
+
+          {/* GTD Scheduling Actions */}
+          {isEnabled('anytime') && (
+            <button
+              type="button"
+              className={styles.item}
+              onClick={async () => {
+                await setBucket(task.id, task.bucket === 'anytime' ? null : 'anytime');
+                onClose();
+              }}
+            >
+              <span className={styles.itemIcon}>⚡</span>
+              <span>{task.bucket === 'anytime' ? 'Remove from Anytime' : 'Move to Anytime'}</span>
+            </button>
+          )}
+
+          {isEnabled('someday') && (
+            <button
+              type="button"
+              className={styles.item}
+              onClick={async () => {
+                await setBucket(task.id, task.bucket === 'someday' ? null : 'someday');
+                onClose();
+              }}
+            >
+              <span className={styles.itemIcon}>📦</span>
+              <span>{task.bucket === 'someday' ? 'Remove from Someday' : 'Move to Someday'}</span>
+            </button>
+          )}
+
+          {isEnabled('waiting_for') && (
+            <button
+              type="button"
+              className={styles.item}
+              onClick={async () => {
+                if (task.waiting_on) {
+                  await clearWaiting(task.id);
+                } else {
+                  const person = window.prompt('Waiting on whom or what?');
+                  if (person && person.trim()) {
+                    await setWaiting({ taskId: task.id, waitingOn: person.trim() });
+                  }
+                }
+                onClose();
+              }}
+            >
+              <span className={styles.itemIcon}>⏳</span>
+              <span>{task.waiting_on ? `Waiting on: ${task.waiting_on} (Clear)` : 'Mark Waiting For...'}</span>
+            </button>
+          )}
 
           <div className={styles.divider} />
 
@@ -345,9 +400,15 @@ export function TaskContextMenu({
           initialDate={task.due_date}
           initialTime={task.due_time}
           initialAllDay={task.all_day === 1}
+          initialBucket={task.bucket}
           position={{ x: x + 215, y }}
           onSelect={(date, time, allDay) => {
             onSetDueDate?.(task.id, date, time, allDay);
+            setShowDatePicker(false);
+            onClose();
+          }}
+          onSelectBucket={(bucket) => {
+            setBucket(task.id, bucket);
             setShowDatePicker(false);
             onClose();
           }}

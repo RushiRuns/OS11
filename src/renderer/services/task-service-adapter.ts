@@ -106,6 +106,34 @@ export const taskServiceAdapter = {
   rolloverToToday(ids: string[], today?: string): Promise<Task[]> {
     return invoke<Task[]>(IPC.TASKS.ROLLOVER_TO_TODAY, { ids, today });
   },
+
+  setBucket(payload: { taskId: string; bucket: 'anytime' | 'someday' | null }): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.SET_BUCKET, payload);
+  },
+
+  clearBucket(taskId: string): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.CLEAR_BUCKET, taskId);
+  },
+
+  setDate(payload: { taskId: string; dueDate: string | null; dueTime?: string | null; allDay?: boolean; recurrenceRule?: string | null }): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.SET_DATE, payload);
+  },
+
+  clearDate(taskId: string): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.CLEAR_DATE, taskId);
+  },
+
+  setWaiting(payload: { taskId: string; waitingOn: string; followUpDate?: string | null }): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.SET_WAITING, payload);
+  },
+
+  clearWaiting(taskId: string): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.CLEAR_WAITING, taskId);
+  },
+
+  restoreSchedulingState(taskId: string, state: any): Promise<{ task: Task; changeReport: any }> {
+    return invoke(IPC.TASKS.RESTORE_SCHEDULING_STATE, { taskId, state });
+  },
 };
 
 export default taskServiceAdapter;

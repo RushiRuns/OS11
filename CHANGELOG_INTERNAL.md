@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 6: Renderer Foundations
+- **What was built:**
+  - `src/renderer/stores/countsStore.ts`: GTD counts store caching DB aggregate counts (`inbox`, `anytime`, `someday`, `waitingFor`, `waitingOverdue`, `stalledProjects`).
+  - `src/renderer/features/tasks/BucketChips.tsx` & `.module.css`: Quick Anytime / Someday chip toggles with active styling and module gating.
+  - `src/renderer/features/tasks/WhenPopover.tsx`: Popover allowing unified scheduling selection between dates and GTD buckets.
+  - `src/renderer/features/tasks/WaitingRow.tsx` & `.module.css`: Inline waiting status viewer, follow-up date input, and editor.
+  - `src/renderer/components/DatePicker/DatePicker.tsx`: Extended to support `initialBucket` and `onSelectBucket`.
+  - `src/renderer/services/task-service-adapter.ts`: Added client adapter methods for scheduling IPC (`setBucket`, `clearBucket`, `setDate`, `clearDate`, `setWaiting`, `clearWaiting`, `restoreSchedulingState`, `getGtdCounts`).
+  - `src/renderer/stores/taskStore.ts`: Added optimistic scheduling actions (`setBucket`, `setDate`, `setWaiting`, `clearWaiting`, `restoreSchedulingState`) and GTD selectors (`useAnytimeTasks`, `useSomedayTasks`, `useWaitingForTasks`).
+  - `src/renderer/features/tasks/TaskCard.tsx` & `.module.css`: Render Anytime, Someday, and Waiting badges and chips.
+  - `src/renderer/features/tasks/DetailPanel.tsx` & `.module.css`: Converted Due Date row to When row displaying date or bucket pills with clear buttons; code-split and embedded `WaitingRow` when `isEnabled('waiting_for')`.
+  - `src/renderer/features/tasks/TaskContextMenu.tsx`: Added module-gated "Move to Anytime", "Move to Someday", and "Waiting For..." actions and wired DatePicker bucket selection.
+  - `src/renderer/features/sidebar/Sidebar.tsx`: Integrated `useCountsStore`, gated GTD smart lists on module enablement, handled task drop into Anytime/Someday/Waiting For, and passed stalled status to projects.
+  - `src/renderer/features/sidebar/ListItem.tsx` & `.module.css`: Added stalled dot indicator with `--color-warning` for stalled projects.
+  - `src/shared/utils/project-health.ts`: Extracted pure stalled project domain check into shared utility.
+  - `src/shared/types/List.ts`: Added `'anytime' | 'someday' | 'waiting_for'` to `SmartListType`.
+- **What changed architecturally:**
+  - Renderer task management seamlessly integrates GTD buckets, follow-up dates, and stalled project feedback while maintaining strict bundle budget (initial JS bundle is 198.23 kB gzipped = 202,990 bytes < 204,800 bytes). Full test suite (70 test files, 506 tests) passes.
+
 ### [2026-10-04] — GTD step 5: Modules & Presets
 - **What was built:**
   - `src/shared/constants/presets.ts`: Consolidated `ProfilePreset` type and `PRESET_MODULE_MAP` enabling `anytime`, `someday`, and `waiting_for` for the `gtd` preset, and disabling all three for `minimalist` and `focus`.

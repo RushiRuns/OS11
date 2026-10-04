@@ -3,6 +3,7 @@ import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/t
 import { taskServiceAdapter } from '../services/task-service-adapter.js';
 import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
 import { useAppStore } from './app-store.js';
+import { useCountsStore } from './countsStore.js';
 
 export type RightSlotActive = 'scheduler' | 'suggestions' | 'detail' | null;
 export type RightSlotPrevious = 'scheduler' | 'suggestions' | null;
@@ -42,6 +43,11 @@ export interface TaskStoreState {
   updateTimeBlock: (id: string, startMin: number, durationMin: number) => Promise<Task>;
   unscheduleTask: (id: string) => Promise<Task>;
   rollOverToToday: (ids: string[], today?: string) => Promise<Task[]>;
+  setBucket: (taskId: string, bucket: 'anytime' | 'someday' | null) => Promise<Task>;
+  setDate: (payload: { taskId: string; dueDate: string | null; dueTime?: string | null; allDay?: boolean; recurrenceRule?: string | null }) => Promise<Task>;
+  setWaiting: (payload: { taskId: string; waitingOn: string; followUpDate?: string | null }) => Promise<Task>;
+  clearWaiting: (taskId: string) => Promise<Task>;
+  restoreSchedulingState: (taskId: string, state: any) => Promise<Task>;
 
   // Rollback
   rollbackUpdate: (id: string, previousState: Task | null) => void;
@@ -669,6 +675,132 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     }
   },
 
+  setBucket: async (taskId: string, bucket: 'anytime' | 'someday' | null): Promise<Task> => {
+    const existing = get().tasksById[taskId];
+    if (!existing) throw new Error(`Task ${taskId} not found`);
+    const previousSnapshot: Task = { ...existing };
+    const optimistic: Task = {
+      ...existing,
+      bucket,
+      due_date: bucket ? null : existing.due_date,
+      due_time: bucket ? null : existing.due_time,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [taskId]: optimistic },
+    }));
+    try {
+      const res = await taskServiceAdapter.setBucket({ taskId, bucket });
+      set((state) => ({
+        tasksById: { ...state.tasksById, [taskId]: res.task },
+      }));
+      useCountsStore.getState().loadCounts();
+      return res.task;
+    } catch (err) {
+      get().rollbackUpdate(taskId, previousSnapshot);
+      throw err;
+    }
+  },
+
+  setDate: async (payload: { taskId: string; dueDate: string | null; dueTime?: string | null; allDay?: boolean; recurrenceRule?: string | null }): Promise<Task> => {
+    const existing = get().tasksById[payload.taskId];
+    if (!existing) throw new Error(`Task ${payload.taskId} not found`);
+    const previousSnapshot: Task = { ...existing };
+    const optimistic: Task = {
+      ...existing,
+      due_date: payload.dueDate ?? null,
+      due_time: payload.dueTime ?? null,
+      bucket: payload.dueDate ? null : existing.bucket,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [payload.taskId]: optimistic },
+    }));
+    try {
+      const res = await taskServiceAdapter.setDate(payload);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [payload.taskId]: res.task },
+      }));
+      useCountsStore.getState().loadCounts();
+      return res.task;
+    } catch (err) {
+      get().rollbackUpdate(payload.taskId, previousSnapshot);
+      throw err;
+    }
+  },
+
+  setWaiting: async (payload: { taskId: string; waitingOn: string; followUpDate?: string | null }): Promise<Task> => {
+    const existing = get().tasksById[payload.taskId];
+    if (!existing) throw new Error(`Task ${payload.taskId} not found`);
+    const previousSnapshot: Task = { ...existing };
+    const optimistic: Task = {
+      ...existing,
+      waiting_on: payload.waitingOn,
+      waiting_since: existing.waiting_since ?? new Date().toISOString(),
+      follow_up_date: payload.followUpDate ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [payload.taskId]: optimistic },
+    }));
+    try {
+      const res = await taskServiceAdapter.setWaiting(payload);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [payload.taskId]: res.task },
+      }));
+      useCountsStore.getState().loadCounts();
+      return res.task;
+    } catch (err) {
+      get().rollbackUpdate(payload.taskId, previousSnapshot);
+      throw err;
+    }
+  },
+
+  clearWaiting: async (taskId: string): Promise<Task> => {
+    const existing = get().tasksById[taskId];
+    if (!existing) throw new Error(`Task ${taskId} not found`);
+    const previousSnapshot: Task = { ...existing };
+    const optimistic: Task = {
+      ...existing,
+      waiting_on: null,
+      waiting_since: null,
+      follow_up_date: null,
+      follow_up_notified_on: null,
+      updated_at: new Date().toISOString(),
+    };
+    set((state) => ({
+      tasksById: { ...state.tasksById, [taskId]: optimistic },
+    }));
+    try {
+      const res = await taskServiceAdapter.clearWaiting(taskId);
+      set((state) => ({
+        tasksById: { ...state.tasksById, [taskId]: res.task },
+      }));
+      useCountsStore.getState().loadCounts();
+      return res.task;
+    } catch (err) {
+      get().rollbackUpdate(taskId, previousSnapshot);
+      throw err;
+    }
+  },
+
+  restoreSchedulingState: async (taskId: string, state: any): Promise<Task> => {
+    const existing = get().tasksById[taskId];
+    if (!existing) throw new Error(`Task ${taskId} not found`);
+    const previousSnapshot: Task = { ...existing };
+    try {
+      const res = await taskServiceAdapter.restoreSchedulingState(taskId, state);
+      set((s) => ({
+        tasksById: { ...s.tasksById, [taskId]: res.task },
+      }));
+      useCountsStore.getState().loadCounts();
+      return res.task;
+    } catch (err) {
+      get().rollbackUpdate(taskId, previousSnapshot);
+      throw err;
+    }
+  },
+
   rollbackUpdate: (id: string, previousState: Task | null) => {
     set((state) => {
       const next = { ...state.tasksById };
@@ -692,7 +824,32 @@ export function useTasksByList(listId: string): Task[] {
     const tasks = Object.values(state.tasksById);
     if (listId === 'list_inbox') {
       return tasks
-        .filter((t) => !t.area_id && !t.project_id && t.is_trashed === 0 && t.parent_task_id === null)
+        .filter(
+          (t) =>
+            !t.area_id &&
+            !t.project_id &&
+            !t.parent_task_id &&
+            !t.due_date &&
+            !t.bucket &&
+            !t.waiting_since &&
+            t.is_completed === 0 &&
+            t.is_trashed === 0
+        )
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }
+    if (listId === 'smart_anytime') {
+      return tasks
+        .filter((t) => t.bucket === 'anytime' && t.is_completed === 0 && t.is_trashed === 0)
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }
+    if (listId === 'smart_someday') {
+      return tasks
+        .filter((t) => t.bucket === 'someday' && t.is_completed === 0 && t.is_trashed === 0)
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }
+    if (listId === 'smart_waiting_for') {
+      return tasks
+        .filter((t) => t.waiting_since !== null && t.is_completed === 0 && t.is_trashed === 0)
         .sort((a, b) => a.sort_order - b.sort_order);
     }
     return tasks
@@ -714,7 +871,41 @@ export function useInboxTasks(): Task[] {
   return useTaskStore((state) => {
     const tasks = Object.values(state.tasksById);
     return tasks
-      .filter((t) => !t.area_id && !t.project_id && t.is_trashed === 0 && t.parent_task_id === null)
+      .filter(
+        (t) =>
+          !t.area_id &&
+          !t.project_id &&
+          !t.parent_task_id &&
+          !t.due_date &&
+          !t.bucket &&
+          !t.waiting_since &&
+          t.is_completed === 0 &&
+          t.is_trashed === 0
+      )
+      .sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+export function useAnytimeTasks(): Task[] {
+  return useTaskStore((state) => {
+    return Object.values(state.tasksById)
+      .filter((t) => t.bucket === 'anytime' && t.is_completed === 0 && t.is_trashed === 0)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+export function useSomedayTasks(): Task[] {
+  return useTaskStore((state) => {
+    return Object.values(state.tasksById)
+      .filter((t) => t.bucket === 'someday' && t.is_completed === 0 && t.is_trashed === 0)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  });
+}
+
+export function useWaitingForTasks(): Task[] {
+  return useTaskStore((state) => {
+    return Object.values(state.tasksById)
+      .filter((t) => t.waiting_since !== null && t.is_completed === 0 && t.is_trashed === 0)
       .sort((a, b) => a.sort_order - b.sort_order);
   });
 }

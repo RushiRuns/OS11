@@ -21,6 +21,8 @@ import type { List } from '@shared/types/List.js';
 import type { Project } from '@shared/types/index.js';
 import type { Area } from '@shared/types/Area.js';
 import type { Tag } from '@shared/types/Tag.js';
+import { useCountsStore } from '../../stores/countsStore.js';
+import { isStalled } from '@shared/utils/project-health.js';
 import styles from './Sidebar.module.css';
 
 interface NavView {
@@ -42,6 +44,7 @@ export function Sidebar(): React.ReactElement {
   const { loadLists } = useListStore();
   const smartLists = useSmartLists();
   const { isEnabled, loadModules } = useModuleStore();
+  const { counts, loadCounts } = useCountsStore();
 
   const {
     projectsById,
@@ -216,6 +219,7 @@ export function Sidebar(): React.ReactElement {
     loadAreas();
     loadModules();
     loadTags();
+    loadCounts();
 
     invoke<Record<string, unknown>>(IPC.SETTINGS.GET_ALL)
       .then((res) => {
@@ -250,7 +254,12 @@ export function Sidebar(): React.ReactElement {
       window.removeEventListener('open-create-area-modal', handleOpenArea);
       window.removeEventListener('open-create-project-modal', handleOpenProject);
     };
-  }, [loadLists, loadProjects, loadAreas, loadModules, loadTags]);
+  }, [loadLists, loadProjects, loadAreas, loadModules, loadTags, loadCounts]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [tasksById, loadCounts]);
+
 
   const projects = useMemo(
     () => (Object.values(projectsById) as Project[]).sort((a, b) => a.sort_order - b.sort_order),
@@ -296,6 +305,9 @@ export function Sidebar(): React.ReactElement {
     for (const sl of smartLists) {
       if (sl.id === 'smart_all' && !showAllTasks) continue;
       if (sl.id === 'smart_completed' && !showCompleted) continue;
+      if (sl.id === 'smart_anytime' && !isEnabled('anytime')) continue;
+      if (sl.id === 'smart_someday' && !isEnabled('someday')) continue;
+      if (sl.id === 'smart_waiting_for' && !isEnabled('waiting_for')) continue;
 
       items.push({
         id: sl.id,
@@ -318,7 +330,7 @@ export function Sidebar(): React.ReactElement {
     }
 
     return items.sort((a, b) => a.order - b.order);
-  }, [smartLists, pinnedProjects, projectAsList, showAllTasks, showCompleted]);
+  }, [smartLists, pinnedProjects, projectAsList, showAllTasks, showCompleted, isEnabled]);
 
   const handleTogglePinList = async (list: List) => {
     const isCurrentlyPinned = Boolean(list.is_pinned);
@@ -405,6 +417,12 @@ export function Sidebar(): React.ReactElement {
           return tasks.filter((t) => t.is_starred === 1 && t.is_completed === 0).length;
         case 'smart_planned':
           return tasks.filter((t) => t.due_date !== null && t.is_completed === 0).length;
+        case 'smart_anytime':
+          return counts.anytime || tasks.filter((t) => t.is_completed === 0 && t.bucket === 'anytime').length;
+        case 'smart_someday':
+          return counts.someday || tasks.filter((t) => t.is_completed === 0 && t.bucket === 'someday').length;
+        case 'smart_waiting_for':
+          return counts.waitingFor || tasks.filter((t) => t.is_completed === 0 && Boolean(t.waiting_on)).length;
         case 'smart_all':
           return tasks.filter((t) => t.is_completed === 0 && t.parent_task_id === null).length;
         case 'smart_completed':
@@ -413,7 +431,7 @@ export function Sidebar(): React.ReactElement {
           return tasks.filter((t) => (t.list_id === listId || t.project_id === listId) && t.is_completed === 0).length;
       }
     },
-    [tasksById]
+    [tasksById, counts]
   );
 
   // Compute active loose task count per area
@@ -531,6 +549,15 @@ export function Sidebar(): React.ReactElement {
       if (targetItem.id === 'smart_my_day') {
         const today = new Date().toISOString().split('T')[0];
         await useTaskStore.getState().updateTask({ id: taskId, my_day_date: today });
+      } else if (targetItem.id === 'smart_anytime') {
+        await useTaskStore.getState().setBucket(taskId, 'anytime');
+      } else if (targetItem.id === 'smart_someday') {
+        await useTaskStore.getState().setBucket(taskId, 'someday');
+      } else if (targetItem.id === 'smart_waiting_for') {
+        const person = window.prompt('Waiting on whom or what?');
+        if (person && person.trim()) {
+          await useTaskStore.getState().setWaiting({ taskId, waitingOn: person.trim() });
+        }
       } else if (targetItem.id === 'list_inbox') {
         await useTaskStore.getState().updateTask({ id: taskId, list_id: 'list_inbox', project_id: null, area_id: null });
       } else if (targetItem.type === 'project') {
@@ -797,6 +824,11 @@ export function Sidebar(): React.ReactElement {
                 list={item.listModel}
                 isActive={isActive}
                 taskCount={count}
+                isStalled={
+                  isProject && item.originalProject
+                    ? isStalled(item.originalProject, Object.values(tasksById))
+                    : false
+                }
                 onClick={() => {
                   if (isProject) {
                     setSelectedProjectId(item.rawId);
@@ -882,6 +914,7 @@ export function Sidebar(): React.ReactElement {
                     (activeListId === 'view_projects' && selectedProjectId === project.id)
                   }
                   taskCount={getProjectTaskCount(project.id)}
+                  isStalled={isStalled(project, Object.values(tasksById))}
                   onClick={() => {
                     setSelectedProjectId(project.id);
                     setActiveListId(`project:${project.id}`);
@@ -1005,6 +1038,7 @@ export function Sidebar(): React.ReactElement {
                             (activeListId === 'view_projects' && selectedProjectId === project.id)
                           }
                           taskCount={getProjectTaskCount(project.id)}
+                          isStalled={isStalled(project, Object.values(tasksById))}
                           onClick={() => {
                             setSelectedProjectId(project.id);
                             setActiveListId(`project:${project.id}`);

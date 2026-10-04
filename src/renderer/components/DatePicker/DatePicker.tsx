@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as chrono from 'chrono-node';
+import { BucketChips } from '../../features/tasks/BucketChips.js';
 import styles from './DatePicker.module.css';
 
 interface DatePickerProps {
   initialDate?: string | null;
   initialTime?: string | null;
   initialAllDay?: boolean;
+  initialBucket?: 'anytime' | 'someday' | null;
   position?: { x: number; y: number };
   onSelect: (date: string | null, time: string | null, allDay: boolean) => void;
+  onSelectBucket?: (bucket: 'anytime' | 'someday' | null) => void;
   onClose: () => void;
 }
 
@@ -17,8 +20,10 @@ export function DatePicker({
   initialDate,
   initialTime,
   initialAllDay = true,
+  initialBucket,
   position,
   onSelect,
+  onSelectBucket,
   onClose,
 }: DatePickerProps): React.ReactElement {
   const [nlpInput, setNlpInput] = useState('');
@@ -55,8 +60,21 @@ export function DatePicker({
 
   const handleSelectDate = (dateStr: string | null) => {
     setSelectedDateStr(dateStr);
+    if (dateStr && onSelectBucket) {
+      onSelectBucket(null);
+    }
     onSelect(dateStr, allDay ? null : timeValue, allDay);
     onClose();
+  };
+
+  const handleBucketSelect = (bucket: 'anytime' | 'someday' | null) => {
+    if (onSelectBucket) {
+      onSelectBucket(bucket);
+      if (bucket) {
+        onSelect(null, null, true);
+        onClose();
+      }
+    }
   };
 
   // Quick options
@@ -197,6 +215,13 @@ export function DatePicker({
             autoFocus
           />
         </div>
+
+        {/* Bucket Chips */}
+        {onSelectBucket && (
+          <div style={{ marginBottom: 'var(--space-2, 8px)' }}>
+            <BucketChips currentBucket={initialBucket} onSelectBucket={handleBucketSelect} />
+          </div>
+        )}
 
         {/* Quick Options */}
         <div className={styles.quickOptions}>

@@ -23,6 +23,8 @@ const DropdownMenu = React.lazy(
   () => import('../../components/primitives/DropdownMenu/DropdownMenu.js')
 );
 const DatePicker = React.lazy(() => import('../../components/DatePicker/DatePicker.js'));
+const WaitingRow = React.lazy(() => import('./WaitingRow.js'));
+import { useModuleStore } from '../../stores/moduleStore.js';
 import { humanReadableRRule } from '../../../shared/utils/recurrence.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
@@ -44,8 +46,19 @@ const PRIORITY_CONFIG = [
 ] as const;
 
 export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactElement {
-  const { updateTask, toggleComplete, completeTask, createTask, deleteTask, duplicateTask } =
-    useTaskStore();
+  const {
+    updateTask,
+    toggleComplete,
+    completeTask,
+    createTask,
+    deleteTask,
+    duplicateTask,
+    setDate,
+    setBucket,
+    setWaiting,
+    clearWaiting,
+  } = useTaskStore();
+  const isEnabled = useModuleStore((s) => s.isEnabled);
   const shouldReduceMotion = useReducedMotion();
 
   // Always bind directly to the latest state in the store by task ID
@@ -509,50 +522,92 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
             </div>
           </div>
 
-          {/* Due Date & Time Row */}
+          {/* When (Due Date / Anytime / Someday) Row */}
           <div className={styles.propertyRow}>
             <span className={styles.propertyLabel}>
-              <span style={{ fontSize: '13px' }}>📅</span> Due Date
+              <span style={{ fontSize: '13px' }}>📅</span> When
             </span>
             <div className={styles.propertyControl}>
-              <button
-                type="button"
-                className={`${styles.datePill} ${
-                  dueDateInfo?.isOverdue
-                    ? styles.dateOverdue
-                    : dueDateInfo?.isToday
-                      ? styles.dateToday
-                      : ''
-                }`}
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setDatePickerPos({ x: Math.max(10, rect.left - 260), y: rect.bottom + 8 });
-                  setIsDatePickerOpen(true);
-                }}
-              >
-                <span>{dueDateInfo ? dueDateInfo.label : 'Set due date'}</span>
-                {dueDateInfo && (
+              {currentTask.bucket ? (
+                <div
+                  className={`${styles.datePill} ${
+                    currentTask.bucket === 'anytime' ? styles.bucketAnytime : styles.bucketSomeday
+                  }`}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDatePickerPos({ x: Math.max(10, rect.left - 260), y: rect.bottom + 8 });
+                    setIsDatePickerOpen(true);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span>{currentTask.bucket === 'anytime' ? '⚡ Anytime' : '📦 Someday'}</span>
                   <span
                     className={styles.clearMiniBtn}
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateTask({
-                        id: currentTask.id,
-                        due_date: null,
-                        due_time: null,
-                        all_day: 0,
-                      });
+                      setBucket(currentTask.id, null);
                     }}
-                    title="Clear due date"
+                    title={`Clear ${currentTask.bucket}`}
                     role="button"
-                    aria-label="Clear due date"
+                    aria-label={`Clear ${currentTask.bucket}`}
                   >
                     ✕
                   </span>
-                )}
-              </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.datePill} ${
+                    dueDateInfo?.isOverdue
+                      ? styles.dateOverdue
+                      : dueDateInfo?.isToday
+                        ? styles.dateToday
+                        : ''
+                  }`}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDatePickerPos({ x: Math.max(10, rect.left - 260), y: rect.bottom + 8 });
+                    setIsDatePickerOpen(true);
+                  }}
+                >
+                  <span>{dueDateInfo ? dueDateInfo.label : 'Set date or bucket'}</span>
+                  {dueDateInfo && (
+                    <span
+                      className={styles.clearMiniBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDate({
+                          taskId: currentTask.id,
+                          dueDate: null,
+                          dueTime: null,
+                          allDay: false,
+                        });
+                      }}
+                      title="Clear due date"
+                      role="button"
+                      aria-label="Clear due date"
+                    >
+                      ✕
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Waiting For Row (gated by waiting_for module) */}
+          {isEnabled('waiting_for') && (
+            <React.Suspense fallback={null}>
+              <WaitingRow
+                task={currentTask}
+                onUpdateWaiting={(waitingOn, followUpDate) =>
+                  setWaiting({ taskId: currentTask.id, waitingOn, followUpDate })
+                }
+                onClearWaiting={() => clearWaiting(currentTask.id)}
+              />
+            </React.Suspense>
+          )}
 
           {/* Repeat / Recurrence Row */}
           <div className={styles.propertyRow}>
@@ -1061,14 +1116,19 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
             initialDate={currentTask.due_date}
             initialTime={currentTask.due_time}
             initialAllDay={currentTask.all_day === 1}
+            initialBucket={currentTask.bucket}
             position={datePickerPos}
             onSelect={(date, time, allDay) => {
-              updateTask({
-                id: currentTask.id,
-                due_date: date,
-                due_time: time,
-                all_day: allDay ? 1 : 0,
+              setDate({
+                taskId: currentTask.id,
+                dueDate: date,
+                dueTime: time,
+                allDay: allDay ?? false,
               });
+              setIsDatePickerOpen(false);
+            }}
+            onSelectBucket={(bucket) => {
+              setBucket(currentTask.id, bucket);
               setIsDatePickerOpen(false);
             }}
             onClose={() => setIsDatePickerOpen(false)}

@@ -1,0 +1,49 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--weight-medium, 500);
+  cursor: pointer;
+  transition: all var(--motion-duration-fast, 120ms) var(--motion-easing-default, ease);
+  user-select: none;
+}
+
+.chip:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.chipActiveAnytime {
+  background: var(--color-accent-subtle, rgba(59, 130, 246, 0.15));
+  color: var(--color-accent, #3b82f6);
+  border-color: var(--color-accent, #3b82f6);
+}
+
+.chipActiveSomeday {
+  background: var(--color-warning-subtle, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning, #f59e0b);
+  border-color: var(--color-warning, #f59e0b);
+}
+
+.clearChip {
+  font-size: var(--text-2xs, 10px);
+  opacity: 0.75;
+}
+
+.clearChip:hover {
+  opacity: 1;
+}

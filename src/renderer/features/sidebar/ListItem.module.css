@@ -84,3 +84,13 @@
   outline-offset: -2px;
   color: var(--accent) !important;
 }
+
+.stalledDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-warning, #f59e0b);
+  flex-shrink: 0;
+  margin-left: var(--space-1);
+}
+
