@@ -8,7 +8,8 @@ import { workerManager } from './services/worker-manager.js';
 import { ReminderService } from './services/reminder/ReminderService.js';
 import { TaskHistoryRepository } from './repositories/TaskHistoryRepository.js';
 import { BackupService } from './services/backup/BackupService.js';
-import type { List, Task, LocalIdentity, Module } from '@shared/types/index.js';
+import { TaskSchedulingService } from './services/task/TaskSchedulingService.js';
+import type { List, Task, LocalIdentity, Module, GtdCounts } from '@shared/types/index.js';
 import { app } from 'electron';
 import path from 'node:path';
 
@@ -18,6 +19,7 @@ export interface StartupPayload {
   settings: Record<string, unknown>;
   modules: Module[];
   identity: LocalIdentity;
+  counts?: GtdCounts;
 }
 
 let cachedStartupData: StartupPayload | null = null;
@@ -78,12 +80,21 @@ export async function runStartupSequence(): Promise<StartupPayload> {
     }
   }, 1500);
 
+  let counts: GtdCounts | undefined;
+  try {
+    const schedulingService = new TaskSchedulingService();
+    counts = schedulingService.getGtdCounts();
+  } catch (err) {
+    console.error('[OS11 Startup] Failed to calculate GTD counts:', err);
+  }
+
   cachedStartupData = {
     lists,
     activeTasks,
     settings,
     modules,
     identity,
+    counts,
   };
 
   return cachedStartupData;

@@ -148,15 +148,23 @@ export class ReminderService {
     this.repository.delete(id);
   }
 
-  public deleteByTaskId(taskId: string): void {
-    const pending = this.repository.getUpcomingAndOverdue().filter((r) => r.task_id === taskId);
-    for (const reminder of pending) {
-      if (this.activeTimers.has(reminder.id)) {
-        clearTimeout(this.activeTimers.get(reminder.id)!);
-        this.activeTimers.delete(reminder.id);
-      }
+  public cancelTimer(id: string): void {
+    if (this.activeTimers.has(id)) {
+      clearTimeout(this.activeTimers.get(id)!);
+      this.activeTimers.delete(id);
     }
-    this.repository.deleteByTaskId(taskId);
+  }
+
+  public deleteByTaskId(taskId: string): string[] {
+    const pending = this.repository.getByTaskId(taskId);
+    for (const reminder of pending) {
+      this.cancelTimer(reminder.id);
+    }
+    const cancelledIds = this.repository.deleteByTaskId(taskId);
+    for (const id of cancelledIds) {
+      this.cancelTimer(id);
+    }
+    return cancelledIds;
   }
 
   public dispose(): void {

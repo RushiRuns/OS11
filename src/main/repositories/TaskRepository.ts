@@ -73,7 +73,15 @@ export class TaskRepository extends BaseRepository {
   }
 
   public getInbox(): Task[] {
-    const stmt = this.db.prepare(GTD_SQL.INBOX_TASKS);
+    if (this.hasGtdCols()) {
+      const stmt = this.db.prepare(GTD_SQL.INBOX_TASKS);
+      return stmt.all() as Task[];
+    }
+    const stmt = this.db.prepare(`
+      SELECT * FROM tasks
+      WHERE area_id IS NULL AND project_id IS NULL AND is_trashed = 0 AND parent_task_id IS NULL
+      ORDER BY sort_order ASC, created_at DESC
+    `);
     return stmt.all() as Task[];
   }
 
@@ -165,6 +173,18 @@ export class TaskRepository extends BaseRepository {
       WHERE id IN (${placeholders})
     `);
     stmt.run(reviewedAt, now, ...taskIds);
+  }
+
+  public getRecentWaitingOn(limit = 10): string[] {
+    const stmt = this.db.prepare(`
+      SELECT DISTINCT waiting_on
+      FROM tasks
+      WHERE waiting_on IS NOT NULL AND TRIM(waiting_on) != ''
+      ORDER BY updated_at DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(limit) as Array<{ waiting_on: string }>;
+    return rows.map((r) => r.waiting_on);
   }
 
   public updateSchedulingFields(id: string, cols: SchedulingColumns, updatedAt: string): Task {

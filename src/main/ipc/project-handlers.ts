@@ -96,6 +96,58 @@ export function registerProjectHandlers(service = new ProjectService()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(
+    IPC.PROJECTS.SET_SOMEDAY,
+    async (_event, payload: { projectId: string; isSomeday: boolean | number }) => {
+      try {
+        const isSomedayBool = Boolean(payload.isSomeday);
+        const data = service.setSomeday(payload.projectId, isSomedayBool);
+        return { ok: true, data };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  ipcMain.handle(IPC.PROJECTS.GET_SOMEDAY, async () => {
+    try {
+      const data = service.getSomedayProjects();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.PROJECTS.GET_SOMEDAY_IMPACT, async (_event, projectId: string) => {
+    try {
+      const data = service.getSomedayImpact(projectId);
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(IPC.PROJECTS.GET_STALLED, async () => {
+    try {
+      const data = service.getStalledProjectIds();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle(
+    IPC.PROJECTS.MARK_REVIEWED,
+    async (_event, payload: { projectId: string; reviewedAt?: string }) => {
+      try {
+        const data = service.markReviewed(payload.projectId, payload.reviewedAt);
+        return { ok: true, data };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 }
 
 export default registerProjectHandlers;

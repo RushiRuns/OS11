@@ -24,10 +24,14 @@ import { registerSecurityHandlers } from './security-handlers.js';
 import { registerExportHandlers } from './export-handlers.js';
 import { registerImportHandlers } from './import-handlers.js';
 import { registerBackupHandlers } from './backup-handlers.js';
+import { registerSchedulingHandlers } from './scheduling-handlers.js';
+import { registerReviewHandlers } from './review-handlers.js';
 
 export function registerIpcHandlers(): void {
   registerAppHandlers();
   registerTaskHandlers();
+  registerSchedulingHandlers();
+  registerReviewHandlers();
   registerAreaHandlers();
   registerListHandlers();
   registerListGroupHandlers();

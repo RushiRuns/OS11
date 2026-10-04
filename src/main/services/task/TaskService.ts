@@ -241,6 +241,18 @@ export class TaskService {
     const now = new Date().toISOString();
 
     this.taskRepo.complete(id, now);
+
+    // Auto-clear waiting fields if setting enabled (default: true)
+    const autoClearWaiting = this.settingsRepo.get<boolean>('gtd_auto_clear_waiting_on_complete');
+    if (autoClearWaiting !== false && (existing.waiting_since || existing.waiting_on)) {
+      this.taskRepo.updateSchedulingFields(id, {
+        waiting_on: null,
+        waiting_since: null,
+        follow_up_date: null,
+        follow_up_notified_on: null,
+      });
+    }
+
     const completedTask = this.getById(id);
 
     // If task has recurrence rule and skipRecurrence is not requested, create next instance automatically
@@ -329,6 +341,10 @@ export class TaskService {
 
   public addToMyDay(id: string, date?: string): Task {
     const targetDate = date ?? new Date().toISOString().split('T')[0];
+    const existing = this.getById(id);
+    if (existing.bucket === 'someday') {
+      this.taskRepo.updateSchedulingFields(id, { bucket: 'anytime' });
+    }
     this.taskRepo.addToMyDay(id, targetDate);
     return this.getById(id);
   }

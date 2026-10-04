@@ -1,5 +1,6 @@
 import { ProjectRepository } from '../../repositories/ProjectRepository.js';
 import { TaskRepository } from '../../repositories/TaskRepository.js';
+import { isStalled } from '../../domain/project-health.js';
 import type { Project, CreateProjectPayload, UpdateProjectPayload, NotificationHistoryItem } from '@shared/types/index.js';
 
 export class ProjectService {
@@ -91,6 +92,36 @@ export class ProjectService {
     }
     this.repository.delete(id);
     return { trashedTaskIds: tasks.map(t => t.id), trashedCount: tasks.length };
+  }
+
+  public setSomeday(id: string, isSomeday: boolean): Project {
+    return this.repository.setSomeday(id, isSomeday);
+  }
+
+  public getSomedayProjects(): Project[] {
+    return this.repository.getSomedayProjects();
+  }
+
+  public getSomedayImpact(id: string): { openTasks: number; datedTasks: number } {
+    const tasks = this.taskRepo.getByProjectId(id).filter((t) => t.is_trashed === 0 && t.is_completed === 0);
+    const datedTasks = tasks.filter((t) => t.due_date !== null).length;
+    return { openTasks: tasks.length, datedTasks };
+  }
+
+  public markReviewed(id: string, reviewedAt?: string): Project {
+    return this.repository.markReviewed(id, reviewedAt ?? new Date().toISOString());
+  }
+
+  public getStalledProjectIds(): string[] {
+    const projects = this.repository.getAll().filter((p) => p.status === 'active' && p.is_someday !== 1);
+    const allTasks = this.taskRepo.getAll();
+    const stalled: string[] = [];
+    for (const p of projects) {
+      if (isStalled(p, allTasks)) {
+        stalled.push(p.id);
+      }
+    }
+    return stalled;
   }
 }
 

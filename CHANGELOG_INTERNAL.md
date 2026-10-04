@@ -3,6 +3,21 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 4: Services, Write Path Audit & IPC Handlers
+- **What was built:**
+  - `src/main/services/task/TaskSchedulingService.ts`: Single-writer architecture service implementing atomic state transitions (`setDate`, `clearDate`, `setBucket`, `clearBucket`, `setWaiting`, `clearWaiting`, `restoreSchedulingState`, `getGtdCounts`, `reviewSomedayBatch`), row-to-state mapping, and post-commit Node timer cancellation.
+  - `src/main/services/reminder/ReminderService.ts`: Added `cancelTimer(id)` and updated `deleteByTaskId` to delete reminders and clear active Node in-memory timers.
+  - `src/main/services/task/TaskService.ts`: Write path audit — auto-clearing waiting fields on task completion (configurable via `gtd_auto_clear_waiting_on_complete`) and promoting Someday tasks to Anytime on `addToMyDay`.
+  - `src/main/services/project/ProjectService.ts`: Added `setSomeday`, `getSomedayProjects`, `getSomedayImpact`, `markReviewed`, and `getStalledProjectIds`.
+  - `src/main/ipc/scheduling-handlers.ts`: Handlers for all GTD scheduling IPC channels (`SET_BUCKET`, `CLEAR_BUCKET`, `SET_DATE`, `CLEAR_DATE`, `SET_WAITING`, `CLEAR_WAITING`, `GET_ANYTIME`, `GET_SOMEDAY`, `GET_WAITING`, `GET_GTD_COUNTS`, `RESTORE_SCHEDULING_STATE`, `GET_RECENT_WAITING_ON`, `SNOOZE_FOLLOW_UP`).
+  - `src/main/ipc/project-handlers.ts`: Handlers for `SET_SOMEDAY`, `GET_SOMEDAY`, `GET_SOMEDAY_IMPACT`, `GET_STALLED`, and `MARK_REVIEWED`.
+  - `src/main/ipc/module-handlers.ts`: Handler for `GET_DISABLE_IMPACT` querying impacted task and project counts.
+  - `src/main/ipc/review-handlers.ts`: Handlers for `GET_GTD_STEPS`, `MARK_REVIEWED`, and `REVIEW_SOMEDAY_BATCH`.
+  - `src/main/startup.ts`: Added GTD counts calculation to startup sequence and extended `StartupPayload.counts`.
+  - `tests/architecture/single-writer.test.ts`: Architecture and functional tests verifying single-writer isolation and transition mechanics.
+- **What changed architecturally:**
+  - Isolated all scheduling field writes to `TaskSchedulingService`. All 70 test files and 506 tests passing.
+
 ### [2026-10-04] — GTD step 3: Repositories & SQL Queries
 - **What was built:**
   - `src/main/repositories/scheduling-sql.ts`: Pre-compiled SQL queries for `INBOX_TASKS`, `ANYTIME_TASKS`, `SOMEDAY_TASKS`, `WAITING_FOR_TASKS`, `GTD_TASK_COUNTS` (aggregate with `COALESCE(SUM(...), 0)`), `DUE_FOLLOW_UPS`, and `UPDATE_SCHEDULING_FIELDS`.
