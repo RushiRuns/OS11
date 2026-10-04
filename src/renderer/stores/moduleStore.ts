@@ -3,7 +3,8 @@ import { IPC } from '@shared/ipc-channels.js';
 import type { Module, ModuleName } from '@shared/types/Module.js';
 import { invoke } from '../services/ipc.js';
 
-export type ProfilePreset = 'minimalist' | 'gtd' | 'focus' | 'custom';
+import { PRESET_MODULE_MAP, type ProfilePreset } from '@shared/constants/presets.js';
+export type { ProfilePreset };
 
 interface ModuleState {
   modulesByName: Record<string, boolean>;
@@ -26,6 +27,9 @@ const DEFAULT_MODULES: Record<string, boolean> = {
   file_attachments: true,
   nlp_parsing: true,
   sound_effects: true,
+  anytime: true,
+  someday: true,
+  waiting_for: true,
   vim_keybindings: false,
   habit_tracker: false,
   collaboration: false,
@@ -96,17 +100,9 @@ export const useModuleStore = create<ModuleState>((set, get) => ({
       next[key] = false;
     }
 
-    if (preset === 'minimalist') {
-      next.my_day = true;
-    } else if (preset === 'gtd') {
-      next.my_day = true;
-      next.project_management = true;
-      next.agenda = true;
-      next.goals_habits = true;
-    } else if (preset === 'focus') {
-      next.my_day = true;
-      next.pomodoro = true;
-      next.agenda = true;
+    const enabledList = PRESET_MODULE_MAP[preset] ?? [];
+    for (const mod of enabledList) {
+      next[mod] = true;
     }
 
     // Always keep sound effects on unless disabled manually

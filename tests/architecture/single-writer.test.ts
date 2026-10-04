@@ -94,7 +94,7 @@ describe('Architecture: Single-Writer Scheduling Discipline', () => {
       expect(result.changeReport.newState.due_date).toBeNull();
       expect(result.changeReport.cancelledReminderIds).toHaveLength(1);
 
-      const updated = taskRepo.getById(task.id);
+      const updated = taskRepo.getById(task.id)!;
       expect(updated.bucket).toBe('someday');
       expect(updated.due_date).toBeNull();
       expect(reminderRepo.getByTaskId(task.id)).toHaveLength(0);
@@ -111,7 +111,7 @@ describe('Architecture: Single-Writer Scheduling Discipline', () => {
       expect(result.changeReport.newState.bucket).toBeNull();
       expect(result.changeReport.newState.due_date).toBe('2026-10-20');
 
-      const updated = taskRepo.getById(task.id);
+      const updated = taskRepo.getById(task.id)!;
       expect(updated.bucket).toBeNull();
       expect(updated.due_date).toBe('2026-10-20');
     });
@@ -132,7 +132,7 @@ describe('Architecture: Single-Writer Scheduling Discipline', () => {
       expect(result.changeReport.newState.waiting_on).toBe('Alice');
       expect(result.changeReport.newState.follow_up_date).toBe('2026-10-10');
 
-      const updated = taskRepo.getById(task.id);
+      const updated = taskRepo.getById(task.id)!;
       expect(updated.bucket).toBe('anytime');
       expect(updated.waiting_on).toBe('Alice');
     });
@@ -153,7 +153,7 @@ describe('Architecture: Single-Writer Scheduling Discipline', () => {
       );
       expect(restoreResult.changeReport.newState.bucket).toBe('someday');
 
-      const restored = taskRepo.getById(task.id);
+      const restored = taskRepo.getById(task.id)!;
       expect(restored.bucket).toBe('someday');
     });
 

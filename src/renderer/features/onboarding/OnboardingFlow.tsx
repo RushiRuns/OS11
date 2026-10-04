@@ -27,7 +27,7 @@ const PRESET_OPTIONS: {
     id: 'gtd',
     name: 'GTD (Getting Things Done)',
     icon: '⚡',
-    description: 'Comprehensive workflow with Projects, Context Tags, Subtasks, and Structured Deadlines.',
+    description: 'Comprehensive workflow with Anytime, Someday, Waiting For, Projects, and Contexts.',
   },
   {
     id: 'focus',

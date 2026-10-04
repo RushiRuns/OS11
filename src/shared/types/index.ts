@@ -25,3 +25,4 @@ export * from './CalendarEvent.js';
 export * from './analytics.js';
 export * from './TaskHistory.js';
 export * from './portability.js';
+export * from './Scheduling.js';

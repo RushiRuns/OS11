@@ -187,17 +187,30 @@ export class TaskRepository extends BaseRepository {
     return rows.map((r) => r.waiting_on);
   }
 
-  public updateSchedulingFields(id: string, cols: SchedulingColumns, updatedAt: string): Task {
+  public updateSchedulingFields(id: string, cols: Partial<SchedulingColumns>, updatedAt?: string): Task {
     const current = this.getById(id);
     if (!current) {
       throw new Error(`Task not found: ${id}`);
     }
 
+    const merged: SchedulingColumns = {
+      bucket: cols.bucket !== undefined ? cols.bucket : (current.bucket ?? null),
+      due_date: cols.due_date !== undefined ? cols.due_date : (current.due_date ?? null),
+      due_time: cols.due_time !== undefined ? cols.due_time : (current.due_time ?? null),
+      all_day: cols.all_day !== undefined ? cols.all_day : (current.all_day ?? 0),
+      recurrence_rule: cols.recurrence_rule !== undefined ? cols.recurrence_rule : (current.recurrence_rule ?? null),
+      waiting_on: cols.waiting_on !== undefined ? cols.waiting_on : (current.waiting_on ?? null),
+      waiting_since: cols.waiting_since !== undefined ? cols.waiting_since : (current.waiting_since ?? null),
+      follow_up_date: cols.follow_up_date !== undefined ? cols.follow_up_date : (current.follow_up_date ?? null),
+      follow_up_notified_on: cols.follow_up_notified_on !== undefined ? cols.follow_up_notified_on : (current.follow_up_notified_on ?? null),
+      reviewed_at: cols.reviewed_at !== undefined ? cols.reviewed_at : (current.reviewed_at ?? null),
+    };
+
     const stmt = this.db.prepare(GTD_SQL.UPDATE_SCHEDULING_FIELDS);
     stmt.run({
-      ...cols,
+      ...merged,
       id,
-      updated_at: updatedAt,
+      updated_at: updatedAt ?? new Date().toISOString(),
     });
 
     return this.getById(id)!;

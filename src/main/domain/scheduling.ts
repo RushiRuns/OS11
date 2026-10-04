@@ -33,7 +33,6 @@ export function applySchedulingTransition(
   context?: { today?: string; timestamp?: string }
 ): { nextState: SchedulingState; effects: TransitionEffects } {
   const currentTimestamp = context?.timestamp ?? (context?.today ? `${context.today}T00:00:00.000Z` : new Date().toISOString());
-  const todayDate = context?.today ?? currentTimestamp.split('T')[0];
 
   const nextState: SchedulingState = { ...state };
   const effects: TransitionEffects = {

@@ -3,6 +3,17 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 5: Modules & Presets
+- **What was built:**
+  - `src/shared/constants/presets.ts`: Consolidated `ProfilePreset` type and `PRESET_MODULE_MAP` enabling `anytime`, `someday`, and `waiting_for` for the `gtd` preset, and disabling all three for `minimalist` and `focus`.
+  - `src/main/repositories/ModuleRepository.ts` & `src/renderer/stores/moduleStore.ts`: Updated to consume `PRESET_MODULE_MAP` and default modules with GTD buckets.
+  - `src/renderer/features/settings/DisableModuleImpactDialog.tsx` & `.module.css`: Impact confirmation dialog rendered when disabling populated GTD modules, displaying affected task and project counts.
+  - `src/renderer/features/settings/ModulesPage.tsx`: Integrated `anytime`, `someday`, `waiting_for` module rows, updated GTD Mode description, and wired impact confirmation check via `IPC.MODULES.GET_DISABLE_IMPACT`.
+  - `src/renderer/features/onboarding/OnboardingFlow.tsx`: Updated GTD preset onboarding card copy.
+  - `src/shared/types/index.ts`: Re-exported `Scheduling.ts`.
+- **What changed architecturally:**
+  - Presets and module impact rules are unified in shared constants. Initial JS bundle strictly within budget at 197.46 kB gzipped (202,199 bytes < 204,800 bytes).
+
 ### [2026-10-04] — GTD step 4: Services, Write Path Audit & IPC Handlers
 - **What was built:**
   - `src/main/services/task/TaskSchedulingService.ts`: Single-writer architecture service implementing atomic state transitions (`setDate`, `clearDate`, `setBucket`, `clearBucket`, `setWaiting`, `clearWaiting`, `restoreSchedulingState`, `getGtdCounts`, `reviewSomedayBatch`), row-to-state mapping, and post-commit Node timer cancellation.

@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../components/Button/Button.js';
 import { useModuleStore, type ProfilePreset } from '../../stores/moduleStore.js';
+import { invoke } from '../../services/ipc.js';
+import { IPC } from '@shared/ipc-channels.js';
+import { DisableModuleImpactDialog } from './DisableModuleImpactDialog.js';
 import styles from './SettingsView.module.css';
 
 interface ModuleDef {
@@ -13,6 +16,9 @@ interface ModuleDef {
 
 const MODULES: ModuleDef[] = [
   { id: 'my_day', name: 'My Day', desc: 'Daily intentional task focus list with automatic midnight rollover', icon: '☀️' },
+  { id: 'anytime', name: 'Anytime Bucket', desc: 'Smart view of undated tasks ready to be worked on at any time', icon: '⚡' },
+  { id: 'someday', name: 'Someday / Maybe', desc: 'Parked aspirational ideas, future projects, and scheduled reviews', icon: '💡' },
+  { id: 'waiting_for', name: 'Waiting For', desc: 'Delegated tasks awaiting third-party follow-up or blocked progress', icon: '⏳' },
   { id: 'project_management', name: 'Projects & Work breakdown', desc: 'Multi-list grouping, sections, milestones, and task dependencies', icon: '📁' },
   { id: 'pomodoro', name: 'Pomodoro Focus Timer', desc: 'Time-boxed focus sessions, intervals, floating mini-window, and audio alerts', icon: '⏱️' },
   { id: 'agenda', name: 'Chronological Agenda', desc: 'Daily and weekly schedule view with external calendar integration and load balancing', icon: '📆' },
@@ -31,17 +37,57 @@ const MODULES: ModuleDef[] = [
 
 export function ModulesPage(): React.ReactElement {
   const { isEnabled, toggleModule, activePreset, applyPreset } = useModuleStore();
+  const [impactDialog, setImpactDialog] = useState<{
+    moduleName: string;
+    taskCount: number;
+    projectCount: number;
+  } | null>(null);
 
   const handlePresetSelect = async (preset: ProfilePreset) => {
     await applyPreset(preset);
   };
 
   const handleToggle = async (id: string, current: boolean) => {
+    // If turning off a GTD module, check if there are tasks/projects affected
+    if (current && (id === 'anytime' || id === 'someday' || id === 'waiting_for')) {
+      try {
+        const impact = await invoke<{ taskCount: number; projectCount: number }>(
+          IPC.MODULES.GET_DISABLE_IMPACT,
+          id
+        );
+        if (impact && (impact.taskCount > 0 || impact.projectCount > 0)) {
+          setImpactDialog({
+            moduleName: id,
+            taskCount: impact.taskCount,
+            projectCount: impact.projectCount,
+          });
+          return;
+        }
+      } catch {
+        // Fallback to normal toggle
+      }
+    }
     await toggleModule(id, !current);
+  };
+
+  const confirmDisable = async () => {
+    if (impactDialog) {
+      await toggleModule(impactDialog.moduleName, false);
+      setImpactDialog(null);
+    }
   };
 
   return (
     <div>
+      {impactDialog && (
+        <DisableModuleImpactDialog
+          moduleName={impactDialog.moduleName}
+          taskCount={impactDialog.taskCount}
+          projectCount={impactDialog.projectCount}
+          onConfirm={confirmDisable}
+          onCancel={() => setImpactDialog(null)}
+        />
+      )}
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Modular Feature System</h2>
         <p className={styles.sectionDesc}>
@@ -69,7 +115,7 @@ export function ModulesPage(): React.ReactElement {
             onClick={() => handlePresetSelect('gtd')}
           >
             <div className={styles.presetTitle}>GTD Mode</div>
-            <div className={styles.presetDesc}>Projects, Agenda, Goals, and My Day for structured planning.</div>
+            <div className={styles.presetDesc}>Anytime, Someday, Waiting For, Projects, Agenda, and Goals for full GTD workflow.</div>
           </button>
 
           <button
