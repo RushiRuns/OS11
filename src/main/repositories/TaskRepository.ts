@@ -1,5 +1,7 @@
 import { BaseRepository } from './base-repository.js';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '../../shared/types/task.js';
+import type { SchedulingColumns } from '../../shared/types/Scheduling.js';
+import { GTD_SQL } from './scheduling-sql.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class TaskRepository extends BaseRepository {
@@ -71,12 +73,114 @@ export class TaskRepository extends BaseRepository {
   }
 
   public getInbox(): Task[] {
-    const stmt = this.db.prepare(`
-      SELECT * FROM tasks
-      WHERE area_id IS NULL AND project_id IS NULL AND is_trashed = 0 AND parent_task_id IS NULL
-      ORDER BY sort_order ASC, created_at DESC
-    `);
+    const stmt = this.db.prepare(GTD_SQL.INBOX_TASKS);
     return stmt.all() as Task[];
+  }
+
+  public getAnytime(filter?: { areaId?: string; projectId?: string }): Task[] {
+    let sql = `
+      SELECT * FROM tasks
+      WHERE bucket = 'anytime'
+        AND is_completed = 0
+        AND is_trashed = 0
+    `;
+    const params: unknown[] = [];
+    if (filter?.areaId) {
+      sql += ' AND area_id = ?';
+      params.push(filter.areaId);
+    }
+    if (filter?.projectId) {
+      sql += ' AND project_id = ?';
+      params.push(filter.projectId);
+    }
+    sql += ' ORDER BY sort_order ASC, created_at DESC';
+    const stmt = this.db.prepare(sql);
+    return stmt.all(...params) as Task[];
+  }
+
+  public getSomeday(filter?: { projectId?: string }): Task[] {
+    let sql = `
+      SELECT * FROM tasks
+      WHERE bucket = 'someday'
+        AND is_completed = 0
+        AND is_trashed = 0
+    `;
+    const params: unknown[] = [];
+    if (filter?.projectId) {
+      sql += ' AND project_id = ?';
+      params.push(filter.projectId);
+    }
+    sql += ' ORDER BY sort_order ASC, created_at DESC';
+    const stmt = this.db.prepare(sql);
+    return stmt.all(...params) as Task[];
+  }
+
+  public getWaitingFor(): Task[] {
+    const stmt = this.db.prepare(GTD_SQL.WAITING_FOR_TASKS);
+    return stmt.all() as Task[];
+  }
+
+  public getGtdTaskCounts(today: string): {
+    inbox: number;
+    anytime: number;
+    someday: number;
+    waitingFor: number;
+    waitingOverdue: number;
+  } {
+    const stmt = this.db.prepare(GTD_SQL.GTD_TASK_COUNTS);
+    const row = stmt.get({ today }) as any;
+    return {
+      inbox: Number(row?.inbox ?? 0),
+      anytime: Number(row?.anytime ?? 0),
+      someday: Number(row?.someday ?? 0),
+      waitingFor: Number(row?.waitingFor ?? 0),
+      waitingOverdue: Number(row?.waitingOverdue ?? 0),
+    };
+  }
+
+  public getDueFollowUps(today: string): Task[] {
+    const stmt = this.db.prepare(GTD_SQL.DUE_FOLLOW_UPS);
+    return stmt.all({ today }) as Task[];
+  }
+
+  public setFollowUpNotified(taskId: string, today: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE tasks
+      SET follow_up_notified_on = ?,
+          updated_at = ?
+      WHERE id = ?
+    `);
+    const now = new Date().toISOString();
+    stmt.run(today, now, taskId);
+  }
+
+  public markSomedayReviewedBatch(taskIds: string[], reviewedAt: string): void {
+    if (taskIds.length === 0) return;
+    const now = new Date().toISOString();
+    const placeholders = taskIds.map(() => '?').join(',');
+    const stmt = this.db.prepare(`
+      UPDATE tasks
+      SET reviewed_at = ?,
+          updated_at = ?
+      WHERE id IN (${placeholders})
+    `);
+    stmt.run(reviewedAt, now, ...taskIds);
+  }
+
+  public updateSchedulingFields(id: string, cols: SchedulingColumns, updatedAt: string): Task {
+    const current = this.getById(id);
+    if (!current) {
+      throw new Error(`Task not found: ${id}`);
+    }
+
+    const stmt = this.db.prepare(GTD_SQL.UPDATE_SCHEDULING_FIELDS);
+    stmt.run({
+      ...cols,
+      id,
+      updated_at: updatedAt,
+    });
+
+    return this.getById(id)!;
   }
 
   public getById(id: string): Task | null {
@@ -191,6 +295,19 @@ export class TaskRepository extends BaseRepository {
     return this.hasTimeBlockCol;
   }
 
+  private hasGtdColsState: boolean | null = null;
+  private hasGtdCols(): boolean {
+    if (this.hasGtdColsState === null) {
+      try {
+        const cols = this.db.pragma('table_info(tasks)') as Array<{ name: string }>;
+        this.hasGtdColsState = cols.some((c) => c.name === 'bucket');
+      } catch {
+        this.hasGtdColsState = false;
+      }
+    }
+    return this.hasGtdColsState;
+  }
+
 
   public create(payload: CreateTaskPayload | (Partial<Task> & { title: string })): Task {
     const id = ('id' in payload && payload.id) ? payload.id : uuidv4();
@@ -267,6 +384,12 @@ export class TaskRepository extends BaseRepository {
       trashed_at: null,
       scheduled_start_min: null,
       scheduled_duration_min: null,
+      bucket: payload.bucket ?? null,
+      waiting_on: payload.waiting_on ?? null,
+      waiting_since: payload.waiting_since ?? null,
+      follow_up_date: payload.follow_up_date ?? null,
+      follow_up_notified_on: payload.follow_up_notified_on ?? null,
+      reviewed_at: payload.reviewed_at ?? null,
       created_at: now,
       updated_at: now,
     };
@@ -293,6 +416,11 @@ export class TaskRepository extends BaseRepository {
     if (this.hasAreaId()) {
       sqlCols += ', area_id';
       sqlVals += ', @area_id';
+    }
+
+    if (this.hasGtdCols()) {
+      sqlCols += ', bucket, waiting_on, waiting_since, follow_up_date, follow_up_notified_on, reviewed_at';
+      sqlVals += ', @bucket, @waiting_on, @waiting_since, @follow_up_date, @follow_up_notified_on, @reviewed_at';
     }
 
     const stmt = this.db.prepare(`
@@ -362,6 +490,12 @@ export class TaskRepository extends BaseRepository {
       is_habit: actualFields.is_habit !== undefined
         ? (typeof actualFields.is_habit === 'boolean' ? (actualFields.is_habit ? 1 : 0) : actualFields.is_habit)
         : (current.is_habit ?? 0),
+      bucket: actualFields.bucket !== undefined ? actualFields.bucket : (current.bucket ?? null),
+      waiting_on: actualFields.waiting_on !== undefined ? actualFields.waiting_on : (current.waiting_on ?? null),
+      waiting_since: actualFields.waiting_since !== undefined ? actualFields.waiting_since : (current.waiting_since ?? null),
+      follow_up_date: actualFields.follow_up_date !== undefined ? actualFields.follow_up_date : (current.follow_up_date ?? null),
+      follow_up_notified_on: actualFields.follow_up_notified_on !== undefined ? actualFields.follow_up_notified_on : (current.follow_up_notified_on ?? null),
+      reviewed_at: actualFields.reviewed_at !== undefined ? actualFields.reviewed_at : (current.reviewed_at ?? null),
       updated_at: new Date().toISOString(),
     };
 
@@ -397,6 +531,10 @@ export class TaskRepository extends BaseRepository {
 
     if (this.hasTimeBlock()) {
       setClauses += ', scheduled_start_min = @scheduled_start_min, scheduled_duration_min = @scheduled_duration_min';
+    }
+
+    if (this.hasGtdCols()) {
+      setClauses += ', bucket = @bucket, waiting_on = @waiting_on, waiting_since = @waiting_since, follow_up_date = @follow_up_date, follow_up_notified_on = @follow_up_notified_on, reviewed_at = @reviewed_at';
     }
 
     const stmt = this.db.prepare(`

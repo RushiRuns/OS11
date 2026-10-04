@@ -91,6 +91,19 @@ export class ProjectRepository extends BaseRepository {
     return this.hasViewsColState;
   }
 
+  private hasSomedayColsState: boolean | null = null;
+  private hasSomedayCols(): boolean {
+    if (this.hasSomedayColsState === null) {
+      try {
+        const cols = this.db.pragma('table_info(projects)') as Array<{ name: string }>;
+        this.hasSomedayColsState = cols.some((c) => c.name === 'is_someday');
+      } catch {
+        this.hasSomedayColsState = false;
+      }
+    }
+    return this.hasSomedayColsState;
+  }
+
   public getByAreaId(areaId: string): Project[] {
     const stmt = this.db.prepare(`
       SELECT * FROM projects
@@ -121,6 +134,13 @@ export class ProjectRepository extends BaseRepository {
           : payload.is_pinned
         : 0;
 
+    const isSomedayVal =
+      payload.is_someday !== undefined
+        ? typeof payload.is_someday === 'boolean'
+          ? payload.is_someday ? 1 : 0
+          : payload.is_someday
+        : 0;
+
     const viewsVal: Project['views'] =
       payload.views && payload.views.length > 0
         ? payload.views
@@ -141,6 +161,8 @@ export class ProjectRepository extends BaseRepository {
       area_id: payload.area_id ?? 'area_default',
       is_pinned: isPinnedVal,
       pinned_sort_order: payload.pinned_sort_order ?? 0,
+      is_someday: isSomedayVal,
+      reviewed_at: payload.reviewed_at ?? null,
       created_at: now,
       updated_at: now,
     };
@@ -171,6 +193,10 @@ export class ProjectRepository extends BaseRepository {
     if (this.hasViewsCol()) {
       sql += ', views';
       values += ', @viewsJson';
+    }
+    if (this.hasSomedayCols()) {
+      sql += ', is_someday, reviewed_at';
+      values += ', @is_someday, @reviewed_at';
     }
 
     sql += ') ' + values + ')';
@@ -216,6 +242,7 @@ export class ProjectRepository extends BaseRepository {
       is_pinned: isPinnedVal,
       pinned_sort_order: pinnedSortOrderVal,
       is_someday: isSomedayVal,
+      reviewed_at: fields.reviewed_at !== undefined ? fields.reviewed_at : current.reviewed_at,
       updated_at: new Date().toISOString(),
     };
 
@@ -243,6 +270,9 @@ export class ProjectRepository extends BaseRepository {
     if (this.hasViewsCol()) {
       setClauses += ', views = @viewsJson';
     }
+    if (this.hasSomedayCols()) {
+      setClauses += ', is_someday = @is_someday, reviewed_at = @reviewed_at';
+    }
 
     const stmt = this.db.prepare(`UPDATE projects SET ${setClauses} WHERE id = @id`);
     stmt.run({
@@ -250,6 +280,56 @@ export class ProjectRepository extends BaseRepository {
       viewsJson: JSON.stringify(updated.views),
     });
     return updated;
+  }
+
+  public setSomeday(id: string, isSomeday: boolean, reviewedAt?: string): Project {
+    const isSomedayVal = isSomeday ? 1 : 0;
+    const now = new Date().toISOString();
+    const finalReviewedAt = reviewedAt !== undefined ? reviewedAt : (isSomeday ? now : null);
+    const stmt = this.db.prepare(`
+      UPDATE projects
+      SET is_someday = ?,
+          reviewed_at = ?,
+          updated_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(isSomedayVal, finalReviewedAt, now, id);
+    return this.getById(id)!;
+  }
+
+  public markReviewed(id: string, reviewedAt: string): Project {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE projects
+      SET reviewed_at = ?,
+          updated_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(reviewedAt, now, id);
+    return this.getById(id)!;
+  }
+
+  public markReviewedBatch(ids: string[], reviewedAt: string): void {
+    if (ids.length === 0) return;
+    const now = new Date().toISOString();
+    const placeholders = ids.map(() => '?').join(',');
+    const stmt = this.db.prepare(`
+      UPDATE projects
+      SET reviewed_at = ?,
+          updated_at = ?
+      WHERE id IN (${placeholders})
+    `);
+    stmt.run(reviewedAt, now, ...ids);
+  }
+
+  public getSomedayProjects(): Project[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM projects
+      WHERE is_someday = 1 AND status != 'archived'
+      ORDER BY sort_order ASC, created_at ASC
+    `);
+    const rows = stmt.all() as any[];
+    return rows.map((r) => this.mapRow(r));
   }
 
   public archive(id: string): void {

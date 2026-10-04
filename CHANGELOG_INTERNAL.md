@@ -3,6 +3,16 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 3: Repositories & SQL Queries
+- **What was built:**
+  - `src/main/repositories/scheduling-sql.ts`: Pre-compiled SQL queries for `INBOX_TASKS`, `ANYTIME_TASKS`, `SOMEDAY_TASKS`, `WAITING_FOR_TASKS`, `GTD_TASK_COUNTS` (aggregate with `COALESCE(SUM(...), 0)`), `DUE_FOLLOW_UPS`, and `UPDATE_SCHEDULING_FIELDS`.
+  - `src/main/repositories/TaskRepository.ts`: Added `getInbox` (untriaged tasks), `getAnytime`, `getSomeday`, `getWaitingFor`, `getGtdTaskCounts`, `getDueFollowUps`, `setFollowUpNotified`, `markSomedayReviewedBatch`, and atomic `updateSchedulingFields`.
+  - `src/main/repositories/ProjectRepository.ts`: Added `setSomeday`, `markReviewed`, `markReviewedBatch`, and `getSomedayProjects`.
+  - `src/main/repositories/ReminderRepository.ts`: Updated `deleteByTaskId` to return deleted reminder IDs for timer cancellation.
+  - `tests/repositories/scheduling-repositories.test.ts`: 11 integration tests verifying all repository queries and transactions.
+- **What changed architecturally:**
+  - Repositories now expose atomic scheduling writers and partial-index-backed aggregate queries with 0 string concatenation.
+
 ### [2026-10-04] — GTD step 2: Pure Domain Layer & Tests
 - **What was built:**
   - `src/main/domain/scheduling.ts`: Pure state transition engine (`applySchedulingTransition`) enforcing R2 (date & bucket mutual exclusivity), R3 (waiting & someday mutual exclusivity), R4 (someday cancels reminders), plus pure predicates (`isActionable`, `isWaiting`, `isSomeday`, `isAnytime`, `isUntriaged`, `isFollowUpDue`, `isFollowUpOverdue`).

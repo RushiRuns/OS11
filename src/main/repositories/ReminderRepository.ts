@@ -55,9 +55,13 @@ export class ReminderRepository extends BaseRepository {
     stmt.run(snoozedUntil, id);
   }
 
-  public deleteByTaskId(taskId: string): void {
+  public deleteByTaskId(taskId: string): string[] {
+    const existing = this.getByTaskId(taskId);
+    if (existing.length === 0) return [];
+    const ids = existing.map((r) => r.id);
     const stmt = this.db.prepare(`DELETE FROM reminders WHERE task_id = ?`);
     stmt.run(taskId);
+    return ids;
   }
 
   public delete(id: string): void {
