@@ -3,6 +3,25 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD steps 9-13: Parked Projects, Shortcuts, Follow-Up Notifications & Weekly Review Main-Pane Takeover
+- **What was built:**
+  - `src/renderer/features/projects/ProjectHeader.tsx` & `.module.css`: Added stalled indicator warning badge (`⚠️ Stalled: no next action`) and Someday badge (`📦 Someday / Maybe`), with Park / Unpark action in the header menu.
+  - `src/renderer/features/projects/ProjectContextMenu.tsx`: Added "Park in Someday" / "Unpark Project" menu option gated on `someday` module toggle.
+  - `src/renderer/features/projects/CreateProjectModal.tsx` & `.module.css`: Added "Park project in Someday / Maybe" checkbox with persistence of `is_someday` and `status = 'parked'`.
+  - `src/renderer/App.tsx` & `src/renderer/hooks/useKeyboardShortcuts.ts`: Added global and in-app navigation hotkeys `Ctrl+Shift+A` (Anytime), `Ctrl+Shift+S` (Someday), and `Ctrl+Shift+W` (Waiting For) gated on module enablement.
+  - `src/renderer/features/settings/KeyboardSettings.tsx`: Registered GTD navigation shortcuts in settings directory.
+  - `src/renderer/features/lists/SuggestionsSidebar.tsx` & `.module.css`: Re-ranked suggestions to surface due follow-ups first with "Follow up today" badge, followed by due/overdue items, high priority tasks, and Anytime bucket tasks, while strictly excluding Someday bucket tasks.
+  - `src/main/services/reminder/ReminderService.ts`: Added `checkDueFollowUps` querying due follow-ups, dispatching native notifications (`Waiting For: <name>`), stamping `follow_up_notified_on` for once-per-day deduplication, and added periodic background checks.
+  - `src/main/repositories/TaskRepository.ts`: Guarded GTD query methods with `hasGtdCols()` for robust legacy/unmigrated schema safety.
+  - `src/renderer/features/review/WeeklyReviewFlow.tsx` & `.module.css`: Replaced modal review dialog with a full main-pane takeover (`activeListId = 'view_weekly_review'`) with 5 GTD review steps (Clear Inbox, Stalled Projects, Waiting For, Someday / Maybe 5-item batch review with `reviewed_at` stamp, and Completed Celebration).
+  - Deprecated and removed legacy `WeeklyReviewModal.tsx`.
+  - `vite.config.ts`: Bundled `src/renderer/features/review` into the lazy `'gtd'` chunk.
+  - `src/renderer/features/goals/GoalsView.tsx`: Integrated "Start Review →" button navigating directly to `view_weekly_review`.
+  - Added feature tests: `tests/features/project-parked.test.ts`, `tests/features/gtd-shortcuts.test.ts`, `tests/services/follow-up-notifications.test.ts`, and `tests/features/weekly-review-flow.test.ts`.
+- **What changed architecturally:**
+  - Main-pane review flow integrates smoothly with single-writer backend IPC (`IPC.REVIEW.GET_GTD_STEPS`, `IPC.REVIEW.MARK_REVIEWED`, `IPC.GTD.SCHEDULE_TASK`).
+  - Production build bundle size remains strictly verified: **Initial JS bundle size is 187.33 kB gzipped (191,829 bytes)**, well under the 200 KB (204,800 bytes) threshold with **12.97 KB margin**. Initial CSS bundle is 20.97 kB gzipped. Entire test suite (76 test files, 533 tests) passes with 100% success rate.
+
 ### [2026-10-04] — GTD step 8: Lazy GTD Views & Chunk Splitting
 - **What was built:**
   - `src/renderer/features/gtd/AnytimeView.tsx` & `.module.css`: Anytime smart view displaying undated next actions with grouping by Area, Project, or None.
