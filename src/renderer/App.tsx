@@ -1,5 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useAppStore } from './stores/app-store.js';
+import { useListStore } from './stores/listStore.js';
+import { useModuleStore } from './stores/moduleStore.js';
 import { Titlebar } from './components/Titlebar/Titlebar.js';
 
 // Critical path — always in initial bundle (PERFORMANCE.md §5)
@@ -324,6 +326,24 @@ export function App(): React.ReactElement {
         e.preventDefault();
         setIsFocusMode(prev => !prev);
         togglePomodoroFocus();
+      } else if (modKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        if (useModuleStore.getState().isEnabled('anytime')) {
+          e.preventDefault();
+          setActiveListId('smart_anytime');
+          useListStore.getState().setActiveList('smart_anytime');
+        }
+      } else if (modKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        if (useModuleStore.getState().isEnabled('someday')) {
+          e.preventDefault();
+          setActiveListId('smart_someday');
+          useListStore.getState().setActiveList('smart_someday');
+        }
+      } else if (modKey && e.shiftKey && e.key.toLowerCase() === 'w') {
+        if (useModuleStore.getState().isEnabled('waiting_for')) {
+          e.preventDefault();
+          setActiveListId('smart_waiting_for');
+          useListStore.getState().setActiveList('smart_waiting_for');
+        }
       }
     };
 

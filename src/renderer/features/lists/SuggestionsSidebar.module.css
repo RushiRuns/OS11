@@ -94,6 +94,35 @@
   flex-shrink: 0;
 }
 
+.followUpBadge {
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  background: var(--color-warning-muted, rgba(245, 158, 11, 0.15));
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  font-weight: var(--weight-medium);
+}
+
+.anytimeBadge {
+  font-size: var(--text-xs);
+  color: var(--accent);
+  background: var(--accent-subtle, rgba(99, 102, 241, 0.12));
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  font-weight: var(--weight-medium);
+}
+
+.priorityBadge {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
 .emptyStateContainer {
   flex: 1;
   display: flex;

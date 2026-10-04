@@ -13,18 +13,62 @@ export function SuggestionsSidebar({ onClose }: SuggestionsSidebarProps): React.
   const { tasksById, updateTask } = useTaskStore();
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Filter tasks due today/overdue or high-priority that are not yet in My Day
+  // Filter and prioritize suggestions:
+  // 1. Due follow-ups: waiting_since is set and follow_up_date <= today
+  // 2. Due / overdue tasks
+  // 3. High priority tasks
+  // 4. Anytime bucket tasks
+  // Strictly excludes Someday bucket tasks.
   const suggestions = useMemo(() => {
-    return Object.values(tasksById)
-      .filter((t) => {
-        if (t.is_trashed === 1 || t.is_completed === 1) return false;
-        if (t.my_day_date === todayStr) return false;
+    const followUps: Array<{ task: Task; badge: string; badgeClass: string }> = [];
+    const dueTasks: Array<{ task: Task; badge: string; badgeClass: string }> = [];
+    const priorityTasks: Array<{ task: Task; badge: string; badgeClass: string }> = [];
+    const anytimeTasks: Array<{ task: Task; badge: string; badgeClass: string }> = [];
 
-        const isDueTodayOrOverdue = t.due_date && t.due_date <= todayStr;
-        const isHighPriority = t.priority >= 2;
-        return isDueTodayOrOverdue || isHighPriority;
-      })
-      .slice(0, 15);
+    for (const t of Object.values(tasksById)) {
+      if (t.is_trashed === 1 || t.is_completed === 1) continue;
+      if (t.my_day_date === todayStr) continue;
+      if (t.bucket === 'someday') continue;
+
+      if (t.waiting_since && t.follow_up_date && t.follow_up_date <= todayStr) {
+        followUps.push({
+          task: t,
+          badge: 'Follow up today',
+          badgeClass: styles.followUpBadge,
+        });
+        continue;
+      }
+
+      if (t.due_date && t.due_date <= todayStr) {
+        dueTasks.push({
+          task: t,
+          badge: '(Due)',
+          badgeClass: styles.dueBadge,
+        });
+        continue;
+      }
+
+      if (t.priority >= 2) {
+        priorityTasks.push({
+          task: t,
+          badge: t.priority >= 3 ? 'High Priority' : 'Priority',
+          badgeClass: styles.priorityBadge,
+        });
+        continue;
+      }
+
+      if (t.bucket === 'anytime') {
+        anytimeTasks.push({
+          task: t,
+          badge: 'Anytime',
+          badgeClass: styles.anytimeBadge,
+        });
+      }
+    }
+
+    anytimeTasks.sort((a, b) => (b.task.created_at || '').localeCompare(a.task.created_at || ''));
+
+    return [...followUps, ...dueTasks, ...priorityTasks, ...anytimeTasks].slice(0, 20);
   }, [tasksById, todayStr]);
 
   const handleAddToMyDay = async (task: Task) => {
@@ -82,15 +126,13 @@ export function SuggestionsSidebar({ onClose }: SuggestionsSidebarProps): React.
       ) : (
         <div className={styles.content}>
           <div className={styles.suggestionList}>
-            {suggestions.map((task) => (
+            {suggestions.map(({ task, badge, badgeClass }) => (
               <div key={task.id} className={styles.suggestionRow}>
                 <div className={styles.suggestionTitleWrap}>
                   <span className={styles.suggestionTitle} title={task.title}>
                     {task.title}
                   </span>
-                  {task.due_date && task.due_date <= todayStr && (
-                    <span className={styles.dueBadge}>(Due)</span>
-                  )}
+                  {badge && <span className={badgeClass}>{badge}</span>}
                 </div>
                 <Button
                   variant="ghost"

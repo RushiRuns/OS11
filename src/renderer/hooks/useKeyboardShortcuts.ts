@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTaskStore } from '../stores/taskStore.js';
 import { useListStore } from '../stores/listStore.js';
 import { useAppStore } from '../stores/app-store.js';
+import { useModuleStore } from '../stores/moduleStore.js';
 import { useSearchStore } from '../stores/searchStore.js';
 import { useUndoRedo } from './useUndoRedo.js';
 import { ipc } from '../services/ipc.js';
@@ -218,12 +219,38 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Ctrl+Shift+S -> Toggle My Day Scheduler panel
+      // Ctrl+Shift+A -> Navigate to Anytime
+      if (modKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        if (useModuleStore.getState().isEnabled('anytime')) {
+          e.preventDefault();
+          setActiveListId('smart_anytime');
+          setActiveList('smart_anytime');
+          return;
+        }
+      }
+
+      // Ctrl+Shift+S -> Navigate to Someday (or toggle My Day Scheduler panel if someday is disabled)
       if (modKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        if (useModuleStore.getState().isEnabled('someday')) {
+          e.preventDefault();
+          setActiveListId('smart_someday');
+          setActiveList('smart_someday');
+          return;
+        }
         const { activeListId } = useAppStore.getState();
         if (activeListId === 'smart_my_day') {
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('os11:toggle-scheduler'));
+          return;
+        }
+      }
+
+      // Ctrl+Shift+W -> Navigate to Waiting For
+      if (modKey && e.shiftKey && e.key.toLowerCase() === 'w') {
+        if (useModuleStore.getState().isEnabled('waiting_for')) {
+          e.preventDefault();
+          setActiveListId('smart_waiting_for');
+          setActiveList('smart_waiting_for');
           return;
         }
       }
