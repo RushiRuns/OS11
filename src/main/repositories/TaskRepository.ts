@@ -124,6 +124,9 @@ export class TaskRepository extends BaseRepository {
   }
 
   public getWaitingFor(): Task[] {
+    if (!this.hasGtdCols()) {
+      return [];
+    }
     const stmt = this.db.prepare(GTD_SQL.WAITING_FOR_TASKS);
     return stmt.all() as Task[];
   }
@@ -135,6 +138,9 @@ export class TaskRepository extends BaseRepository {
     waitingFor: number;
     waitingOverdue: number;
   } {
+    if (!this.hasGtdCols()) {
+      return { inbox: 0, anytime: 0, someday: 0, waitingFor: 0, waitingOverdue: 0 };
+    }
     const stmt = this.db.prepare(GTD_SQL.GTD_TASK_COUNTS);
     const row = stmt.get({ today }) as any;
     return {
@@ -147,11 +153,17 @@ export class TaskRepository extends BaseRepository {
   }
 
   public getDueFollowUps(today: string): Task[] {
+    if (!this.hasGtdCols()) {
+      return [];
+    }
     const stmt = this.db.prepare(GTD_SQL.DUE_FOLLOW_UPS);
     return stmt.all({ today }) as Task[];
   }
 
   public setFollowUpNotified(taskId: string, today: string): void {
+    if (!this.hasGtdCols()) {
+      return;
+    }
     const stmt = this.db.prepare(`
       UPDATE tasks
       SET follow_up_notified_on = ?,

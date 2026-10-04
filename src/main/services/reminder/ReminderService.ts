@@ -81,11 +81,33 @@ export class ReminderService {
     this.notificationService.send('reminder', title, body, reminder.task_id);
   }
 
+  public checkDueFollowUps(dateStr?: string): number {
+    const today = dateStr ?? new Date().toISOString().split('T')[0];
+    const dueFollowUps = this.taskRepository.getDueFollowUps(today);
+    for (const task of dueFollowUps) {
+      const title = task.waiting_on ? `Waiting For: ${task.waiting_on}` : 'Waiting For Follow-Up';
+      const body = task.title;
+      this.notificationService.send('reminder', title, body, task.id);
+      this.taskRepository.setFollowUpNotified(task.id, today);
+    }
+    return dueFollowUps.length;
+  }
+
+  public startPeriodicFollowUpCheck(intervalMs = 30 * 60 * 1000): void {
+    if (this.followUpInterval) {
+      clearInterval(this.followUpInterval);
+    }
+    this.followUpInterval = setInterval(() => {
+      this.checkDueFollowUps();
+    }, intervalMs);
+  }
+
   public processOverdueAtStartup(): void {
     const pending = this.repository.getUpcomingAndOverdue();
     for (const reminder of pending) {
       this.schedule(reminder);
     }
+    this.checkDueFollowUps();
   }
 
   public rescheduleAfterSleep(): void {
@@ -168,6 +190,10 @@ export class ReminderService {
   }
 
   public dispose(): void {
+    if (this.followUpInterval) {
+      clearInterval(this.followUpInterval);
+      this.followUpInterval = undefined;
+    }
     for (const timer of this.activeTimers.values()) {
       clearTimeout(timer);
     }

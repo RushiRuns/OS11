@@ -56,6 +56,7 @@ export async function runStartupSequence(): Promise<StartupPayload> {
   // Start background reminder processing
   reminderServiceInstance = new ReminderService();
   reminderServiceInstance.processOverdueAtStartup();
+  reminderServiceInstance.startPeriodicFollowUpCheck();
 
   // Background maintenance tasks (purge old history > 30 days & daily auto-backup)
   setTimeout(async () => {
