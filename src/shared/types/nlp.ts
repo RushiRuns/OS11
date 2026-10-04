@@ -10,6 +10,7 @@ export interface ParsedTaskInput {
   projectName?: string | null;
   pomodoroRequested: boolean;
   recurrenceRule: string | null;
+  bucket?: 'anytime' | 'someday' | null;
 }
 
 export interface ParsedQuickAddResult extends ParsedTaskInput {

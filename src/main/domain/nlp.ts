@@ -88,6 +88,20 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
     }
   }
 
+  // 5b. Bucket detection (~anytime, ~any, ~someday, ~some)
+  let bucket: 'anytime' | 'someday' | null = null;
+  const bucketRegex = /(?:^|\s)~(anytime|any|someday|some)(?=\s|$)/i;
+  const bucketMatch = workingText.match(bucketRegex);
+  if (bucketMatch) {
+    const rawBucket = bucketMatch[1].toLowerCase();
+    if (rawBucket === 'anytime' || rawBucket === 'any') {
+      bucket = 'anytime';
+    } else if (rawBucket === 'someday' || rawBucket === 'some') {
+      bucket = 'someday';
+    }
+    workingText = workingText.replace(bucketRegex, ' ');
+  }
+
   // 6. Chrono date & time extraction
   const parsed = chrono.parse(workingText);
   let dueDate: string | null = null;
@@ -125,6 +139,14 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
     }
   }
 
+  // Enforce R2: Date and bucket never coexist. Explicit bucket clears date/recurrence.
+  if (bucket) {
+    dueDate = null;
+    dueTime = null;
+    allDay = true;
+    recurrenceRule = null;
+  }
+
   const cleanTitle =
     workingText
       .replace(/\s+/g, ' ')
@@ -144,5 +166,6 @@ export function parseQuickAdd(text: string): ParsedQuickAddResult {
     projectName,
     pomodoroRequested,
     recurrenceRule,
+    bucket,
   };
 }

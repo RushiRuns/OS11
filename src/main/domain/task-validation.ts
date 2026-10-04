@@ -56,6 +56,34 @@ export function validateCreate(payload: CreateTaskPayload): void {
       throw new ValidationError(`Invalid recurrence rule (RRULE): "${payload.recurrence_rule}".`);
     }
   }
+
+  if (payload.bucket !== undefined && payload.bucket !== null) {
+    if (payload.bucket !== 'anytime' && payload.bucket !== 'someday') {
+      throw new ValidationError(`Invalid bucket: "${payload.bucket}". Expected "anytime", "someday", or null.`);
+    }
+  }
+
+  if (payload.due_date && payload.bucket) {
+    throw new ValidationError('Task cannot have both due_date and bucket simultaneously.');
+  }
+
+  if (payload.waiting_on !== undefined && payload.waiting_on !== null) {
+    if (typeof payload.waiting_on !== 'string') {
+      throw new ValidationError('waiting_on must be a string.');
+    }
+    if (payload.waiting_on.length > 120) {
+      throw new ValidationError('waiting_on cannot exceed 120 characters.');
+    }
+    if (payload.bucket === 'someday') {
+      throw new ValidationError('Task cannot have both bucket="someday" and waiting_on simultaneously.');
+    }
+  }
+
+  if (payload.follow_up_date) {
+    if (!isValidIsoDateString(payload.follow_up_date)) {
+      throw new ValidationError(`Invalid follow_up_date format: "${payload.follow_up_date}". Expected YYYY-MM-DD or ISO 8601.`);
+    }
+  }
 }
 
 export function validateUpdate(fields: UpdateTaskPayload): void {
@@ -97,6 +125,34 @@ export function validateUpdate(fields: UpdateTaskPayload): void {
   if (fields.recurrence_rule) {
     if (!isValidRRule(fields.recurrence_rule)) {
       throw new ValidationError(`Invalid recurrence rule (RRULE): "${fields.recurrence_rule}".`);
+    }
+  }
+
+  if (fields.bucket !== undefined && fields.bucket !== null) {
+    if (fields.bucket !== 'anytime' && fields.bucket !== 'someday') {
+      throw new ValidationError(`Invalid bucket: "${fields.bucket}". Expected "anytime", "someday", or null.`);
+    }
+  }
+
+  if (fields.due_date && fields.bucket) {
+    throw new ValidationError('Task cannot have both due_date and bucket simultaneously.');
+  }
+
+  if (fields.waiting_on !== undefined && fields.waiting_on !== null) {
+    if (typeof fields.waiting_on !== 'string') {
+      throw new ValidationError('waiting_on must be a string.');
+    }
+    if (fields.waiting_on.length > 120) {
+      throw new ValidationError('waiting_on cannot exceed 120 characters.');
+    }
+    if (fields.bucket === 'someday') {
+      throw new ValidationError('Task cannot have both bucket="someday" and waiting_on simultaneously.');
+    }
+  }
+
+  if (fields.follow_up_date) {
+    if (!isValidIsoDateString(fields.follow_up_date)) {
+      throw new ValidationError(`Invalid follow_up_date format: "${fields.follow_up_date}". Expected YYYY-MM-DD or ISO 8601.`);
     }
   }
 }

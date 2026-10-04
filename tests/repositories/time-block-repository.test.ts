@@ -27,7 +27,7 @@ describe('TaskRepository - Time Block Choke Points and Constraints', () => {
 
   it('verifies 0011 migration adds columns with CHECK constraints', () => {
     const version = db.pragma('user_version', { simple: true }) as number;
-    expect(version).toBe(11);
+    expect(version).toBeGreaterThanOrEqual(11);
 
     const task = taskRepo.create({
       title: 'Check constraint test',

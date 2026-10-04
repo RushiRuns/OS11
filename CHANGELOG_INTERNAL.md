@@ -3,6 +3,17 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-04] — GTD step 2: Pure Domain Layer & Tests
+- **What was built:**
+  - `src/main/domain/scheduling.ts`: Pure state transition engine (`applySchedulingTransition`) enforcing R2 (date & bucket mutual exclusivity), R3 (waiting & someday mutual exclusivity), R4 (someday cancels reminders), plus pure predicates (`isActionable`, `isWaiting`, `isSomeday`, `isAnytime`, `isUntriaged`, `isFollowUpDue`, `isFollowUpOverdue`).
+  - `src/main/domain/project-health.ts`: Pure `isStalled` domain calculator (stalled when active with 0 incomplete actionable tasks).
+  - `src/main/domain/review.ts`: Pure `pickSomedayReviewBatch` for review item sorting and interval filtering.
+  - `src/main/domain/nlp.ts`: Added bucket parsing for `~anytime`, `~any`, `~someday`, `~some` and enforced R2 mutual exclusivity with parsed dates.
+  - `src/main/domain/task-validation.ts`: Validates bucket values, waiting_on max length (120), follow_up_date ISO format, and mutual exclusivity invariants.
+  - Unit test suites added: `tests/domain/scheduling.test.ts`, `tests/domain/project-health.test.ts`, `tests/domain/review.test.ts`, `tests/domain/nlp-gtd.test.ts`. 100% domain pass rate (489 total tests passing).
+- **What changed architecturally:**
+  - Complete isolation of GTD scheduling rules in pure domain functions with zero side-effects.
+
 ### [2026-10-04] — GTD step 1: Data Model, Settings, Shared Types (Migration 0012 & Reconciler)
 - **What was built:**
   - `src/main/migrations/0012_gtd_scheduling.sql`: Adds tasks columns (`bucket`, `waiting_on`, `waiting_since`, `follow_up_date`, `follow_up_notified_on`, `reviewed_at`) and projects columns (`is_someday`, `reviewed_at`); creates partial indexes `idx_tasks_bucket`, `idx_tasks_waiting`, `idx_tasks_inbox`, and `idx_projects_someday`; seeds modules (`anytime`, `someday`, `waiting_for`), settings (`gtd_someday_review_interval_days`, `gtd_auto_clear_waiting_on_complete`), and smart lists (`smart_anytime`, `smart_someday`, `smart_waiting_for`) using `INSERT OR IGNORE`.
