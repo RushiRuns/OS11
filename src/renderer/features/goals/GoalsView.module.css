@@ -464,12 +464,42 @@
   z-index: var(--z-notification, 500);
 }
 
-/* Status Filter Segmented Control */
+/* Status Filter Segmented Control & Domain Filter */
 .filterBar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   margin-top: calc(-1 * var(--space-2));
+}
+
+.categoryFilterWrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.categoryFilterSelect {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  padding: 6px 14px;
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.categoryFilterSelect:hover {
+  border-color: var(--border-default);
+  background-color: var(--surface-hover);
+}
+
+.categoryFilterSelect:focus {
+  border-color: var(--accent);
 }
 
 .segmentedControl {
@@ -680,4 +710,114 @@
   0% { transform: translateY(0) scale(1); }
   100% { transform: translateY(-8px) scale(1.05); }
 }
+
+/* Category & Hierarchy Enhancements */
+.categoryBadge {
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--surface-overlay, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: fit-content;
+}
+
+.parentGoalTag {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--surface-base);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-subtle);
+  margin-top: -2px;
+}
+
+.parentGoalTag strong {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+/* Sub-goals list within Goal Card */
+.subGoalsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.subGoalsHeader {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subGoalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subGoalItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-base);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.subGoalTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.subGoalBullet {
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.subGoalTitle {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subGoalPercent {
+  color: var(--text-secondary);
+  font-weight: var(--weight-bold);
+  font-size: 10px;
+}
+
+.subGoalProgressTrack {
+  height: 4px;
+  width: 100%;
+  background: var(--surface-hover);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.subGoalProgressBar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
 

@@ -667,11 +667,13 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                 }}
               >
                 <option value="">None (No Goal)</option>
-                {Object.values(goalsById).map((g) => (
-                  <option key={g.id} value={g.id}>
-                    🎯 {g.title}
-                  </option>
-                ))}
+                {Object.values(goalsById)
+                  .filter((g) => g.status !== 'archived' || g.id === linkedGoal?.id)
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      🎯 {g.title}{g.category ? ` [${g.category}]` : ''}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

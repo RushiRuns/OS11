@@ -245,6 +245,29 @@
   transition: transform var(--transition-fast);
 }
 
+.propertySelect {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  padding: 4px 8px;
+  outline: none;
+  font-family: inherit;
+  max-width: 220px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.propertySelect:hover {
+  border-color: var(--border-default);
+  background: var(--surface-hover);
+}
+
+.propertySelect:focus {
+  border-color: var(--accent);
+}
+
 /* Date Badge */
 .datePill {
   display: inline-flex;

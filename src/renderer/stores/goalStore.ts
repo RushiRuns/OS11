@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { IPC } from '../../shared/ipc-channels.js';
-import type { Goal, GoalStatus, CreateGoalPayload, UpdateGoalPayload, GoalLink, Task } from '../../shared/types/index.js';
+import type { Goal, GoalStatus, CreateGoalPayload, UpdateGoalPayload, GoalLink, Task, Project } from '../../shared/types/index.js';
 import { invoke } from '../services/ipc.js';
 
 export interface GoalStoreState {
@@ -15,9 +15,17 @@ export interface GoalStoreState {
   updateGoal: (id: string, fields: UpdateGoalPayload) => Promise<Goal>;
   deleteGoal: (id: string) => Promise<void>;
   linkTask: (goalId: string, resourceId: string, resourceType?: 'task' | 'project') => Promise<void>;
-  unlinkTask: (goalId: string, resourceId: string) => Promise<void>;
+  unlinkTask: (goalId: string, resourceId: string, resourceType?: 'task' | 'project') => Promise<void>;
   incrementStreak: (goalId: string) => Promise<void>;
-  computeProgress: (goalId: string, tasksById: Record<string, Task>) => number;
+  computeProgress: (
+    goalId: string,
+    tasksById: Record<string, Task>,
+    projectsById?: Record<string, Project>
+  ) => number;
+  getSubGoals: (goalId: string) => Goal[];
+  getParentGoal: (goalId: string) => Goal | null;
+  getGoalForTask: (taskId: string) => Goal | null;
+  getGoalForProject: (projectId: string) => Goal | null;
   adjustGoalProgress: (goalId: string, delta: number) => Promise<Goal | undefined>;
   setGoalStatus: (id: string, status: GoalStatus) => Promise<Goal>;
   archiveGoal: (id: string) => Promise<Goal>;
@@ -129,15 +137,15 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
     }
   },
 
-  unlinkTask: async (goalId: string, resourceId: string) => {
+  unlinkTask: async (goalId: string, resourceId: string, resourceType: 'task' | 'project' = 'task') => {
     try {
-      await invoke(IPC.GOALS.LINK_TASK, { goalId, resourceType: 'task', resourceId, unlink: true });
+      await invoke(IPC.GOALS.LINK_TASK, { goalId, resourceType, resourceId, unlink: true });
       set((state) => {
         const existing = state.linksByGoalId[goalId] ?? [];
         return {
           linksByGoalId: {
             ...state.linksByGoalId,
-            [goalId]: existing.filter((l) => l.resource_id !== resourceId),
+            [goalId]: existing.filter((l) => !(l.resource_id === resourceId && l.resource_type === resourceType)),
           },
         };
       });
@@ -158,22 +166,60 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
     });
   },
 
-  computeProgress: (goalId: string, tasksById: Record<string, Task>) => {
+  computeProgress: (
+    goalId: string,
+    tasksById: Record<string, Task>,
+    projectsById: Record<string, Project> = {}
+  ) => {
     const goal = get().goalsById[goalId];
     if (!goal) return 0;
 
     const links = get().linksByGoalId[goalId] ?? [];
     const taskLinks = links.filter((l) => l.resource_type === 'task');
+    const projectLinks = links.filter((l) => l.resource_type === 'project');
+    const subGoals = Object.values(get().goalsById).filter((g) => g.parent_goal_id === goalId);
 
-    if (taskLinks.length > 0) {
-      let completedCount = 0;
-      for (const link of taskLinks) {
-        const t = tasksById[link.resource_id];
-        if (t && t.is_completed === 1) {
-          completedCount++;
+    let totalItems = 0;
+    let completedItems = 0;
+
+    // 1. Task links
+    for (const link of taskLinks) {
+      totalItems++;
+      const t = tasksById[link.resource_id];
+      if (t && t.is_completed === 1) {
+        completedItems++;
+      }
+    }
+
+    // 2. Project links
+    for (const link of projectLinks) {
+      totalItems++;
+      const p = projectsById[link.resource_id];
+      if (p && (p.status === 'completed' || (p as unknown as { is_completed?: number }).is_completed === 1)) {
+        completedItems++;
+      } else if (p) {
+        const projectTasks = Object.values(tasksById).filter(
+          (t) => t.project_id === p.id && t.is_trashed === 0
+        );
+        if (projectTasks.length > 0) {
+          const completedProjectTasks = projectTasks.filter((t) => t.is_completed === 1).length;
+          completedItems += completedProjectTasks / projectTasks.length;
         }
       }
-      return Math.round((completedCount / taskLinks.length) * 100);
+    }
+
+    // 3. Sub-goals
+    for (const sub of subGoals) {
+      totalItems++;
+      if (sub.status === 'completed') {
+        completedItems++;
+      } else if (sub.target_value > 0) {
+        completedItems += Math.min(1, Math.max(0, sub.current_value / sub.target_value));
+      }
+    }
+
+    if (totalItems > 0) {
+      return Math.min(100, Math.round((completedItems / totalItems) * 100));
     }
 
     // Fallback to numeric value ratio
@@ -182,6 +228,34 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
     }
 
     return 0;
+  },
+
+  getSubGoals: (goalId: string) => {
+    return Object.values(get().goalsById).filter((g) => g.parent_goal_id === goalId);
+  },
+
+  getParentGoal: (goalId: string) => {
+    const goal = get().goalsById[goalId];
+    if (!goal || !goal.parent_goal_id) return null;
+    return get().goalsById[goal.parent_goal_id] ?? null;
+  },
+
+  getGoalForTask: (taskId: string) => {
+    for (const [goalId, links] of Object.entries(get().linksByGoalId)) {
+      if (links.some((l) => l.resource_type === 'task' && l.resource_id === taskId)) {
+        return get().goalsById[goalId] ?? null;
+      }
+    }
+    return null;
+  },
+
+  getGoalForProject: (projectId: string) => {
+    for (const [goalId, links] of Object.entries(get().linksByGoalId)) {
+      if (links.some((l) => l.resource_type === 'project' && l.resource_id === projectId)) {
+        return get().goalsById[goalId] ?? null;
+      }
+    }
+    return null;
   },
 
   adjustGoalProgress: async (goalId: string, delta: number) => {

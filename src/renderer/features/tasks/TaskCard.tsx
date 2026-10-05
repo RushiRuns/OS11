@@ -9,6 +9,7 @@ import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useGoalStore } from '../../stores/goalStore.js';
 import { useSchedulerUiStore } from '../../stores/schedulerUiStore.js';
 import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
 import type { Task } from '@shared/types/task.js';
@@ -128,6 +129,7 @@ export const TaskCard = memo(function TaskCard({
   const taskTags = useTagStore(state => state.getTagsForTask(task.id));
   const loadTagsForTask = useTagStore(state => state.loadTagsForTask);
   const attachmentCount = useAttachmentStore(state => state.countsByTaskId[task.id] ?? 0);
+  const linkedGoal = useGoalStore(state => state.getGoalForTask(task.id));
 
   const formattedDueDate = useMemo(() => {
     return formatDateTime(task.due_date, task.due_time, task.all_day);
@@ -165,7 +167,7 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
-  const hasMetadataRow = Boolean(hasScheduledTime || formattedDueDate || task.bucket || task.waiting_on || taskTags.length > 0 || hasSubtaskBadge);
+  const hasMetadataRow = Boolean(hasScheduledTime || formattedDueDate || task.bucket || task.waiting_on || taskTags.length > 0 || hasSubtaskBadge || linkedGoal);
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -606,6 +608,35 @@ export const TaskCard = memo(function TaskCard({
                   </span>
                 </div>
               )}
+
+              {linkedGoal && (
+                <>
+                  {(hasScheduledTime || task.bucket || task.waiting_on || formattedDueDate || taskTags.length > 0 || hasSubtaskBadge) && (
+                    <span className={styles.metaDot} aria-hidden="true">
+                      ·
+                    </span>
+                  )}
+                  <span
+                    className={styles.inlineGoalPill}
+                    role="button"
+                    tabIndex={0}
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={e => {
+                      e.stopPropagation();
+                      useAppStore.getState().setActiveListId('view_goals');
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation();
+                        useAppStore.getState().setActiveListId('view_goals');
+                      }
+                    }}
+                    title={`Goal: ${linkedGoal.title}`}
+                  >
+                    🎯 {linkedGoal.title}
+                  </span>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -706,6 +737,30 @@ export const TaskCard = memo(function TaskCard({
             title={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}
           >
             📎 ×{attachmentCount}
+          </span>
+        )}
+
+        {variant === 'project' && linkedGoal && (
+          <span
+            className={styles.goalPill}
+            role="button"
+            tabIndex={0}
+            aria-label={`Linked to goal: ${linkedGoal.title}`}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => {
+              e.stopPropagation();
+              useAppStore.getState().setActiveListId('view_goals');
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                useAppStore.getState().setActiveListId('view_goals');
+              }
+            }}
+            title={`Goal: ${linkedGoal.title}`}
+          >
+            <span aria-hidden="true">🎯</span>
+            <span className={styles.goalPillTitle}>{linkedGoal.title}</span>
           </span>
         )}
       </div>

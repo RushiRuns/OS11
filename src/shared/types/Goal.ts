@@ -6,6 +6,8 @@ export interface Goal {
   description?: string | null;
   goal_type: 'habit' | 'milestone' | 'outcome';
   status: GoalStatus;
+  parent_goal_id?: string | null;
+  category?: string | null;
   target_date?: string | null;
   target_value: number;
   current_value: number;
@@ -22,6 +24,8 @@ export interface CreateGoalPayload {
   description?: string | null;
   goal_type: 'habit' | 'milestone' | 'outcome';
   status?: GoalStatus;
+  parent_goal_id?: string | null;
+  category?: string | null;
   target_date?: string | null;
   target_value?: number;
   current_value?: number;
@@ -36,6 +40,8 @@ export interface UpdateGoalPayload {
   description?: string | null;
   goal_type?: 'habit' | 'milestone' | 'outcome';
   status?: GoalStatus;
+  parent_goal_id?: string | null;
+  category?: string | null;
   target_date?: string | null;
   target_value?: number;
   current_value?: number;

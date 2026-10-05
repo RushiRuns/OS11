@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGoalStore } from '../../stores/goalStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
@@ -36,8 +37,10 @@ export function GoalsView(): React.ReactElement {
 
   const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
   const tasksById = useTaskStore((state) => state.tasksById);
+  const projectsById = useProjectStore((state) => state.projectsById);
 
   const [statusFilter, setStatusFilter] = useState<GoalFilterTab>('active');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [celebratingGoal, setCelebratingGoal] = useState<Goal | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,12 +55,24 @@ export function GoalsView(): React.ReactElement {
   const [targetDate, setTargetDate] = useState('');
   const [targetValue, setTargetValue] = useState<number>(100);
   const [currentValue, setCurrentValue] = useState<number>(0);
+  const [parentGoalId, setParentGoalId] = useState<string>('');
+  const [category, setCategory] = useState<string>('');
 
   useEffect(() => {
     loadGoals();
   }, [loadGoals]);
 
   const allGoalsList = useMemo(() => Object.values(goalsById), [goalsById]);
+
+  const allCategories = useMemo(() => {
+    const cats = new Set<string>();
+    allGoalsList.forEach((g) => {
+      if (g.category && g.category.trim()) {
+        cats.add(g.category.trim());
+      }
+    });
+    return Array.from(cats).sort();
+  }, [allGoalsList]);
 
   const activeCount = useMemo(
     () => allGoalsList.filter((g) => (g.status ?? 'active') === 'active' || g.status === 'paused').length,
@@ -77,10 +92,11 @@ export function GoalsView(): React.ReactElement {
     return allGoalsList
       .filter((g) => {
         const s = g.status ?? 'active';
-        if (statusFilter === 'active') return s === 'active' || s === 'paused';
-        if (statusFilter === 'completed') return s === 'completed';
-        if (statusFilter === 'archived') return s === 'archived';
-        return true; // 'all'
+        if (statusFilter === 'active' && !(s === 'active' || s === 'paused')) return false;
+        if (statusFilter === 'completed' && s !== 'completed') return false;
+        if (statusFilter === 'archived' && s !== 'archived') return false;
+        if (categoryFilter !== 'all' && (g.category ?? '') !== categoryFilter) return false;
+        return true;
       })
       .sort((a, b) => {
         const statusOrder: Record<string, number> = { active: 1, paused: 2, completed: 3, archived: 4 };
@@ -91,7 +107,7 @@ export function GoalsView(): React.ReactElement {
         if (b.target_date) return 1;
         return b.created_at.localeCompare(a.created_at);
       });
-  }, [allGoalsList, statusFilter]);
+  }, [allGoalsList, statusFilter, categoryFilter]);
 
   // Is today Friday? (Day 5)
   const isFriday = useMemo(() => new Date().getDay() === 5, []);
@@ -105,6 +121,8 @@ export function GoalsView(): React.ReactElement {
     setTargetDate('');
     setTargetValue(100);
     setCurrentValue(0);
+    setParentGoalId('');
+    setCategory('');
     setIsModalOpen(true);
   };
 
@@ -116,6 +134,8 @@ export function GoalsView(): React.ReactElement {
     setTargetDate(goal.target_date ?? '');
     setTargetValue(goal.target_value ?? 100);
     setCurrentValue(goal.current_value ?? 0);
+    setParentGoalId(goal.parent_goal_id ?? '');
+    setCategory(goal.category ?? '');
     setIsModalOpen(true);
   };
 
@@ -134,6 +154,8 @@ export function GoalsView(): React.ReactElement {
         target_date: targetDate || null,
         target_value: tVal,
         current_value: cVal,
+        parent_goal_id: parentGoalId.trim() || null,
+        category: category.trim() || null,
       };
       await updateGoal(editingGoal.id, payload);
     } else {
@@ -145,6 +167,8 @@ export function GoalsView(): React.ReactElement {
         target_date: targetDate || null,
         target_value: tVal,
         current_value: cVal,
+        parent_goal_id: parentGoalId.trim() || null,
+        category: category.trim() || null,
       };
       await createGoal(payload);
     }
@@ -191,32 +215,28 @@ export function GoalsView(): React.ReactElement {
   };
 
   const computeGoalProgress = (goal: Goal): number => {
-    const links = linksByGoalId[goal.id] ?? [];
-    const taskLinks = links.filter((l) => l.resource_type === 'task');
-
-    if (taskLinks.length > 0) {
-      let completed = 0;
-      for (const link of taskLinks) {
-        const task = tasksById[link.resource_id];
-        if (task && task.is_completed === 1) {
-          completed++;
-        }
-      }
-      return Math.round((completed / taskLinks.length) * 100);
-    }
-
-    if (goal.target_value > 0) {
-      return Math.min(100, Math.round((goal.current_value / goal.target_value) * 100));
-    }
-
-    return 0;
+    return useGoalStore.getState().computeProgress(goal.id, tasksById, projectsById);
   };
 
   const availableTasksToLink = useMemo(() => {
     if (!linkingGoalId) return [];
-    const existing = new Set((linksByGoalId[linkingGoalId] ?? []).map((l) => l.resource_id));
+    const existing = new Set(
+      (linksByGoalId[linkingGoalId] ?? [])
+        .filter((l) => l.resource_type === 'task')
+        .map((l) => l.resource_id)
+    );
     return Object.values(tasksById).filter((t) => !existing.has(t.id) && t.is_trashed === 0);
   }, [linkingGoalId, linksByGoalId, tasksById]);
+
+  const availableProjectsToLink = useMemo(() => {
+    if (!linkingGoalId) return [];
+    const existing = new Set(
+      (linksByGoalId[linkingGoalId] ?? [])
+        .filter((l) => l.resource_type === 'project')
+        .map((l) => l.resource_id)
+    );
+    return Object.values(projectsById).filter((p) => !existing.has(p.id) && p.status !== 'archived');
+  }, [linkingGoalId, linksByGoalId, projectsById]);
 
   return (
     <div className={styles.pageContainer}>
@@ -347,6 +367,24 @@ export function GoalsView(): React.ReactElement {
             <span className={styles.countBadge}>{allCount}</span>
           </button>
         </div>
+
+        {allCategories.length > 0 && (
+          <div className={styles.categoryFilterWrap}>
+            <select
+              className={styles.categoryFilterSelect}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Filter goals by category"
+            >
+              <option value="all">🏷️ All Categories ({allCategories.length})</option>
+              {allCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  🏷️ {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Goals Grid */}
@@ -409,6 +447,11 @@ export function GoalsView(): React.ReactElement {
                       <span className={`${styles.goalTypeBadge} ${typeBadgeClass}`}>
                         {goal.goal_type}
                       </span>
+                      {goal.category && (
+                        <span className={styles.categoryBadge} title={`Category: ${goal.category}`}>
+                          🏷️ {goal.category}
+                        </span>
+                      )}
                       {goal.status === 'completed' && (
                         <span className={`${styles.goalTypeBadge} ${styles.badgeCompleted}`}>
                           ✓ Completed
@@ -425,6 +468,12 @@ export function GoalsView(): React.ReactElement {
                         </span>
                       )}
                     </div>
+                    {goal.parent_goal_id && goalsById[goal.parent_goal_id] && (
+                      <div className={styles.parentGoalTag}>
+                        <span>↳ Sub-goal of:</span>
+                        <strong>{goalsById[goal.parent_goal_id].title}</strong>
+                      </div>
+                    )}
                     <h2 className={styles.goalTitle}>{goal.title}</h2>
                     {goal.description && <p className={styles.goalDesc}>{goal.description}</p>}
                   </div>
@@ -441,7 +490,7 @@ export function GoalsView(): React.ReactElement {
                   <ProgressBar
                     progress={progress}
                     showLabel
-                    label={links.length > 0 ? `${links.length} linked tasks (${progress}%)` : `${goal.current_value} / ${goal.target_value} (${progress}%)`}
+                    label={links.length > 0 ? `${links.length} linked resources (${progress}%)` : `${goal.current_value} / ${goal.target_value} (${progress}%)`}
                   />
 
                   {links.length === 0 && goal.status !== 'archived' && (
@@ -473,22 +522,50 @@ export function GoalsView(): React.ReactElement {
                   )}
                 </div>
 
-                {/* Linked Tasks Section */}
+                {/* Sub-goals Section */}
+                {(() => {
+                  const subGoals = useGoalStore.getState().getSubGoals(goal.id);
+                  if (subGoals.length === 0) return null;
+                  return (
+                    <div className={styles.subGoalsSection}>
+                      <span className={styles.subGoalsHeader}>Sub-goals / OKRs ({subGoals.length})</span>
+                      <div className={styles.subGoalsList}>
+                        {subGoals.map((sub) => {
+                          const subProg = useGoalStore.getState().computeProgress(sub.id, tasksById, projectsById);
+                          return (
+                            <div key={sub.id} className={styles.subGoalItem}>
+                              <div className={styles.subGoalTitleRow}>
+                                <span className={styles.subGoalBullet}>▸</span>
+                                <span className={styles.subGoalTitle}>{sub.title}</span>
+                                <span className={styles.subGoalPercent}>{subProg}%</span>
+                              </div>
+                              <div className={styles.subGoalProgressTrack}>
+                                <div className={styles.subGoalProgressBar} style={{ width: `${subProg}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Linked Resources Section */}
                 <div className={styles.linkedTasksSection}>
                   <div className={styles.linkedTasksHeader}>
-                    <span>Linked Tasks ({links.length})</span>
+                    <span>Linked Resources ({links.length})</span>
                     {goal.status !== 'archived' && (
                       <button
                         type="button"
                         className={styles.cardBtn}
                         onClick={() => setLinkingGoalId(linkingGoalId === goal.id ? null : goal.id)}
                       >
-                        {linkingGoalId === goal.id ? 'Close' : '+ Link Task'}
+                        {linkingGoalId === goal.id ? 'Close' : '+ Link Resource'}
                       </button>
                     )}
                   </div>
 
-                  {/* Task picker dropdown if linking */}
+                  {/* Resource picker dropdown if linking */}
                   {linkingGoalId === goal.id && (
                     <div style={{ margin: '4px 0' }}>
                       <select
@@ -497,17 +574,31 @@ export function GoalsView(): React.ReactElement {
                         value=""
                         onChange={(e) => {
                           if (e.target.value) {
-                            linkTask(goal.id, e.target.value);
+                            const [type, id] = e.target.value.split(':') as ['task' | 'project', string];
+                            linkTask(goal.id, id, type);
                             setLinkingGoalId(null);
                           }
                         }}
                       >
-                        <option value="">Select a task to link...</option>
-                        {availableTasksToLink.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.title}
-                          </option>
-                        ))}
+                        <option value="">Select a project or task to link...</option>
+                        {availableProjectsToLink.length > 0 && (
+                          <optgroup label="Projects">
+                            {availableProjectsToLink.map((p) => (
+                              <option key={`project:${p.id}`} value={`project:${p.id}`}>
+                                📁 {p.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {availableTasksToLink.length > 0 && (
+                          <optgroup label="Tasks">
+                            {availableTasksToLink.map((t) => (
+                              <option key={`task:${t.id}`} value={`task:${t.id}`}>
+                                ✓ {t.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
                   )}
@@ -515,10 +606,39 @@ export function GoalsView(): React.ReactElement {
                   {links.length > 0 && (
                     <div className={styles.linkList}>
                       {links.map((link) => {
+                        if (link.resource_type === 'project') {
+                          const project = projectsById[link.resource_id];
+                          if (!project) return null;
+                          return (
+                            <div key={`project-${link.resource_id}`} className={styles.linkItem}>
+                              <span
+                                style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  color: 'var(--text-primary)',
+                                }}
+                              >
+                                📁 {project.name}
+                              </span>
+                              {goal.status !== 'archived' && (
+                                <button
+                                  type="button"
+                                  className={styles.unlinkBtn}
+                                  onClick={() => unlinkTask(goal.id, link.resource_id, 'project')}
+                                  title="Unlink project"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          );
+                        }
+
                         const task = tasksById[link.resource_id];
                         if (!task) return null;
                         return (
-                          <div key={link.resource_id} className={styles.linkItem}>
+                          <div key={`task-${link.resource_id}`} className={styles.linkItem}>
                             <span
                               style={{
                                 textDecoration: task.is_completed === 1 ? 'line-through' : 'none',
@@ -535,7 +655,7 @@ export function GoalsView(): React.ReactElement {
                               <button
                                 type="button"
                                 className={styles.unlinkBtn}
-                                onClick={() => unlinkTask(goal.id, link.resource_id)}
+                                onClick={() => unlinkTask(goal.id, link.resource_id, 'task')}
                                 title="Unlink task"
                               >
                                 ✕
@@ -727,6 +847,46 @@ export function GoalsView(): React.ReactElement {
                     value={currentValue}
                     onChange={(e) => setCurrentValue(Number(e.target.value))}
                   />
+                </div>
+              </div>
+
+              <div className={styles.formRow}>
+                <div className={styles.formGroup} style={{ flex: 1 }}>
+                  <label className={styles.formLabel}>Category / Domain</label>
+                  <input
+                    type="text"
+                    list="goal-category-presets"
+                    className={styles.formInput}
+                    placeholder="e.g. Work, Health, Finance..."
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  />
+                  <datalist id="goal-category-presets">
+                    <option value="Work" />
+                    <option value="Personal" />
+                    <option value="Health" />
+                    <option value="Finance" />
+                    <option value="Learning" />
+                    <option value="Creative" />
+                  </datalist>
+                </div>
+
+                <div className={styles.formGroup} style={{ flex: 1 }}>
+                  <label className={styles.formLabel}>Parent Goal (Sub-goal / OKR)</label>
+                  <select
+                    className={styles.formInput}
+                    value={parentGoalId}
+                    onChange={(e) => setParentGoalId(e.target.value)}
+                  >
+                    <option value="">None (Top-level Goal)</option>
+                    {allGoalsList
+                      .filter((g) => !editingGoal || (g.id !== editingGoal.id && g.parent_goal_id !== editingGoal.id))
+                      .map((g) => (
+                        <option key={g.id} value={g.id}>
+                          🎯 {g.title}
+                        </option>
+                      ))}
+                  </select>
                 </div>
               </div>
 

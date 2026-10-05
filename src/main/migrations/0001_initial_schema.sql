@@ -222,6 +222,8 @@ CREATE TABLE IF NOT EXISTS goals (
   description      TEXT,
   goal_type        TEXT NOT NULL,                -- 'habit' | 'milestone' | 'outcome'
   status           TEXT NOT NULL DEFAULT 'active', -- 'active' | 'completed' | 'paused' | 'archived'
+  parent_goal_id   TEXT REFERENCES goals(id) ON DELETE SET NULL,
+  category         TEXT,
   target_date      TEXT,
   target_value     REAL DEFAULT 100,
   current_value    REAL NOT NULL DEFAULT 0,

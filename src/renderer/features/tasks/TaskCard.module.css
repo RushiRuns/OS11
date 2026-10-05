@@ -241,6 +241,22 @@
   text-decoration: underline;
 }
 
+.inlineGoalPill {
+  color: var(--accent);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color var(--transition-fast);
+}
+
+.inlineGoalPill:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 .titleArea {
   flex: 1;
   min-width: 0;
@@ -362,6 +378,33 @@
   border-radius: 50%;
   background: var(--tag-purple);
   flex-shrink: 0;
+}
+
+.goalPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  max-width: 140px;
+}
+
+.goalPill:hover {
+  background: var(--surface-active);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.goalPillTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badgePill {

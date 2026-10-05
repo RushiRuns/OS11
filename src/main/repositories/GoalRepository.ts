@@ -36,6 +36,8 @@ export class GoalRepository extends BaseRepository {
       description: payload.description ?? null,
       goal_type: payload.goal_type,
       status: payload.status ?? 'active',
+      parent_goal_id: payload.parent_goal_id ?? null,
+      category: payload.category ?? null,
       target_date: payload.target_date ?? null,
       target_value: payload.target_value ?? 100,
       current_value: payload.current_value ?? 0,
@@ -48,11 +50,11 @@ export class GoalRepository extends BaseRepository {
 
     const stmt = this.db.prepare(`
       INSERT INTO goals (
-        id, title, description, goal_type, status, target_date,
+        id, title, description, goal_type, status, parent_goal_id, category, target_date,
         target_value, current_value, streak_count, last_progress_at,
         completed_at, created_at, updated_at
       ) VALUES (
-        @id, @title, @description, @goal_type, @status, @target_date,
+        @id, @title, @description, @goal_type, @status, @parent_goal_id, @category, @target_date,
         @target_value, @current_value, @streak_count, @last_progress_at,
         @completed_at, @created_at, @updated_at
       )
@@ -81,6 +83,8 @@ export class GoalRepository extends BaseRepository {
         description = @description,
         goal_type = @goal_type,
         status = @status,
+        parent_goal_id = @parent_goal_id,
+        category = @category,
         target_date = @target_date,
         target_value = @target_value,
         current_value = @current_value,
