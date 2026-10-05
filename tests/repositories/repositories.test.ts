@@ -275,6 +275,22 @@ describe('Phase 2 Repositories & Database Layer', () => {
 
     goalRepo.delete(goal.id);
     expect(goalRepo.getAll().length).toBe(0);
+
+    // Test restoring with explicit ID and historical streak / values
+    const restored = goalRepo.create({
+      id: 'custom-goal-uuid-123',
+      title: 'Restored Goal',
+      goal_type: 'outcome',
+      target_value: 50,
+      current_value: 15,
+      streak_count: 5,
+      last_progress_at: '2026-10-01T00:00:00.000Z',
+    });
+    expect(restored.id).toBe('custom-goal-uuid-123');
+    expect(restored.target_value).toBe(50);
+    expect(restored.current_value).toBe(15);
+    expect(restored.streak_count).toBe(5);
+    expect(restored.last_progress_at).toBe('2026-10-01T00:00:00.000Z');
   });
 
   it('tests NotificationRepository', () => {

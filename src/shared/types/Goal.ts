@@ -13,12 +13,16 @@ export interface Goal {
 }
 
 export interface CreateGoalPayload {
+  id?: string;
   title: string;
   description?: string | null;
   goal_type: 'habit' | 'milestone' | 'outcome';
   target_date?: string | null;
   target_value?: number;
   current_value?: number;
+  streak_count?: number;
+  last_progress_at?: string | null;
+  created_at?: string;
 }
 
 export interface UpdateGoalPayload {

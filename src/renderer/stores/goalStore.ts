@@ -18,6 +18,8 @@ export interface GoalStoreState {
   unlinkTask: (goalId: string, resourceId: string) => Promise<void>;
   incrementStreak: (goalId: string) => Promise<void>;
   computeProgress: (goalId: string, tasksById: Record<string, Task>) => number;
+  adjustGoalProgress: (goalId: string, delta: number) => Promise<Goal | undefined>;
+  restoreGoal: (goal: Goal, links?: GoalLink[]) => Promise<void>;
 }
 
 export const useGoalStore = create<GoalStoreState>((set, get) => ({
@@ -178,6 +180,37 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
     }
 
     return 0;
+  },
+
+  adjustGoalProgress: async (goalId: string, delta: number) => {
+    const goal = get().goalsById[goalId];
+    if (!goal) return undefined;
+    const current = goal.current_value ?? 0;
+    const maxVal = goal.target_value > 0 ? goal.target_value : Infinity;
+    const nextVal = Math.max(0, Math.min(maxVal, Math.round((current + delta) * 100) / 100));
+    return await get().updateGoal(goalId, {
+      current_value: nextVal,
+      last_progress_at: new Date().toISOString(),
+    });
+  },
+
+  restoreGoal: async (goal: Goal, links: GoalLink[] = []) => {
+    const created = await invoke<Goal>(IPC.GOALS.CREATE, goal);
+    for (const link of links) {
+      try {
+        await invoke(IPC.GOALS.LINK_TASK, {
+          goalId: goal.id,
+          resourceType: link.resource_type,
+          resourceId: link.resource_id,
+        });
+      } catch {
+        // Best effort link restore
+      }
+    }
+    set((state) => ({
+      goalsById: { ...state.goalsById, [created.id]: created },
+      linksByGoalId: { ...state.linksByGoalId, [created.id]: links },
+    }));
   },
 }));
 

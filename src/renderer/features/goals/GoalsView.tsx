@@ -3,10 +3,12 @@ import { useGoalStore } from '../../stores/goalStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { useAppStore } from '../../stores/app-store.js';
+import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import { Toast } from '../../components/Toast/Toast.js';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { HabitTracker } from './HabitTracker.js';
-import type { Goal, CreateGoalPayload } from '../../../shared/types/index.js';
+import type { Goal, CreateGoalPayload, UpdateGoalPayload } from '../../../shared/types/index.js';
 import styles from './GoalsView.module.css';
 
 export function GoalsView(): React.ReactElement {
@@ -19,15 +21,20 @@ export function GoalsView(): React.ReactElement {
     linksByGoalId,
     loadGoals,
     createGoal,
+    updateGoal,
     deleteGoal,
     linkTask,
     unlinkTask,
     incrementStreak,
+    adjustGoalProgress,
+    restoreGoal,
   } = useGoalStore();
 
+  const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
   const tasksById = useTaskStore((state) => state.tasksById);
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [linkingGoalId, setLinkingGoalId] = useState<string | null>(null);
   const [isReviewDismissed, setIsReviewDismissed] = useState(false);
 
@@ -36,6 +43,8 @@ export function GoalsView(): React.ReactElement {
   const [description, setDescription] = useState('');
   const [goalType, setGoalType] = useState<'habit' | 'milestone' | 'outcome'>('milestone');
   const [targetDate, setTargetDate] = useState('');
+  const [targetValue, setTargetValue] = useState<number>(100);
+  const [currentValue, setCurrentValue] = useState<number>(0);
 
   useEffect(() => {
     loadGoals();
@@ -54,25 +63,74 @@ export function GoalsView(): React.ReactElement {
   const isFriday = useMemo(() => new Date().getDay() === 5, []);
   const showWeeklyReview = isFriday && !isReviewDismissed;
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    const payload: CreateGoalPayload = {
-      title: title.trim(),
-      description: description.trim() || null,
-      goal_type: goalType,
-      target_date: targetDate || null,
-      target_value: 100,
-      current_value: 0,
-    };
-
-    await createGoal(payload);
+  const handleOpenCreate = () => {
+    setEditingGoal(null);
     setTitle('');
     setDescription('');
     setGoalType('milestone');
     setTargetDate('');
-    setIsCreateOpen(false);
+    setTargetValue(100);
+    setCurrentValue(0);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (goal: Goal) => {
+    setEditingGoal(goal);
+    setTitle(goal.title);
+    setDescription(goal.description ?? '');
+    setGoalType(goal.goal_type);
+    setTargetDate(goal.target_date ?? '');
+    setTargetValue(goal.target_value ?? 100);
+    setCurrentValue(goal.current_value ?? 0);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const tVal = Number(targetValue) > 0 ? Number(targetValue) : 100;
+    const cVal = Math.max(0, Number(currentValue) || 0);
+
+    if (editingGoal) {
+      const payload: UpdateGoalPayload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        goal_type: goalType,
+        target_date: targetDate || null,
+        target_value: tVal,
+        current_value: cVal,
+      };
+      await updateGoal(editingGoal.id, payload);
+    } else {
+      const payload: CreateGoalPayload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        goal_type: goalType,
+        target_date: targetDate || null,
+        target_value: tVal,
+        current_value: cVal,
+      };
+      await createGoal(payload);
+    }
+
+    setIsModalOpen(false);
+    setEditingGoal(null);
+  };
+
+  const handleDeleteGoal = async (goal: Goal) => {
+    const links = linksByGoalId[goal.id] ?? [];
+    await deleteGoal(goal.id);
+
+    pushAction({
+      description: `Goal "${goal.title}" deleted`,
+      undoFn: async () => {
+        await restoreGoal(goal, links);
+      },
+      redoFn: async () => {
+        await deleteGoal(goal.id);
+      },
+    });
   };
 
   const computeGoalProgress = (goal: Goal): number => {
@@ -150,7 +208,7 @@ export function GoalsView(): React.ReactElement {
         <button
           type="button"
           className={styles.createBtn}
-          onClick={() => setIsCreateOpen(true)}
+          onClick={handleOpenCreate}
         >
           + Create Goal
         </button>
@@ -198,7 +256,7 @@ export function GoalsView(): React.ReactElement {
             <button
               type="button"
               className={styles.createBtn}
-              onClick={() => setIsCreateOpen(true)}
+              onClick={handleOpenCreate}
             >
               + Create First Goal
             </button>
@@ -235,13 +293,41 @@ export function GoalsView(): React.ReactElement {
                   )}
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Bar & Stepper */}
                 <div>
                   <ProgressBar
                     progress={progress}
                     showLabel
-                    label={links.length > 0 ? `${links.length} linked tasks` : 'Progress'}
+                    label={links.length > 0 ? `${links.length} linked tasks (${progress}%)` : `${goal.current_value} / ${goal.target_value} (${progress}%)`}
                   />
+
+                  {links.length === 0 && (
+                    <div className={styles.stepperRow}>
+                      <span>
+                        Target: <strong className={styles.stepperValue} title="Click to edit values" onClick={() => handleOpenEdit(goal)}>{goal.current_value} / {goal.target_value}</strong>
+                      </span>
+                      <div className={styles.stepperGroup}>
+                        <button
+                          type="button"
+                          className={styles.stepperBtn}
+                          onClick={() => adjustGoalProgress(goal.id, -1)}
+                          title="Decrease progress (-1)"
+                          aria-label="Decrease progress"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.stepperBtn}
+                          onClick={() => adjustGoalProgress(goal.id, 1)}
+                          title="Increase progress (+1)"
+                          aria-label="Increase progress"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Linked Tasks Section */}
@@ -325,6 +411,14 @@ export function GoalsView(): React.ReactElement {
                     <button
                       type="button"
                       className={styles.cardBtn}
+                      onClick={() => handleOpenEdit(goal)}
+                      title="Edit goal"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.cardBtn}
                       onClick={() => incrementStreak(goal.id)}
                       title="Add +1 to streak"
                     >
@@ -333,7 +427,7 @@ export function GoalsView(): React.ReactElement {
                     <button
                       type="button"
                       className={styles.cardBtn}
-                      onClick={() => deleteGoal(goal.id)}
+                      onClick={() => handleDeleteGoal(goal)}
                       title="Delete goal"
                     >
                       🗑️
@@ -346,13 +440,19 @@ export function GoalsView(): React.ReactElement {
         </div>
       )}
 
-      {/* Create Goal Modal */}
-      {isCreateOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setIsCreateOpen(false)}>
+      {/* Create / Edit Goal Modal */}
+      {isModalOpen && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => {
+            setIsModalOpen(false);
+            setEditingGoal(null);
+          }}
+        >
           <div className={styles.modalBox} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Create New Goal</h2>
+            <h2 className={styles.modalTitle}>{editingGoal ? 'Edit Goal' : 'Create New Goal'}</h2>
 
-            <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <form onSubmit={handleModalSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Goal Title</label>
                 <input
@@ -400,16 +500,46 @@ export function GoalsView(): React.ReactElement {
                 />
               </div>
 
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Target Value</label>
+                  <input
+                    type="number"
+                    className={styles.formInput}
+                    min={1}
+                    step={1}
+                    value={targetValue}
+                    onChange={(e) => setTargetValue(Number(e.target.value))}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Current Progress Value</label>
+                  <input
+                    type="number"
+                    className={styles.formInput}
+                    min={0}
+                    step={1}
+                    value={currentValue}
+                    onChange={(e) => setCurrentValue(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
               <div className={styles.modalActions}>
                 <button
                   type="button"
                   className={styles.dismissBtn}
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingGoal(null);
+                  }}
                 >
                   Cancel
                 </button>
                 <button type="submit" className={styles.createBtn}>
-                  Save Goal
+                  {editingGoal ? 'Save Changes' : 'Create Goal'}
                 </button>
               </div>
             </form>
@@ -419,6 +549,24 @@ export function GoalsView(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* Undo Toast Container */}
+      {lastToastAction && (
+        <div className={styles.toastWrap}>
+          <Toast
+            id="goal-undo-toast"
+            message={lastToastAction.description}
+            variant="undo"
+            actionLabel="Undo"
+            onAction={async () => {
+              await undo();
+              clearToast();
+            }}
+            onDismiss={() => clearToast()}
+            duration={5000}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -19,7 +19,7 @@ export class GoalRepository extends BaseRepository {
   }
 
   public create(payload: CreateGoalPayload): Goal {
-    const id = uuidv4();
+    const id = payload.id ?? uuidv4();
     const now = new Date().toISOString();
 
     const record: Goal = {
@@ -30,9 +30,9 @@ export class GoalRepository extends BaseRepository {
       target_date: payload.target_date ?? null,
       target_value: payload.target_value ?? 100,
       current_value: payload.current_value ?? 0,
-      streak_count: 0,
-      last_progress_at: null,
-      created_at: now,
+      streak_count: payload.streak_count ?? 0,
+      last_progress_at: payload.last_progress_at ?? null,
+      created_at: payload.created_at ?? now,
       updated_at: now,
     };
 
