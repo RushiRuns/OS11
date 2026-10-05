@@ -536,9 +536,20 @@ export function TaskContextMenu({
               onClick={() => {
                 if (onMoveTo) {
                   onMoveTo(task.id, { area_id: null, project_id: null });
-                } else {
-                  updateTask({ id: task.id, area_id: null, project_id: null, list_id: null });
                 }
+                updateTask({
+                  id: task.id,
+                  area_id: null,
+                  project_id: null,
+                  list_id: 'list_inbox',
+                  my_day_date: null,
+                  due_date: null,
+                  due_time: null,
+                  bucket: null,
+                  waiting_on: null,
+                  waiting_since: null,
+                  follow_up_date: null,
+                });
                 onClose();
               }}
             >

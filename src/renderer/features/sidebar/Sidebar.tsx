@@ -522,7 +522,20 @@ export function Sidebar(): React.ReactElement {
 
       switch (listId) {
         case 'list_inbox':
-          return tasks.filter((t) => t.is_completed === 0 && ((t.area_id === null && t.project_id === null) || t.list_id === 'list_inbox')).length;
+          return (
+            counts.inbox ||
+            tasks.filter(
+              (t) =>
+                t.is_completed === 0 &&
+                !t.area_id &&
+                !t.project_id &&
+                !t.my_day_date &&
+                !t.due_date &&
+                !t.bucket &&
+                !t.waiting_since &&
+                !t.waiting_on
+            ).length
+          );
         case 'smart_my_day':
           return tasks.filter((t) => t.my_day_date === today && t.is_completed === 0).length;
         case 'smart_important':

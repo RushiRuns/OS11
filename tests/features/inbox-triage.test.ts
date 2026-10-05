@@ -81,31 +81,64 @@ describe('Inbox Triage Fast Actions & Rules', () => {
     expect(nextState.followUpDate).toBe('2026-10-10');
   });
 
-  it('filters tasks for inbox scope: incomplete, not trashed, list_inbox or (area_id is null and project_id is null)', () => {
+  it('filters tasks for inbox scope: incomplete, not trashed, untriaged (no area, no project, no my_day_date, no due_date, no bucket, no waiting)', () => {
     const taskListScopeFilter = (t: {
       is_trashed: number;
       is_completed: number;
       list_id?: string | null;
       area_id?: string | null;
       project_id?: string | null;
+      my_day_date?: string | null;
+      due_date?: string | null;
+      bucket?: string | null;
+      waiting_since?: string | null;
+      waiting_on?: string | null;
     }) => {
       if (t.is_trashed !== 0 || t.is_completed !== 0) return false;
-      return (t.area_id === null && t.project_id === null) || t.list_id === 'list_inbox';
+      return (
+        !t.area_id &&
+        !t.project_id &&
+        !t.my_day_date &&
+        !t.due_date &&
+        !t.bucket &&
+        !t.waiting_since &&
+        !t.waiting_on
+      );
     };
 
-    const taskInbox1 = { id: '1', is_trashed: 0, is_completed: 0, list_id: 'list_inbox', area_id: null, project_id: null };
-    const taskUnassignedRoot = { id: '2', is_trashed: 0, is_completed: 0, list_id: null, area_id: null, project_id: null };
-    const taskProject = { id: '3', is_trashed: 0, is_completed: 0, list_id: 'proj-1', area_id: null, project_id: 'proj-1' };
-    const taskArea = { id: '4', is_trashed: 0, is_completed: 0, list_id: null, area_id: 'area-1', project_id: null };
-    const taskCompletedInbox = { id: '5', is_trashed: 0, is_completed: 1, list_id: 'list_inbox', area_id: null, project_id: null };
-    const taskTrashedInbox = { id: '6', is_trashed: 1, is_completed: 0, list_id: 'list_inbox', area_id: null, project_id: null };
+    const taskUntriagedInbox = {
+      id: '1',
+      is_trashed: 0,
+      is_completed: 0,
+      list_id: 'list_inbox',
+      area_id: null,
+      project_id: null,
+      my_day_date: null,
+      due_date: null,
+      bucket: null,
+      waiting_since: null,
+      waiting_on: null,
+    };
+    const taskInMyDay = { ...taskUntriagedInbox, id: '2', my_day_date: '2026-10-05' };
+    const taskWithDueDate = { ...taskUntriagedInbox, id: '3', due_date: '2026-10-06' };
+    const taskAnytime = { ...taskUntriagedInbox, id: '4', bucket: 'anytime' };
+    const taskSomeday = { ...taskUntriagedInbox, id: '5', bucket: 'someday' };
+    const taskWaiting = { ...taskUntriagedInbox, id: '6', waiting_on: 'Sarah', waiting_since: '2026-10-05' };
+    const taskInProject = { ...taskUntriagedInbox, id: '7', project_id: 'proj-1' };
+    const taskInArea = { ...taskUntriagedInbox, id: '8', area_id: 'area-1' };
+    const taskCompleted = { ...taskUntriagedInbox, id: '9', is_completed: 1 };
+    const taskTrashed = { ...taskUntriagedInbox, id: '10', is_trashed: 1 };
 
-    expect(taskListScopeFilter(taskInbox1)).toBe(true);
-    expect(taskListScopeFilter(taskUnassignedRoot)).toBe(true);
-    expect(taskListScopeFilter(taskProject)).toBe(false);
-    expect(taskListScopeFilter(taskArea)).toBe(false);
-    expect(taskListScopeFilter(taskCompletedInbox)).toBe(false);
-    expect(taskListScopeFilter(taskTrashedInbox)).toBe(false);
+    expect(taskListScopeFilter(taskUntriagedInbox)).toBe(true);
+    expect(taskListScopeFilter(taskInMyDay)).toBe(false);
+    expect(taskListScopeFilter(taskWithDueDate)).toBe(false);
+    expect(taskListScopeFilter(taskAnytime)).toBe(false);
+    expect(taskListScopeFilter(taskSomeday)).toBe(false);
+    expect(taskListScopeFilter(taskWaiting)).toBe(false);
+    expect(taskListScopeFilter(taskInProject)).toBe(false);
+    expect(taskListScopeFilter(taskInArea)).toBe(false);
+    expect(taskListScopeFilter(taskCompleted)).toBe(false);
+    expect(taskListScopeFilter(taskTrashed)).toBe(false);
   });
 });
 
