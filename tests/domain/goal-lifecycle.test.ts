@@ -20,6 +20,7 @@ describe('Domain: Goal Status Lifecycle & Archival', () => {
     target_value: 21,
     current_value: 15,
     streak_count: 7,
+    longest_streak: 7,
     last_progress_at: '2026-10-01T08:00:00.000Z',
     completed_at: null,
     created_at: '2026-09-01T08:00:00.000Z',

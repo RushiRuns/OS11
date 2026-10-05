@@ -20,6 +20,7 @@ describe('Domain: Goal CRUD, Editing & Progress Capabilities', () => {
     target_value: 25,
     current_value: 5,
     streak_count: 3,
+    longest_streak: 3,
     last_progress_at: '2026-10-01T12:00:00.000Z',
     completed_at: null,
     created_at: '2026-09-01T12:00:00.000Z',

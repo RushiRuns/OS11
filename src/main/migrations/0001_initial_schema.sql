@@ -228,6 +228,7 @@ CREATE TABLE IF NOT EXISTS goals (
   target_value     REAL DEFAULT 100,
   current_value    REAL NOT NULL DEFAULT 0,
   streak_count     INTEGER NOT NULL DEFAULT 0,
+  longest_streak   INTEGER NOT NULL DEFAULT 0,
   last_progress_at TEXT,
   completed_at     TEXT,
   created_at       TEXT NOT NULL,
@@ -241,6 +242,17 @@ CREATE TABLE IF NOT EXISTS goal_links (
   resource_id   TEXT NOT NULL,
   PRIMARY KEY (goal_id, resource_type, resource_id)
 );
+
+-- 17b. goal_habit_logs (Daily check-in history for habit goals)
+CREATE TABLE IF NOT EXISTS goal_habit_logs (
+  goal_id       TEXT NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+  check_in_date TEXT NOT NULL,                   -- 'YYYY-MM-DD'
+  created_at    TEXT NOT NULL,
+  PRIMARY KEY (goal_id, check_in_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_goal_habit_logs_goal ON goal_habit_logs(goal_id);
+CREATE INDEX IF NOT EXISTS idx_goal_habit_logs_date ON goal_habit_logs(check_in_date);
 
 -- 18. notification_history
 CREATE TABLE IF NOT EXISTS notification_history (

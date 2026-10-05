@@ -228,3 +228,201 @@
   align-items: center;
   gap: 4px;
 }
+
+/* Habit Goals Grid & Cards */
+.habitGoalsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.habitGoalCard {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.habitGoalCard:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.habitGoalTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.habitGoalInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.habitGoalTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.categoryBadge {
+  font-size: 10px;
+  color: var(--text-secondary);
+  background-color: var(--surface-hover);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.streakBadgeCompleted {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.streakBadgeDue {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.streakBadgeBroken {
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  background-color: var(--surface-overlay, rgba(255, 255, 255, 0.05));
+  border: 1px dashed var(--border-subtle);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.streakBadgeInactive {
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  background-color: var(--surface-overlay, rgba(255, 255, 255, 0.05));
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* 7-Day Mini Track */
+.recentDaysStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+}
+
+.dayDot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-base);
+  border: 1px solid transparent;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.dayDotChecked {
+  background-color: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.dayDotToday {
+  border-color: var(--accent, #3b82f6);
+  box-shadow: 0 0 0 1px var(--accent, #3b82f6);
+}
+
+.dayDotLabel {
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  color: var(--text-secondary);
+}
+
+.dayDotChecked .dayDotLabel {
+  color: #10b981;
+}
+
+.dayDotIndicator {
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  height: 12px;
+  line-height: 12px;
+}
+
+.habitGoalBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.bestStreakText {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.bestStreakText strong {
+  color: var(--text-primary);
+}
+
+.checkInBtn {
+  background-color: var(--accent-subtle, rgba(59, 130, 246, 0.15));
+  color: var(--accent-primary, #3b82f6);
+  border: 1px solid var(--accent, #3b82f6);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.checkInBtn:hover {
+  background-color: var(--accent, #3b82f6);
+  color: var(--text-on-accent, #ffffff);
+}
+
+.checkInBtnDone {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.checkInBtnDone:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}

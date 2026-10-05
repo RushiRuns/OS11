@@ -1,11 +1,23 @@
 import { create } from 'zustand';
 import { IPC } from '../../shared/ipc-channels.js';
-import type { Goal, GoalStatus, CreateGoalPayload, UpdateGoalPayload, GoalLink, Task, Project } from '../../shared/types/index.js';
+import type {
+  Goal,
+  GoalStatus,
+  CreateGoalPayload,
+  UpdateGoalPayload,
+  GoalLink,
+  GoalHabitLog,
+  GoalStreakStatus,
+  GoalStreakDay,
+  Task,
+  Project,
+} from '../../shared/types/index.js';
 import { invoke } from '../services/ipc.js';
 
 export interface GoalStoreState {
   goalsById: Record<string, Goal>;
   linksByGoalId: Record<string, GoalLink[]>;
+  habitLogsByGoalId: Record<string, GoalHabitLog[]>;
   loading: boolean;
   error: string | null;
 
@@ -17,6 +29,8 @@ export interface GoalStoreState {
   linkTask: (goalId: string, resourceId: string, resourceType?: 'task' | 'project') => Promise<void>;
   unlinkTask: (goalId: string, resourceId: string, resourceType?: 'task' | 'project') => Promise<void>;
   incrementStreak: (goalId: string) => Promise<void>;
+  checkInHabit: (goalId: string, dateStr?: string) => Promise<{ goal: Goal; isToggledOff: boolean }>;
+  getStreakStatus: (goalId: string) => GoalStreakStatus;
   computeProgress: (
     goalId: string,
     tasksById: Record<string, Task>,
@@ -35,6 +49,7 @@ export interface GoalStoreState {
 export const useGoalStore = create<GoalStoreState>((set, get) => ({
   goalsById: {},
   linksByGoalId: {},
+  habitLogsByGoalId: {},
   loading: false,
   error: null,
 
@@ -62,7 +77,27 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
         linksMap[link.goal_id].push(link);
       }
 
-      set({ goalsById: goalsMap, linksByGoalId: linksMap, loading: false });
+      let allHabitLogs: GoalHabitLog[] = [];
+      try {
+        allHabitLogs = await invoke<GoalHabitLog[]>(IPC.GOALS.GET_HABIT_LOGS);
+      } catch {
+        // Best effort fallback
+      }
+
+      const habitLogsMap: Record<string, GoalHabitLog[]> = {};
+      for (const log of allHabitLogs) {
+        if (!habitLogsMap[log.goal_id]) {
+          habitLogsMap[log.goal_id] = [];
+        }
+        habitLogsMap[log.goal_id].push(log);
+      }
+
+      set({
+        goalsById: goalsMap,
+        linksByGoalId: linksMap,
+        habitLogsByGoalId: habitLogsMap,
+        loading: false,
+      });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       set({ error: msg, loading: false });
@@ -156,14 +191,114 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
     }
   },
 
+  checkInHabit: async (goalId: string, dateStr?: string) => {
+    try {
+      const res = await invoke<{ goal: Goal; isToggledOff: boolean }>(IPC.GOALS.CHECK_IN, {
+        goalId,
+        targetDate: dateStr,
+      });
+      const targetDate = dateStr ?? new Date().toISOString().slice(0, 10);
+
+      set((state) => {
+        const existingLogs = state.habitLogsByGoalId[goalId] ?? [];
+        let nextLogs: GoalHabitLog[];
+        if (res.isToggledOff) {
+          nextLogs = existingLogs.filter((l) => l.check_in_date !== targetDate);
+        } else {
+          nextLogs = existingLogs.some((l) => l.check_in_date === targetDate)
+            ? existingLogs
+            : [...existingLogs, { goal_id: goalId, check_in_date: targetDate, created_at: new Date().toISOString() }];
+        }
+
+        return {
+          goalsById: { ...state.goalsById, [goalId]: res.goal },
+          habitLogsByGoalId: { ...state.habitLogsByGoalId, [goalId]: nextLogs },
+        };
+      });
+
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ error: msg });
+      throw err;
+    }
+  },
+
   incrementStreak: async (goalId: string) => {
+    await get().checkInHabit(goalId);
+  },
+
+  getStreakStatus: (goalId: string): GoalStreakStatus => {
     const goal = get().goalsById[goalId];
-    if (!goal) return;
-    const nextStreak = (goal.streak_count ?? 0) + 1;
-    await get().updateGoal(goalId, {
-      streak_count: nextStreak,
-      last_progress_at: new Date().toISOString(),
-    });
+    const logs = get().habitLogsByGoalId[goalId] ?? [];
+    const logDates = new Set(logs.map((l) => l.check_in_date));
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    const checkedInToday = logDates.has(todayStr);
+
+    const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const recentDays: GoalStreakDay[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dStr = d.toISOString().slice(0, 10);
+      recentDays.push({
+        date: dStr,
+        dayLabel: DAY_LABELS[d.getDay()],
+        checked: logDates.has(dStr),
+        isToday: i === 0,
+      });
+    }
+
+    if (!goal || (goal.streak_count === 0 && logs.length === 0)) {
+      return {
+        health: 'inactive',
+        currentStreak: 0,
+        longestStreak: goal?.longest_streak ?? 0,
+        checkedInToday: false,
+        lastProgressAt: goal?.last_progress_at ?? null,
+        recentDays,
+      };
+    }
+
+    if (checkedInToday) {
+      return {
+        health: 'completed_today',
+        currentStreak: goal.streak_count,
+        longestStreak: Math.max(goal.longest_streak ?? 0, goal.streak_count),
+        checkedInToday: true,
+        lastProgressAt: goal.last_progress_at ?? null,
+        recentDays,
+      };
+    }
+
+    const lastDateStr = goal.last_progress_at ? goal.last_progress_at.slice(0, 10) : null;
+    const wasYesterday = lastDateStr === yesterdayStr || logDates.has(yesterdayStr);
+
+    if (wasYesterday) {
+      return {
+        health: 'due_today',
+        currentStreak: goal.streak_count,
+        longestStreak: Math.max(goal.longest_streak ?? 0, goal.streak_count),
+        checkedInToday: false,
+        lastProgressAt: goal.last_progress_at ?? null,
+        recentDays,
+      };
+    }
+
+    return {
+      health: 'broken',
+      currentStreak: 0,
+      longestStreak: Math.max(goal.longest_streak ?? 0, goal.streak_count),
+      checkedInToday: false,
+      lastProgressAt: goal.last_progress_at ?? null,
+      recentDays,
+    };
   },
 
   computeProgress: (

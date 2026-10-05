@@ -4,6 +4,22 @@ import { taskServiceAdapter } from '../services/task-service-adapter.js';
 import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
 import { useAppStore } from './app-store.js';
 import { useCountsStore } from './countsStore.js';
+import { useGoalStore } from './goalStore.js';
+
+function maybeCheckInLinkedGoal(taskId: string) {
+  try {
+    const goalStore = useGoalStore.getState();
+    const linkedGoal = goalStore.getGoalForTask(taskId);
+    if (linkedGoal && linkedGoal.goal_type === 'habit' && linkedGoal.status !== 'archived') {
+      const streak = goalStore.getStreakStatus(linkedGoal.id);
+      if (!streak.checkedInToday) {
+        goalStore.checkInHabit(linkedGoal.id).catch(() => {});
+      }
+    }
+  } catch {
+    // Non-blocking best-effort check-in
+  }
+}
 
 export type RightSlotActive = 'scheduler' | 'suggestions' | 'detail' | null;
 export type RightSlotPrevious = 'scheduler' | 'suggestions' | null;
@@ -284,6 +300,9 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       if (existing.recurrence_rule && nextCompleted === 1) {
         get().loadTasks().catch(() => {});
       }
+      if (nextCompleted === 1) {
+        maybeCheckInLinkedGoal(id);
+      }
       return updated;
     } catch (err) {
       get().rollbackUpdate(id, previousSnapshot);
@@ -318,6 +337,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       if (existing.recurrence_rule && !options?.skipRecurrence) {
         get().loadTasks().catch(() => {});
       }
+      maybeCheckInLinkedGoal(id);
       return updated;
     } catch (err) {
       get().rollbackUpdate(id, previousSnapshot);

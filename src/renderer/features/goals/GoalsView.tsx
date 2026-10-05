@@ -29,6 +29,8 @@ export function GoalsView(): React.ReactElement {
     linkTask,
     unlinkTask,
     incrementStreak,
+    checkInHabit,
+    getStreakStatus,
     adjustGoalProgress,
     setGoalStatus,
     archiveGoal,
@@ -41,6 +43,7 @@ export function GoalsView(): React.ReactElement {
 
   const [statusFilter, setStatusFilter] = useState<GoalFilterTab>('active');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'habit' | 'milestone' | 'outcome'>('all');
   const [celebratingGoal, setCelebratingGoal] = useState<Goal | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,6 +99,7 @@ export function GoalsView(): React.ReactElement {
         if (statusFilter === 'completed' && s !== 'completed') return false;
         if (statusFilter === 'archived' && s !== 'archived') return false;
         if (categoryFilter !== 'all' && (g.category ?? '') !== categoryFilter) return false;
+        if (typeFilter !== 'all' && (g.goal_type ?? 'milestone') !== typeFilter) return false;
         return true;
       })
       .sort((a, b) => {
@@ -107,7 +111,7 @@ export function GoalsView(): React.ReactElement {
         if (b.target_date) return 1;
         return b.created_at.localeCompare(a.created_at);
       });
-  }, [allGoalsList, statusFilter, categoryFilter]);
+  }, [allGoalsList, statusFilter, categoryFilter, typeFilter]);
 
   // Is today Friday? (Day 5)
   const isFriday = useMemo(() => new Date().getDay() === 5, []);
@@ -368,23 +372,39 @@ export function GoalsView(): React.ReactElement {
           </button>
         </div>
 
-        {allCategories.length > 0 && (
-          <div className={styles.categoryFilterWrap}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className={styles.typeFilterWrap}>
             <select
-              className={styles.categoryFilterSelect}
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              aria-label="Filter goals by category"
+              className={styles.typeFilterSelect}
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'habit' | 'milestone' | 'outcome')}
+              aria-label="Filter goals by type"
             >
-              <option value="all">🏷️ All Categories ({allCategories.length})</option>
-              {allCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  🏷️ {cat}
-                </option>
-              ))}
+              <option value="all">🎯 All Types</option>
+              <option value="habit">🔥 Habits</option>
+              <option value="milestone">🏁 Milestones</option>
+              <option value="outcome">🌟 Outcomes</option>
             </select>
           </div>
-        )}
+
+          {allCategories.length > 0 && (
+            <div className={styles.categoryFilterWrap}>
+              <select
+                className={styles.categoryFilterSelect}
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                aria-label="Filter goals by category"
+              >
+                <option value="all">🏷️ All Categories ({allCategories.length})</option>
+                {allCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    🏷️ {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Goals Grid */}
@@ -422,6 +442,8 @@ export function GoalsView(): React.ReactElement {
           {filteredGoals.map((goal) => {
             const progress = computeGoalProgress(goal);
             const links = linksByGoalId[goal.id] ?? [];
+            const isHabit = goal.goal_type === 'habit';
+            const streakStatus = isHabit ? getStreakStatus(goal.id) : null;
 
             const typeBadgeClass =
               goal.goal_type === 'habit'
@@ -478,12 +500,73 @@ export function GoalsView(): React.ReactElement {
                     {goal.description && <p className={styles.goalDesc}>{goal.description}</p>}
                   </div>
 
-                  {goal.streak_count > 0 && (
-                    <span className={styles.streakBadge} title="Active streak">
-                      🔥 {goal.streak_count}d
-                    </span>
+                  {isHabit && streakStatus ? (
+                    <div>
+                      {streakStatus.health === 'completed_today' && (
+                        <span
+                          className={styles.streakBadgeCompleted}
+                          title={`Completed today! Longest streak: ${streakStatus.longestStreak}d`}
+                        >
+                          🔥 {streakStatus.currentStreak}d Streak
+                        </span>
+                      )}
+                      {streakStatus.health === 'due_today' && (
+                        <span
+                          className={styles.streakBadgeDue}
+                          title={`Due today! Longest streak: ${streakStatus.longestStreak}d`}
+                        >
+                          ⏳ {streakStatus.currentStreak}d Due
+                        </span>
+                      )}
+                      {streakStatus.health === 'broken' && (
+                        <span
+                          className={styles.streakBadgeBroken}
+                          title={`Streak broken. Best record: ${streakStatus.longestStreak}d`}
+                        >
+                          ⚠️ Broken (Best: {streakStatus.longestStreak}d)
+                        </span>
+                      )}
+                      {streakStatus.health === 'inactive' && (
+                        <span
+                          className={styles.streakBadgeInactive}
+                          title="No check-ins yet"
+                        >
+                          💤 Inactive
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    goal.streak_count > 0 && (
+                      <span className={styles.streakBadge} title="Active streak">
+                        🔥 {goal.streak_count}d
+                      </span>
+                    )
                   )}
                 </div>
+
+                {/* 7-Day Consistency Strip for Habits */}
+                {isHabit && streakStatus && (
+                  <div className={styles.habitStripWrap}>
+                    <div className={styles.habitStripHeader}>
+                      <span className={styles.habitStripLabel}>Last 7 Days</span>
+                      <span className={styles.habitBestStreak}>
+                        Best: <strong>{streakStatus.longestStreak}d</strong>
+                      </span>
+                    </div>
+                    <div className={styles.recentDaysStrip}>
+                      {streakStatus.recentDays.map((d) => (
+                        <div
+                          key={d.date}
+                          className={`${styles.dayDot} ${d.checked ? styles.dayDotChecked : ''} ${d.isToday ? styles.dayDotToday : ''}`}
+                          title={`${d.date} (${d.dayLabel}): ${d.checked ? 'Checked in' : 'Missed'}${d.isToday ? ' (Today)' : ''}`}
+                        >
+                          <span className={styles.dayDotLabel}>{d.dayLabel}</span>
+                          <span className={styles.dayDotIndicator}>{d.checked ? '✓' : '·'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Progress Bar & Stepper */}
                 <div>
@@ -734,16 +817,31 @@ export function GoalsView(): React.ReactElement {
                       {goal.status === 'archived' ? '↺ Unarchive' : '📦 Archive'}
                     </button>
 
-                    {/* Streak for active goals */}
-                    {(goal.status === 'active' || !goal.status) && (
+                    {/* Habit Check-In or Streak Increment */}
+                    {isHabit && goal.status !== 'archived' && streakStatus ? (
                       <button
                         type="button"
-                        className={styles.cardBtn}
-                        onClick={() => incrementStreak(goal.id)}
-                        title="Add +1 to streak"
+                        className={`${styles.cardBtn} ${streakStatus.checkedInToday ? styles.habitDoneBtn : styles.habitCheckInBtn}`}
+                        onClick={() => checkInHabit(goal.id)}
+                        title={streakStatus.checkedInToday ? 'Checked in today! Click to undo' : 'Check in for today'}
                       >
-                        +🔥
+                        {streakStatus.checkedInToday
+                          ? '✓ Done Today'
+                          : streakStatus.health === 'broken'
+                            ? '+ Restart'
+                            : '+ Check In'}
                       </button>
+                    ) : (
+                      (goal.status === 'active' || !goal.status) && (
+                        <button
+                          type="button"
+                          className={styles.cardBtn}
+                          onClick={() => incrementStreak(goal.id)}
+                          title="Add +1 to streak"
+                        >
+                          +🔥
+                        </button>
+                      )
                     )}
 
                     {/* Delete */}

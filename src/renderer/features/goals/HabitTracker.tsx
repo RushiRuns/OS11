@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useGoalStore } from '../../stores/goalStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
@@ -12,12 +13,24 @@ export function HabitTracker(): React.ReactElement {
   const tasksById = useTaskStore((state) => state.tasksById);
   const toggleComplete = useTaskStore((state) => state.toggleComplete);
 
+  const goalsById = useGoalStore((state) => state.goalsById);
+  const habitLogsByGoalId = useGoalStore((state) => state.habitLogsByGoalId);
+  const checkInHabit = useGoalStore((state) => state.checkInHabit);
+  const getStreakStatus = useGoalStore((state) => state.getStreakStatus);
+
   // Filter tasks marked as habits
   const habitTasks = useMemo(() => {
     return Object.values(tasksById).filter((t) => t.is_habit === 1 && t.is_trashed === 0);
   }, [tasksById]);
 
-  // Generate 52 weeks (364 days) of date strings ending today
+  // Filter goals marked as habits
+  const habitGoals = useMemo(() => {
+    return Object.values(goalsById).filter(
+      (g) => g.goal_type === 'habit' && g.status !== 'archived'
+    );
+  }, [goalsById]);
+
+  // Generate 52 weeks (364 days) of date strings ending today, unifying tasks & goal logs
   const heatmapDays = useMemo(() => {
     const days: Array<{ dateStr: string; count: number }> = [];
     const today = new Date();
@@ -28,6 +41,16 @@ export function HabitTracker(): React.ReactElement {
       if (task.completed_at) {
         const date = task.completed_at.substring(0, 10);
         completionsByDate[date] = (completionsByDate[date] ?? 0) + 1;
+      }
+    }
+
+    // Include check-ins from goal_habit_logs
+    for (const logs of Object.values(habitLogsByGoalId)) {
+      for (const log of logs) {
+        if (log.check_in_date) {
+          const date = log.check_in_date.substring(0, 10);
+          completionsByDate[date] = (completionsByDate[date] ?? 0) + 1;
+        }
       }
     }
 
@@ -43,7 +66,7 @@ export function HabitTracker(): React.ReactElement {
     }
 
     return days;
-  }, [habitTasks]);
+  }, [habitTasks, habitLogsByGoalId]);
 
   if (!isEnabled) {
     return (
@@ -78,17 +101,108 @@ export function HabitTracker(): React.ReactElement {
         </div>
       </div>
 
+      {/* Habit Goals & Streaks */}
+      <section className={styles.chainSection}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTitle}>
+            <span>🎯 Habit Goals & Streaks</span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+              ({habitGoals.length})
+            </span>
+          </span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            Daily goal check-ins and consistency streaks
+          </span>
+        </div>
+
+        {habitGoals.length === 0 ? (
+          <EmptyState
+            icon="🎯"
+            title="No Habit Goals Yet"
+            description="Create a goal with type 'Habit' in the Goals view to track your long-term consistency and streaks here."
+          />
+        ) : (
+          <div className={styles.habitGoalsGrid}>
+            {habitGoals.map((goal) => {
+              const streakStatus = getStreakStatus(goal.id);
+              return (
+                <div key={goal.id} className={styles.habitGoalCard}>
+                  <div className={styles.habitGoalTop}>
+                    <div className={styles.habitGoalInfo}>
+                      <h3 className={styles.habitGoalTitle}>{goal.title}</h3>
+                      {goal.category && (
+                        <span className={styles.categoryBadge}>🏷️ {goal.category}</span>
+                      )}
+                    </div>
+                    {streakStatus.health === 'completed_today' && (
+                      <span className={styles.streakBadgeCompleted}>
+                        🔥 {streakStatus.currentStreak}d Streak
+                      </span>
+                    )}
+                    {streakStatus.health === 'due_today' && (
+                      <span className={styles.streakBadgeDue}>
+                        ⏳ {streakStatus.currentStreak}d Due
+                      </span>
+                    )}
+                    {streakStatus.health === 'broken' && (
+                      <span className={styles.streakBadgeBroken}>
+                        ⚠️ Broken (Best: {streakStatus.longestStreak}d)
+                      </span>
+                    )}
+                    {streakStatus.health === 'inactive' && (
+                      <span className={styles.streakBadgeInactive}>💤 Inactive</span>
+                    )}
+                  </div>
+
+                  {/* 7-Day Mini Track */}
+                  <div className={styles.recentDaysStrip}>
+                    {streakStatus.recentDays.map((d) => (
+                      <div
+                        key={d.date}
+                        className={`${styles.dayDot} ${d.checked ? styles.dayDotChecked : ''} ${d.isToday ? styles.dayDotToday : ''}`}
+                        title={`${d.date} (${d.dayLabel}): ${d.checked ? 'Checked in' : 'Missed'}${d.isToday ? ' (Today)' : ''}`}
+                      >
+                        <span className={styles.dayDotLabel}>{d.dayLabel}</span>
+                        <span className={styles.dayDotIndicator}>{d.checked ? '✓' : '·'}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={styles.habitGoalBottom}>
+                    <span className={styles.bestStreakText}>
+                      Best Streak: <strong>{streakStatus.longestStreak}d</strong>
+                    </span>
+                    <button
+                      type="button"
+                      className={`${styles.checkInBtn} ${streakStatus.checkedInToday ? styles.checkInBtnDone : ''}`}
+                      onClick={() => checkInHabit(goal.id)}
+                      title={streakStatus.checkedInToday ? 'Checked in today! Click to undo' : 'Check in for today'}
+                    >
+                      {streakStatus.checkedInToday
+                        ? '✓ Done Today'
+                        : streakStatus.health === 'broken'
+                          ? '+ Restart Streak'
+                          : '+ Check In Today'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* Habit Chain View */}
       <section className={styles.chainSection}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>
-            <span>🔗 Active Habit Chains</span>
+            <span>🔗 Active Habit Tasks</span>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
               ({habitTasks.length})
             </span>
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            Check off today&apos;s habits to extend your streak
+            Check off today&apos;s habit tasks to extend your streak
           </span>
         </div>
 
@@ -144,7 +258,7 @@ export function HabitTracker(): React.ReactElement {
       <section className={styles.heatmapSection}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>
-            <span>📊 52-Week Habit Heatmap</span>
+            <span>📊 52-Week Habit Heatmap (Tasks & Goals)</span>
           </span>
           <div className={styles.heatmapLegend}>
             <span>Less</span>

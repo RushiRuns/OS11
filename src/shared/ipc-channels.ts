@@ -192,6 +192,8 @@ export const IPC = {
     DELETE: 'goals:delete',
     LINK_TASK: 'goals:link-task',
     GET_ALL_LINKS: 'goals:get-all-links',
+    CHECK_IN: 'goals:check-in',
+    GET_HABIT_LOGS: 'goals:get-habit-logs',
   },
   SETTINGS: {
     GET_ALL: 'settings:get-all',
