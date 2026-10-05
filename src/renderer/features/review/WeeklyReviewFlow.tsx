@@ -8,6 +8,7 @@ import { invoke } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { getIsoWeek } from './ReviewManager.js';
 import type { Task, Project } from '@shared/types/index.js';
+import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
 import styles from './WeeklyReviewFlow.module.css';
 
 export interface WeeklyReviewFlowProps {
@@ -165,7 +166,11 @@ export function WeeklyReviewFlow({ onFinish }: WeeklyReviewFlowProps): React.Rea
   };
 
   const handleMakeWaiting = async (taskId: string) => {
-    const contact = window.prompt('Who are you waiting on?');
+    const contact = await showPrompt({
+      title: 'Waiting For',
+      message: 'Who are you waiting on?',
+      placeholder: 'e.g. Sarah for approval',
+    });
     if (contact === null) return;
     try {
       await invoke(IPC.TASKS.SET_WAITING, {

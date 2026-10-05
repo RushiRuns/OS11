@@ -24,6 +24,7 @@ import type { Area } from '@shared/types/Area.js';
 import type { Tag } from '@shared/types/Tag.js';
 import { useCountsStore } from '../../stores/countsStore.js';
 import { isStalled } from '@shared/utils/project-health.js';
+import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
 import styles from './Sidebar.module.css';
 
 interface NavView {
@@ -665,7 +666,11 @@ export function Sidebar(): React.ReactElement {
       } else if (targetItem.id === 'smart_someday') {
         await useTaskStore.getState().setBucket(taskId, 'someday');
       } else if (targetItem.id === 'smart_waiting_for') {
-        const person = window.prompt('Waiting on whom or what?');
+        const person = await showPrompt({
+          title: 'Waiting For',
+          message: 'Waiting on whom or what?',
+          placeholder: 'e.g. Sarah for approval',
+        });
         if (person && person.trim()) {
           await useTaskStore.getState().setWaiting({ taskId, waitingOn: person.trim() });
         }

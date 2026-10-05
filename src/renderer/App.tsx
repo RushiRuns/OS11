@@ -15,6 +15,7 @@ import { formatForDisplay, toISODateOnly } from '@shared/utils/date.js';
 import { resolvePlannedDrop, type PlannedDropData } from './hooks/usePlannedGroups.js';
 import { SuggestionsSidebar } from './features/lists/SuggestionsSidebar.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
+import { PromptDialog, showPrompt } from './components/PromptDialog/PromptDialog.js';
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
 import { MiniTimerView } from './features/pomodoro/MiniTimerView.js';
 import { FloatingQuickAddModal } from './features/quickadd/FloatingQuickAddModal.js';
@@ -735,7 +736,11 @@ export function App(): React.ReactElement {
       } else if (targetListId === 'smart_someday') {
         await useTaskStore.getState().setBucket(activeTaskId, 'someday');
       } else if (targetListId === 'smart_waiting_for') {
-        const person = window.prompt('Waiting on whom or what?');
+        const person = await showPrompt({
+          title: 'Waiting For',
+          message: 'Waiting on whom or what?',
+          placeholder: 'e.g. Sarah for approval',
+        });
         if (person && person.trim()) {
           await useTaskStore.getState().setWaiting({ taskId: activeTaskId, waitingOn: person.trim() });
         }
@@ -966,6 +971,9 @@ export function App(): React.ReactElement {
 
       {/* Rollover Prompt on day change for incomplete yesterday tasks */}
       <RolloverPrompt />
+
+      {/* Global Prompt Dialog (replaces window.prompt for Electron) */}
+      <PromptDialog />
 
       {/* Command Palette Spotlight modal (Ctrl+K) */}
       <CommandPalette

@@ -6,6 +6,7 @@ import { useUndoRedoStore } from '../../hooks/useUndoRedo.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
 import type { Task } from '@shared/types/task.js';
+import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
 import styles from './TaskContextMenu.module.css';
 
 export interface TaskContextMenuPosition {
@@ -464,15 +465,19 @@ export function TaskContextMenu({
                 type="button"
                 className={styles.item}
                 onClick={async () => {
+                  onClose();
                   if (task.waiting_on) {
                     await clearWaiting(task.id);
                   } else {
-                    const person = window.prompt('Waiting on whom or what?');
+                    const person = await showPrompt({
+                      title: 'Waiting For',
+                      message: 'Waiting on whom or what?',
+                      placeholder: 'e.g. Sarah for approval',
+                    });
                     if (person && person.trim()) {
                       await setWaiting({ taskId: task.id, waitingOn: person.trim() });
                     }
                   }
-                  onClose();
                 }}
               >
                 <span className={styles.itemIcon}>
