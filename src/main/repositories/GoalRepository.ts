@@ -1,5 +1,5 @@
 import { BaseRepository } from './base-repository.js';
-import type { Goal, CreateGoalPayload, UpdateGoalPayload, GoalHabitLog } from '../../shared/types/Goal.js';
+import type { Goal, CreateGoalPayload, UpdateGoalPayload, GoalHabitLog, GoalProgressLog } from '../../shared/types/Goal.js';
 import type { GoalLink } from '../../shared/types/GoalLink.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -242,6 +242,46 @@ export class GoalRepository extends BaseRepository {
       SELECT * FROM goal_links
     `);
     return stmt.all() as GoalLink[];
+  }
+
+  public addProgressLog(
+    goalId: string,
+    progressPercent: number,
+    currentValue: number,
+    recordedAt?: string
+  ): GoalProgressLog {
+    const id = uuidv4();
+    const timestamp = recordedAt ?? new Date().toISOString();
+    const stmt = this.db.prepare(`
+      INSERT INTO goal_progress_logs (id, goal_id, progress_percent, current_value, recorded_at)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, goalId, progressPercent, currentValue, timestamp);
+
+    return {
+      id,
+      goal_id: goalId,
+      progress_percent: progressPercent,
+      current_value: currentValue,
+      recorded_at: timestamp,
+    };
+  }
+
+  public getProgressLogs(goalId: string): GoalProgressLog[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM goal_progress_logs
+      WHERE goal_id = ?
+      ORDER BY recorded_at ASC
+    `);
+    return stmt.all(goalId) as GoalProgressLog[];
+  }
+
+  public getAllProgressLogs(): GoalProgressLog[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM goal_progress_logs
+      ORDER BY recorded_at ASC
+    `);
+    return stmt.all() as GoalProgressLog[];
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useGoalStore } from '../../stores/goalStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
@@ -9,7 +9,10 @@ import { Toast } from '../../components/Toast/Toast.js';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { HabitTracker } from './HabitTracker.js';
-import type { Goal, CreateGoalPayload, UpdateGoalPayload } from '../../../shared/types/index.js';
+import { GoalContextMenu, type GoalContextMenuPosition } from './GoalContextMenu.js';
+import { GoalAnalyticsBanner } from './GoalAnalyticsBanner.js';
+import { GoalHistoryModal } from './GoalHistoryModal.js';
+import type { Goal, CreateGoalPayload, UpdateGoalPayload, GoalSortOption } from '../../../shared/types/index.js';
 import styles from './GoalsView.module.css';
 
 export type GoalFilterTab = 'active' | 'completed' | 'archived' | 'all';
@@ -22,15 +25,19 @@ export function GoalsView(): React.ReactElement {
   const {
     goalsById,
     linksByGoalId,
+    progressLogsByGoalId,
     loadGoals,
     createGoal,
     updateGoal,
     deleteGoal,
+    duplicateGoal,
     linkTask,
     unlinkTask,
     incrementStreak,
     checkInHabit,
     getStreakStatus,
+    getDeadlineInfo,
+    computeAnalyticsSummary,
     adjustGoalProgress,
     setGoalStatus,
     archiveGoal,
@@ -44,12 +51,20 @@ export function GoalsView(): React.ReactElement {
   const [statusFilter, setStatusFilter] = useState<GoalFilterTab>('active');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'habit' | 'milestone' | 'outcome'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<GoalSortOption>('target_date_asc');
+  const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [celebratingGoal, setCelebratingGoal] = useState<Goal | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [linkingGoalId, setLinkingGoalId] = useState<string | null>(null);
+  const [contextMenuGoal, setContextMenuGoal] = useState<Goal | null>(null);
+  const [contextMenuPos, setContextMenuPos] = useState<GoalContextMenuPosition | null>(null);
+  const [historyModalGoal, setHistoryModalGoal] = useState<Goal | null>(null);
   const [isReviewDismissed, setIsReviewDismissed] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -66,6 +81,43 @@ export function GoalsView(): React.ReactElement {
   }, [loadGoals]);
 
   const allGoalsList = useMemo(() => Object.values(goalsById), [goalsById]);
+
+  // Keyboard Shortcuts (/ for search, C for create goal, Esc to dismiss)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+
+      if (e.key === '/' && !isInput && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if ((e.key === 'c' || e.key === 'C') && !isInput && !e.metaKey && !e.ctrlKey && !isModalOpen) {
+        e.preventDefault();
+        handleOpenCreate();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (searchQuery) {
+          setSearchQuery('');
+        }
+        if (contextMenuGoal) {
+          setContextMenuGoal(null);
+          setContextMenuPos(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchQuery, contextMenuGoal, isModalOpen]);
 
   const allCategories = useMemo(() => {
     const cats = new Set<string>();
@@ -91,6 +143,14 @@ export function GoalsView(): React.ReactElement {
   );
   const allCount = allGoalsList.length;
 
+  const computeGoalProgress = (goal: Goal): number => {
+    return useGoalStore.getState().computeProgress(goal.id, tasksById, projectsById);
+  };
+
+  const analyticsSummary = useMemo(() => {
+    return computeAnalyticsSummary(tasksById, projectsById);
+  }, [computeAnalyticsSummary, tasksById, projectsById, allGoalsList]);
+
   const filteredGoals = useMemo(() => {
     return allGoalsList
       .filter((g) => {
@@ -100,18 +160,61 @@ export function GoalsView(): React.ReactElement {
         if (statusFilter === 'archived' && s !== 'archived') return false;
         if (categoryFilter !== 'all' && (g.category ?? '') !== categoryFilter) return false;
         if (typeFilter !== 'all' && (g.goal_type ?? 'milestone') !== typeFilter) return false;
+
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const titleMatch = (g.title ?? '').toLowerCase().includes(q);
+          const descMatch = (g.description ?? '').toLowerCase().includes(q);
+          const catMatch = (g.category ?? '').toLowerCase().includes(q);
+          if (!titleMatch && !descMatch && !catMatch) return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
+        // Status sort precedence first
         const statusOrder: Record<string, number> = { active: 1, paused: 2, completed: 3, archived: 4 };
         const orderDiff = (statusOrder[a.status ?? 'active'] ?? 1) - (statusOrder[b.status ?? 'active'] ?? 1);
         if (orderDiff !== 0) return orderDiff;
-        if (a.target_date && b.target_date) return a.target_date.localeCompare(b.target_date);
-        if (a.target_date) return -1;
-        if (b.target_date) return 1;
-        return b.created_at.localeCompare(a.created_at);
+
+        switch (sortBy) {
+          case 'target_date_asc': {
+            if (a.target_date && b.target_date) return a.target_date.localeCompare(b.target_date);
+            if (a.target_date) return -1;
+            if (b.target_date) return 1;
+            return b.created_at.localeCompare(a.created_at);
+          }
+          case 'target_date_desc': {
+            if (a.target_date && b.target_date) return b.target_date.localeCompare(a.target_date);
+            if (a.target_date) return -1;
+            if (b.target_date) return 1;
+            return b.created_at.localeCompare(a.created_at);
+          }
+          case 'progress_desc': {
+            const diff = computeGoalProgress(b) - computeGoalProgress(a);
+            if (diff !== 0) return diff;
+            return b.created_at.localeCompare(a.created_at);
+          }
+          case 'progress_asc': {
+            const diff = computeGoalProgress(a) - computeGoalProgress(b);
+            if (diff !== 0) return diff;
+            return b.created_at.localeCompare(a.created_at);
+          }
+          case 'streak_desc': {
+            const diff = (b.streak_count ?? 0) - (a.streak_count ?? 0);
+            if (diff !== 0) return diff;
+            return (b.longest_streak ?? 0) - (a.longest_streak ?? 0);
+          }
+          case 'title_asc': {
+            return a.title.localeCompare(b.title);
+          }
+          case 'created_desc':
+          default: {
+            return b.created_at.localeCompare(a.created_at);
+          }
+        }
       });
-  }, [allGoalsList, statusFilter, categoryFilter, typeFilter]);
+  }, [allGoalsList, statusFilter, categoryFilter, typeFilter, searchQuery, sortBy, tasksById, projectsById]);
 
   // Is today Friday? (Day 5)
   const isFriday = useMemo(() => new Date().getDay() === 5, []);
@@ -218,8 +321,19 @@ export function GoalsView(): React.ReactElement {
     });
   };
 
-  const computeGoalProgress = (goal: Goal): number => {
-    return useGoalStore.getState().computeProgress(goal.id, tasksById, projectsById);
+  const handleDuplicateGoal = async (goal: Goal) => {
+    const duplicated = await duplicateGoal(goal.id);
+    if (duplicated) {
+      pushAction({
+        description: `Duplicated "${goal.title}"`,
+        undoFn: async () => {
+          await deleteGoal(duplicated.id);
+        },
+        redoFn: async () => {
+          await restoreGoal(duplicated);
+        },
+      });
+    }
   };
 
   const availableTasksToLink = useMemo(() => {
@@ -279,21 +393,44 @@ export function GoalsView(): React.ReactElement {
           <div className={styles.container}>
             {/* Header */}
             <div className={styles.headerRow}>
-        <div className={styles.titleWrap}>
-          <h1 className={styles.title}>Goals & Objectives</h1>
-          <p className={styles.subtitle}>
-            Connect high-level aspirations to daily execution and track streaks
-          </p>
-        </div>
+              <div className={styles.titleWrap}>
+                <h1 className={styles.title}>Goals & Objectives</h1>
+                <p className={styles.subtitle}>
+                  Connect high-level aspirations to daily execution and track streaks
+                </p>
+              </div>
 
-        <button
-          type="button"
-          className={styles.createBtn}
-          onClick={handleOpenCreate}
-        >
-          + Create Goal
-        </button>
-      </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className={`${styles.analyticsToggleBtn} ${showAnalytics ? styles.analyticsToggleBtnActive : ''}`}
+                  onClick={() => setShowAnalytics((prev) => !prev)}
+                  aria-expanded={showAnalytics}
+                  title="Toggle Analytics Dashboard"
+                >
+                  📊 {showAnalytics ? 'Hide Analytics' : 'Analytics'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.createBtn}
+                  onClick={handleOpenCreate}
+                >
+                  + Create Goal
+                </button>
+              </div>
+            </div>
+
+            {/* Goal Analytics Banner */}
+            {showAnalytics && (
+              <GoalAnalyticsBanner
+                summary={analyticsSummary}
+                onSelectCategoryFilter={(cat) => setCategoryFilter(cat)}
+                onFilterOverdue={() => {
+                  setStatusFilter('active');
+                  setSortBy('target_date_asc');
+                }}
+              />
+            )}
 
       {/* Weekly Review Prompt Banner */}
       {showWeeklyReview && (
@@ -373,6 +510,49 @@ export function GoalsView(): React.ReactElement {
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Keyword Search */}
+          <div className={styles.searchFilterWrap}>
+            <span className={styles.searchIcon}>🔍</span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search goals... (/)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search goals"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className={styles.searchClearBtn}
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className={styles.typeFilterWrap}>
+            <select
+              className={styles.sortSelect}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as GoalSortOption)}
+              aria-label="Sort goals"
+            >
+              <option value="target_date_asc">📅 Target: Soonest</option>
+              <option value="target_date_desc">📅 Target: Furthest</option>
+              <option value="progress_desc">📈 Progress: High → Low</option>
+              <option value="progress_asc">📉 Progress: Low → High</option>
+              <option value="streak_desc">🔥 Streak: Highest</option>
+              <option value="title_asc">🔤 Title: A → Z</option>
+              <option value="created_desc">🕒 Created: Newest</option>
+            </select>
+          </div>
+
           <div className={styles.typeFilterWrap}>
             <select
               className={styles.typeFilterSelect}
@@ -444,6 +624,7 @@ export function GoalsView(): React.ReactElement {
             const links = linksByGoalId[goal.id] ?? [];
             const isHabit = goal.goal_type === 'habit';
             const streakStatus = isHabit ? getStreakStatus(goal.id) : null;
+            const deadlineInfo = getDeadlineInfo(goal);
 
             const typeBadgeClass =
               goal.goal_type === 'habit'
@@ -457,12 +638,22 @@ export function GoalsView(): React.ReactElement {
               goal.status === 'completed' ? styles.goalCardCompleted : '',
               goal.status === 'paused' ? styles.goalCardPaused : '',
               goal.status === 'archived' ? styles.goalCardArchived : '',
+              deadlineInfo.state === 'overdue' ? styles.goalCardOverdue : '',
+              deadlineInfo.state === 'due_today' ? styles.goalCardDueToday : '',
             ]
               .filter(Boolean)
               .join(' ');
 
             return (
-              <div key={goal.id} className={cardClass}>
+              <div
+                key={goal.id}
+                className={cardClass}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenuGoal(goal);
+                  setContextMenuPos({ x: e.clientX, y: e.clientY });
+                }}
+              >
                 <div className={styles.cardHeader}>
                   <div className={styles.cardHeaderLeft}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -753,15 +944,41 @@ export function GoalsView(): React.ReactElement {
 
                 {/* Footer Controls */}
                 <div className={styles.cardFooter}>
-                  <span>
-                    {goal.status === 'completed' && goal.completed_at
-                      ? `🏆 Completed: ${new Date(goal.completed_at).toLocaleDateString()}`
-                      : goal.target_date
-                        ? `🎯 Target: ${goal.target_date}`
-                        : 'No target date'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span>
+                      {goal.status === 'completed' && goal.completed_at
+                        ? `🏆 Completed: ${new Date(goal.completed_at).toLocaleDateString()}`
+                        : goal.target_date
+                          ? `🎯 Target: ${goal.target_date}`
+                          : 'No target date'}
+                    </span>
+                    {goal.status !== 'completed' && goal.status !== 'archived' && deadlineInfo.state !== 'none' && (
+                      <span
+                        className={
+                          deadlineInfo.state === 'overdue'
+                            ? styles.deadlineBadgeOverdue
+                            : deadlineInfo.state === 'due_today'
+                              ? styles.deadlineBadgeDueToday
+                              : deadlineInfo.state === 'due_soon'
+                                ? styles.deadlineBadgeDueSoon
+                                : styles.deadlineBadgeOnTrack
+                        }
+                      >
+                        {deadlineInfo.label}
+                      </span>
+                    )}
+                  </div>
 
                   <div className={styles.cardActions}>
+                    <button
+                      type="button"
+                      className={styles.cardBtn}
+                      onClick={() => setHistoryModalGoal(goal)}
+                      title="View progress history"
+                    >
+                      📈 History
+                    </button>
+
                     {goal.status !== 'archived' && (
                       <button
                         type="button"
@@ -1046,6 +1263,72 @@ export function GoalsView(): React.ReactElement {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Right-click Context Menu */}
+      {contextMenuGoal && (
+        <GoalContextMenu
+          goal={contextMenuGoal}
+          position={contextMenuPos}
+          onClose={() => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+          }}
+          onEdit={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            handleOpenEdit(g);
+          }}
+          onDuplicate={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            handleDuplicateGoal(g);
+          }}
+          onToggleComplete={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            if (g.status === 'completed') {
+              handleReopenGoal(g);
+            } else {
+              handleMarkCompleted(g);
+            }
+          }}
+          onTogglePause={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            handleTogglePause(g);
+          }}
+          onToggleArchive={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            handleToggleArchive(g);
+          }}
+          onLinkResource={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            setLinkingGoalId(g.id);
+          }}
+          onViewHistory={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            setHistoryModalGoal(g);
+          }}
+          onDelete={(g) => {
+            setContextMenuGoal(null);
+            setContextMenuPos(null);
+            handleDeleteGoal(g);
+          }}
+        />
+      )}
+
+      {/* Progress History Modal */}
+      {historyModalGoal && (
+        <GoalHistoryModal
+          goal={historyModalGoal}
+          logs={progressLogsByGoalId[historyModalGoal.id] ?? []}
+          currentProgress={computeGoalProgress(historyModalGoal)}
+          onClose={() => setHistoryModalGoal(null)}
+        />
       )}
 
       {/* Undo Toast Container */}

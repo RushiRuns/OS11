@@ -194,6 +194,8 @@ export const IPC = {
     GET_ALL_LINKS: 'goals:get-all-links',
     CHECK_IN: 'goals:check-in',
     GET_HABIT_LOGS: 'goals:get-habit-logs',
+    GET_PROGRESS_LOGS: 'goals:get-progress-logs',
+    RECORD_PROGRESS_LOG: 'goals:record-progress-log',
   },
   SETTINGS: {
     GET_ALL: 'settings:get-all',

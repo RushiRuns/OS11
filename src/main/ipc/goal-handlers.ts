@@ -95,6 +95,33 @@ export function registerGoalHandlers(repo = new GoalRepository()): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(
+    IPC.GOALS.GET_PROGRESS_LOGS,
+    async (_event, goalId?: string) => {
+      try {
+        const data = goalId ? repo.getProgressLogs(goalId) : repo.getAllProgressLogs();
+        return { ok: true, data };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    IPC.GOALS.RECORD_PROGRESS_LOG,
+    async (
+      _event,
+      { goalId, progressPercent, currentValue }: { goalId: string; progressPercent: number; currentValue: number }
+    ) => {
+      try {
+        const data = repo.addProgressLog(goalId, progressPercent, currentValue);
+        return { ok: true, data };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 }
 
 export default registerGoalHandlers;

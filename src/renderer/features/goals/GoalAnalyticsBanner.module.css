@@ -1,0 +1,195 @@
+.bannerContainer {
+  background-color: var(--surface-raised, #1e1e24);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-xl, 16px);
+  padding: var(--space-5, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 20px);
+  margin-bottom: var(--space-4, 16px);
+  box-shadow: var(--shadow-sm);
+  animation: bannerEnter 150ms ease-out;
+}
+
+@keyframes bannerEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bannerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bannerTitle {
+  font-size: var(--text-base, 14px);
+  font-weight: var(--weight-bold, 700);
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bannerSubtitle {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.kpiCard {
+  background-color: var(--surface-base, #121216);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg, 12px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.kpiCard:hover {
+  border-color: var(--border-default);
+}
+
+.kpiCardClickable {
+  cursor: pointer;
+}
+
+.kpiCardClickable:hover {
+  border-color: var(--accent);
+  background-color: var(--surface-hover);
+}
+
+.kpiCardOverdue {
+  border-color: rgba(239, 68, 68, 0.3);
+  background-color: rgba(239, 68, 68, 0.04);
+}
+
+.kpiCardOverdue:hover {
+  border-color: #ef4444;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpiValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.kpiValue {
+  font-size: 22px;
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.kpiSubtext {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.kpiProgressTrack {
+  height: 4px;
+  width: 100%;
+  background: var(--surface-hover);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.kpiProgressBar {
+  height: 100%;
+  background: var(--accent-primary, #3b82f6);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+/* Category Progress Breakdown Section */
+.categorySection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.categorySectionHeader {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.categoryItem {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.categoryItem:hover {
+  border-color: var(--accent);
+  background-color: var(--surface-hover);
+}
+
+.categoryTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.categoryName {
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.categoryPercent {
+  font-weight: var(--weight-bold);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.categoryMeta {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  display: flex;
+  justify-content: space-between;
+}

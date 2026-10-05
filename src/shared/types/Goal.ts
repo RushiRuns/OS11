@@ -77,4 +77,50 @@ export interface UpdateGoalPayload {
   completed_at?: string | null;
 }
 
+export interface GoalProgressLog {
+  id: string;
+  goal_id: string;
+  progress_percent: number;
+  current_value: number;
+  recorded_at: string;
+}
+
+export type GoalSortOption =
+  | 'target_date_asc'
+  | 'target_date_desc'
+  | 'progress_desc'
+  | 'progress_asc'
+  | 'streak_desc'
+  | 'title_asc'
+  | 'created_desc';
+
+export type GoalDeadlineState = 'overdue' | 'due_today' | 'due_soon' | 'on_track' | 'completed' | 'none';
+
+export interface GoalDeadlineInfo {
+  state: GoalDeadlineState;
+  label: string;
+  diffDays: number | null;
+}
+
+export interface GoalCategoryAnalytics {
+  category: string;
+  count: number;
+  avgProgress: number;
+  completedCount: number;
+}
+
+export interface GoalAnalyticsSummary {
+  totalGoals: number;
+  activeGoals: number;
+  completedGoals: number;
+  archivedGoals: number;
+  completionRate: number; // 0 - 100
+  overallActiveProgress: number; // 0 - 100
+  overdueCount: number;
+  totalActiveStreaks: number;
+  topStreak: number;
+  categoryBreakdown: GoalCategoryAnalytics[];
+}
+
+
 

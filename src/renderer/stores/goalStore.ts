@@ -9,6 +9,9 @@ import type {
   GoalHabitLog,
   GoalStreakStatus,
   GoalStreakDay,
+  GoalProgressLog,
+  GoalDeadlineInfo,
+  GoalAnalyticsSummary,
   Task,
   Project,
 } from '../../shared/types/index.js';
@@ -18,6 +21,7 @@ export interface GoalStoreState {
   goalsById: Record<string, Goal>;
   linksByGoalId: Record<string, GoalLink[]>;
   habitLogsByGoalId: Record<string, GoalHabitLog[]>;
+  progressLogsByGoalId: Record<string, GoalProgressLog[]>;
   loading: boolean;
   error: string | null;
 
@@ -26,16 +30,23 @@ export interface GoalStoreState {
   createGoal: (payload: CreateGoalPayload) => Promise<Goal>;
   updateGoal: (id: string, fields: UpdateGoalPayload) => Promise<Goal>;
   deleteGoal: (id: string) => Promise<void>;
+  duplicateGoal: (id: string) => Promise<Goal>;
   linkTask: (goalId: string, resourceId: string, resourceType?: 'task' | 'project') => Promise<void>;
   unlinkTask: (goalId: string, resourceId: string, resourceType?: 'task' | 'project') => Promise<void>;
   incrementStreak: (goalId: string) => Promise<void>;
   checkInHabit: (goalId: string, dateStr?: string) => Promise<{ goal: Goal; isToggledOff: boolean }>;
   getStreakStatus: (goalId: string) => GoalStreakStatus;
+  getDeadlineInfo: (goal: Goal) => GoalDeadlineInfo;
+  recordProgressLog: (goalId: string, progressPercent: number, currentValue: number) => Promise<GoalProgressLog>;
   computeProgress: (
     goalId: string,
     tasksById: Record<string, Task>,
     projectsById?: Record<string, Project>
   ) => number;
+  computeAnalyticsSummary: (
+    tasksById: Record<string, Task>,
+    projectsById?: Record<string, Project>
+  ) => GoalAnalyticsSummary;
   getSubGoals: (goalId: string) => Goal[];
   getParentGoal: (goalId: string) => Goal | null;
   getGoalForTask: (taskId: string) => Goal | null;
@@ -50,6 +61,7 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
   goalsById: {},
   linksByGoalId: {},
   habitLogsByGoalId: {},
+  progressLogsByGoalId: {},
   loading: false,
   error: null,
 
@@ -92,10 +104,26 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
         habitLogsMap[log.goal_id].push(log);
       }
 
+      let allProgressLogs: GoalProgressLog[] = [];
+      try {
+        allProgressLogs = await invoke<GoalProgressLog[]>(IPC.GOALS.GET_PROGRESS_LOGS);
+      } catch {
+        // Best effort fallback
+      }
+
+      const progressLogsMap: Record<string, GoalProgressLog[]> = {};
+      for (const pl of allProgressLogs) {
+        if (!progressLogsMap[pl.goal_id]) {
+          progressLogsMap[pl.goal_id] = [];
+        }
+        progressLogsMap[pl.goal_id].push(pl);
+      }
+
       set({
         goalsById: goalsMap,
         linksByGoalId: linksMap,
         habitLogsByGoalId: habitLogsMap,
+        progressLogsByGoalId: progressLogsMap,
         loading: false,
       });
     } catch (err: unknown) {
@@ -393,16 +421,216 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
     return null;
   },
 
+  duplicateGoal: async (id: string): Promise<Goal> => {
+    const goal = get().goalsById[id];
+    if (!goal) {
+      throw new Error(`Goal not found: ${id}`);
+    }
+
+    const newTitle = goal.title.endsWith('(Copy)')
+      ? goal.title
+      : `${goal.title} (Copy)`;
+
+    const payload: CreateGoalPayload = {
+      title: newTitle,
+      description: goal.description,
+      goal_type: goal.goal_type,
+      category: goal.category,
+      status: 'active',
+      parent_goal_id: goal.parent_goal_id,
+      target_date: goal.target_date,
+      target_value: goal.target_value,
+      current_value: 0,
+      streak_count: 0,
+      longest_streak: 0,
+    };
+
+    return await get().createGoal(payload);
+  },
+
+  getDeadlineInfo: (goal: Goal): GoalDeadlineInfo => {
+    if (goal.status === 'completed') {
+      return {
+        state: 'completed',
+        label: goal.completed_at ? `🏆 Completed ${goal.completed_at.slice(0, 10)}` : '🏆 Completed',
+        diffDays: null,
+      };
+    }
+
+    if (goal.status === 'archived') {
+      return {
+        state: 'none',
+        label: '📦 Archived',
+        diffDays: null,
+      };
+    }
+
+    if (!goal.target_date) {
+      return {
+        state: 'none',
+        label: 'No target date',
+        diffDays: null,
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [y, m, d] = goal.target_date.split('-').map((v) => parseInt(v, 10));
+    const target = new Date(y, m - 1, d);
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      const overdueDays = Math.abs(diffDays);
+      return {
+        state: 'overdue',
+        label: `⚠️ Overdue by ${overdueDays}d`,
+        diffDays,
+      };
+    }
+
+    if (diffDays === 0) {
+      return {
+        state: 'due_today',
+        label: '⏳ Due Today',
+        diffDays: 0,
+      };
+    }
+
+    if (diffDays <= 3) {
+      return {
+        state: 'due_soon',
+        label: `📅 Due in ${diffDays}d`,
+        diffDays,
+      };
+    }
+
+    return {
+      state: 'on_track',
+      label: `🎯 Target: ${goal.target_date} (${diffDays}d left)`,
+      diffDays,
+    };
+  },
+
+  recordProgressLog: async (goalId: string, progressPercent: number, currentValue: number) => {
+    try {
+      const res = await invoke<GoalProgressLog>(IPC.GOALS.RECORD_PROGRESS_LOG, {
+        goalId,
+        progressPercent,
+        currentValue,
+      });
+      set((state) => {
+        const existing = state.progressLogsByGoalId[goalId] ?? [];
+        return {
+          progressLogsByGoalId: {
+            ...state.progressLogsByGoalId,
+            [goalId]: [...existing, res],
+          },
+        };
+      });
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ error: msg });
+      throw err;
+    }
+  },
+
   adjustGoalProgress: async (goalId: string, delta: number) => {
     const goal = get().goalsById[goalId];
     if (!goal) return undefined;
     const current = goal.current_value ?? 0;
     const maxVal = goal.target_value > 0 ? goal.target_value : Infinity;
     const nextVal = Math.max(0, Math.min(maxVal, Math.round((current + delta) * 100) / 100));
-    return await get().updateGoal(goalId, {
+    const updated = await get().updateGoal(goalId, {
       current_value: nextVal,
       last_progress_at: new Date().toISOString(),
     });
+
+    const percent = maxVal > 0 && maxVal !== Infinity ? Math.min(100, Math.round((nextVal / maxVal) * 100)) : 0;
+    await get().recordProgressLog(goalId, percent, nextVal).catch(() => {});
+
+    return updated;
+  },
+
+  computeAnalyticsSummary: (
+    tasksById: Record<string, Task>,
+    projectsById: Record<string, Project> = {}
+  ): GoalAnalyticsSummary => {
+    const allGoals = Object.values(get().goalsById);
+    const totalGoals = allGoals.length;
+    const activeGoalsList = allGoals.filter((g) => (g.status ?? 'active') === 'active' || g.status === 'paused');
+    const activeGoals = activeGoalsList.length;
+    const completedGoals = allGoals.filter((g) => g.status === 'completed').length;
+    const archivedGoals = allGoals.filter((g) => g.status === 'archived').length;
+
+    const completionRate = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
+
+    let totalActiveProgress = 0;
+    for (const g of activeGoalsList) {
+      totalActiveProgress += get().computeProgress(g.id, tasksById, projectsById);
+    }
+    const overallActiveProgress = activeGoalsList.length > 0 ? Math.round(totalActiveProgress / activeGoalsList.length) : 0;
+
+    let overdueCount = 0;
+    for (const g of activeGoalsList) {
+      const deadline = get().getDeadlineInfo(g);
+      if (deadline.state === 'overdue') {
+        overdueCount++;
+      }
+    }
+
+    let totalActiveStreaks = 0;
+    let topStreak = 0;
+    for (const g of allGoals) {
+      if (g.goal_type === 'habit' && g.status !== 'archived') {
+        if (g.streak_count > 0) {
+          totalActiveStreaks += g.streak_count;
+        }
+        if (g.longest_streak > topStreak) {
+          topStreak = g.longest_streak;
+        }
+      }
+    }
+
+    const categoryMap: Record<string, { total: number; sumProgress: number; completed: number }> = {};
+    for (const g of allGoals) {
+      const cat = g.category?.trim() || 'General';
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { total: 0, sumProgress: 0, completed: 0 };
+      }
+      categoryMap[cat].total += 1;
+      const prog = get().computeProgress(g.id, tasksById, projectsById);
+      categoryMap[cat].sumProgress += prog;
+      if (g.status === 'completed') {
+        categoryMap[cat].completed += 1;
+      }
+    }
+
+    const categoryBreakdown = Object.entries(categoryMap)
+      .map(([category, stats]) => ({
+        category,
+        count: stats.total,
+        avgProgress: stats.total > 0 ? Math.round(stats.sumProgress / stats.total) : 0,
+        completedCount: stats.completed,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      totalGoals,
+      activeGoals,
+      completedGoals,
+      archivedGoals,
+      completionRate,
+      overallActiveProgress,
+      overdueCount,
+      totalActiveStreaks,
+      topStreak,
+      categoryBreakdown,
+    };
   },
 
   setGoalStatus: async (id: string, status: GoalStatus) => {

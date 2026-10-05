@@ -254,6 +254,17 @@ CREATE TABLE IF NOT EXISTS goal_habit_logs (
 CREATE INDEX IF NOT EXISTS idx_goal_habit_logs_goal ON goal_habit_logs(goal_id);
 CREATE INDEX IF NOT EXISTS idx_goal_habit_logs_date ON goal_habit_logs(check_in_date);
 
+CREATE TABLE IF NOT EXISTS goal_progress_logs (
+  id               TEXT PRIMARY KEY,
+  goal_id          TEXT NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+  progress_percent REAL NOT NULL,
+  current_value    REAL NOT NULL,
+  recorded_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_goal_progress_logs_goal_id ON goal_progress_logs(goal_id);
+CREATE INDEX IF NOT EXISTS idx_goal_progress_logs_recorded ON goal_progress_logs(recorded_at);
+
 -- 18. notification_history
 CREATE TABLE IF NOT EXISTS notification_history (
   id         TEXT PRIMARY KEY,
