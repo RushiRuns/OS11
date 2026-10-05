@@ -73,12 +73,13 @@ export interface DropPlan {
   isNoop: boolean; // dropping here would leave the task exactly where it already is
 }
 
-function isExternalDropTarget(id: string): boolean {
+export function isExternalDropTarget(id: string): boolean {
   return (
     id === 'scheduler-grid' ||
     id === 'my-day-list-drop-zone' ||
     id.startsWith('list:') ||
     id.startsWith('project:') ||
+    id.startsWith('area:') ||
     id.startsWith('tag:')
   );
 }

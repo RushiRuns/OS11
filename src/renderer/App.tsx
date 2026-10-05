@@ -768,6 +768,7 @@ export function App(): React.ReactElement {
         id: activeTaskId,
         area_id: targetAreaId,
         project_id: null,
+        list_id: null,
       });
       return;
     }
