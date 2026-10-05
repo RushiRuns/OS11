@@ -730,7 +730,7 @@ export function App(): React.ReactElement {
       const targetListId = overIdStr.slice(5);
       if (targetListId === 'smart_my_day') {
         const today = toISODateOnly(new Date());
-        await useTaskStore.getState().updateTask({ id: activeTaskId, my_day_date: today });
+        await useTaskStore.getState().updateTask({ id: activeTaskId, my_day_date: today, bucket: null });
       } else if (targetListId === 'smart_anytime') {
         await useTaskStore.getState().setBucket(activeTaskId, 'anytime');
       } else if (targetListId === 'smart_someday') {
@@ -750,14 +750,15 @@ export function App(): React.ReactElement {
           list_id: 'list_inbox',
           project_id: null,
           area_id: null,
+          bucket: null,
         });
       } else if (targetListId === 'smart_important') {
         await useTaskStore.getState().toggleStar(activeTaskId);
       } else if (targetListId === 'smart_planned') {
         const today = toISODateOnly(new Date());
-        await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: today });
+        await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: today, bucket: null });
       } else {
-        await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId });
+        await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId, bucket: null });
       }
       return;
     }
@@ -780,6 +781,7 @@ export function App(): React.ReactElement {
         id: activeTaskId,
         project_id: targetProjectId,
         area_id: proj?.area_id ?? null,
+        bucket: null,
       });
       return;
     }

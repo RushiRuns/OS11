@@ -2,7 +2,9 @@ import React, { useState, useMemo } from 'react';
 import type { Task } from '@shared/types/task.js';
 import { useWaitingForTasks, useTaskStore } from '../../stores/taskStore.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
+import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
+import { Toast } from '../../components/Toast/Toast.js';
 import { WaitingPopover } from './WaitingPopover.js';
 import styles from './WaitingForView.module.css';
 
@@ -20,6 +22,7 @@ export function WaitingForView({
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | undefined>();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -50,12 +53,16 @@ export function WaitingForView({
       waitingOn: task.waiting_on || '',
       followUpDate: nextDate,
     });
+    setToastMessage(`Snoozed follow-up to ${nextDate}`);
   };
 
-  const handleEditClick = (e: React.MouseEvent, task: Task) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setPopoverPos({ x: rect.left, y: rect.bottom + 8 });
+  const handleFollowedUp = async (task: Task) => {
+    await clearWaiting(task.id);
+    setToastMessage(`Marked "${task.title}" as followed up`);
+  };
+
+  const handleEditClick = (task: Task, pos?: { x: number; y: number }) => {
+    setPopoverPos(pos ?? { x: window.innerWidth / 2 - 140, y: window.innerHeight / 3 });
     setEditingTask(task);
   };
 
@@ -67,16 +74,107 @@ export function WaitingForView({
         followUpDate: followUpDate || null,
       });
       setEditingTask(null);
+      setToastMessage('Updated follow-up details');
     }
+  };
+
+  const renderCard = (task: Task, isOverdue = false) => {
+    const menuItems: (DropdownMenuItemConfig | 'separator')[] = [
+      {
+        id: 'snooze-2d',
+        label: '+2 Days',
+        onClick: () => handleSnooze(task, 2),
+      },
+      {
+        id: 'snooze-7d',
+        label: '+1 Week',
+        onClick: () => handleSnooze(task, 7),
+      },
+      'separator',
+      {
+        id: 'edit-waiting',
+        label: 'Edit Follow-up...',
+        onClick: () => handleEditClick(task),
+      },
+      {
+        id: 'clear-waiting',
+        label: 'Clear Waiting State',
+        danger: true,
+        onClick: () => clearWaiting(task.id),
+      },
+    ];
+
+    return (
+      <div
+        key={task.id}
+        className={`${styles.feelCard} ${isOverdue ? styles.feelCardOverdue : ''} ${
+          task.id === selectedTaskId ? styles.feelCardSelected : ''
+        }`}
+        onClick={() => onSelectTask?.(task)}
+      >
+        <div className={styles.feelLeft}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={false}
+              onChange={() => toggleComplete(task.id)}
+              ariaLabel={`Complete task: ${task.title}`}
+            />
+          </div>
+          <span className={styles.feelTitle} title={task.title}>{task.title}</span>
+        </div>
+
+        <div className={styles.feelMeta}>
+          {task.waiting_on && (
+            <span className={styles.waitingChip} title={`Waiting on: ${task.waiting_on}`}>
+              <span className={styles.waitingChipPrefix}>@</span>
+              {task.waiting_on}
+            </span>
+          )}
+          {task.follow_up_date && (
+            <span
+              className={`${styles.followUpBadge} ${isOverdue ? styles.followUpOverdue : ''}`}
+              title={`Follow-up date: ${task.follow_up_date}`}
+            >
+              {isOverdue ? `Overdue (${task.follow_up_date})` : task.follow_up_date}
+            </span>
+          )}
+        </div>
+
+        <div className={styles.feelActions} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={styles.followUpBtn}
+            onClick={() => handleFollowedUp(task)}
+            title="Received response — clear waiting state"
+            aria-label="✓ Followed Up"
+          >
+            ✓ Followed Up
+          </button>
+
+          <DropdownMenu
+            trigger={
+              <button
+                type="button"
+                className={styles.moreBtn}
+                aria-label="More actions"
+                onClick={(e) => e.stopPropagation()}
+              >
+                •••
+              </button>
+            }
+            items={menuItems}
+            align="end"
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.titleArea}>
-          <h1 className={styles.title}>
-            <span>⏳</span> Waiting For
-          </h1>
+          <h1 className={styles.title}>Waiting For</h1>
           <span className={styles.badge}>{tasks.length}</span>
           {overdueTasks.length > 0 && (
             <span className={`${styles.badge} ${styles.badgeOverdue}`}>
@@ -102,68 +200,7 @@ export function WaitingForView({
                   <span>⚠️ Overdue Follow-ups ({overdueTasks.length})</span>
                 </div>
                 <div className={styles.cardList}>
-                  {overdueTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className={`${styles.waitingCard} ${styles.waitingCardOverdue} ${
-                        task.id === selectedTaskId ? styles.waitingCardSelected : ''
-                      }`}
-                      onClick={() => onSelectTask?.(task)}
-                    >
-                      <div className={styles.cardTopRow}>
-                        <div className={styles.cardTitleArea}>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={false}
-                              onChange={() => toggleComplete(task.id)}
-                              ariaLabel="Complete task"
-                            />
-                          </div>
-                          <span className={styles.cardTitle}>{task.title}</span>
-                        </div>
-                      </div>
-
-                      <div className={styles.waitingDetails}>
-                        <span>Waiting on:</span>
-                        <span className={styles.waitingOnText}>{task.waiting_on}</span>
-                        <span className={`${styles.followUpDate} ${styles.followUpOverdue}`}>
-                          Overdue ({task.follow_up_date})
-                        </span>
-                      </div>
-
-                      <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => clearWaiting(task.id)}
-                          title="Received response — clear waiting state"
-                        >
-                          ✓ Followed Up
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => handleSnooze(task, 2)}
-                        >
-                          +2 Days
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => handleSnooze(task, 7)}
-                        >
-                          +1 Week
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={(e) => handleEditClick(e, task)}
-                        >
-                          ✏️ Edit
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {overdueTasks.map((task) => renderCard(task, true))}
                 </div>
               </section>
             )}
@@ -175,67 +212,7 @@ export function WaitingForView({
                   <span>Upcoming Follow-ups ({upcomingTasks.length})</span>
                 </div>
                 <div className={styles.cardList}>
-                  {upcomingTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className={`${styles.waitingCard} ${
-                        task.id === selectedTaskId ? styles.waitingCardSelected : ''
-                      }`}
-                      onClick={() => onSelectTask?.(task)}
-                    >
-                      <div className={styles.cardTopRow}>
-                        <div className={styles.cardTitleArea}>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={false}
-                              onChange={() => toggleComplete(task.id)}
-                              ariaLabel="Complete task"
-                            />
-                          </div>
-                          <span className={styles.cardTitle}>{task.title}</span>
-                        </div>
-                      </div>
-
-                      <div className={styles.waitingDetails}>
-                        <span>Waiting on:</span>
-                        <span className={styles.waitingOnText}>{task.waiting_on}</span>
-                        <span className={styles.followUpDate}>
-                          Follow-up: {task.follow_up_date}
-                        </span>
-                      </div>
-
-                      <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => clearWaiting(task.id)}
-                        >
-                          ✓ Followed Up
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => handleSnooze(task, 2)}
-                        >
-                          +2 Days
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => handleSnooze(task, 7)}
-                        >
-                          +1 Week
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={(e) => handleEditClick(e, task)}
-                        >
-                          ✏️ Edit
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {upcomingTasks.map((task) => renderCard(task, false))}
                 </div>
               </section>
             )}
@@ -247,57 +224,7 @@ export function WaitingForView({
                   <span>No Follow-up Date ({unscheduledTasks.length})</span>
                 </div>
                 <div className={styles.cardList}>
-                  {unscheduledTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className={`${styles.waitingCard} ${
-                        task.id === selectedTaskId ? styles.waitingCardSelected : ''
-                      }`}
-                      onClick={() => onSelectTask?.(task)}
-                    >
-                      <div className={styles.cardTopRow}>
-                        <div className={styles.cardTitleArea}>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={false}
-                              onChange={() => toggleComplete(task.id)}
-                              ariaLabel="Complete task"
-                            />
-                          </div>
-                          <span className={styles.cardTitle}>{task.title}</span>
-                        </div>
-                      </div>
-
-                      <div className={styles.waitingDetails}>
-                        <span>Waiting on:</span>
-                        <span className={styles.waitingOnText}>{task.waiting_on}</span>
-                      </div>
-
-                      <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => clearWaiting(task.id)}
-                        >
-                          ✓ Followed Up
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={() => handleSnooze(task, 2)}
-                        >
-                          Set Date (+2d)
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btnAction}
-                          onClick={(e) => handleEditClick(e, task)}
-                        >
-                          ✏️ Edit
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {unscheduledTasks.map((task) => renderCard(task, false))}
                 </div>
               </section>
             )}
@@ -313,6 +240,18 @@ export function WaitingForView({
           onSave={handleSaveWaiting}
           onCancel={() => setEditingTask(null)}
         />
+      )}
+
+      {toastMessage && (
+        <div className={styles.toastWrap}>
+          <Toast
+            id="waiting-for-toast"
+            message={toastMessage}
+            variant="success"
+            onDismiss={() => setToastMessage(null)}
+            duration={3000}
+          />
+        </div>
       )}
     </div>
   );

@@ -44,37 +44,48 @@
   font-weight: var(--weight-medium);
 }
 
-.tabButtons {
-  display: flex;
+.segmentedControl {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
   background-color: var(--surface-raised);
-  padding: 2px;
-  border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  padding: 3px;
+  gap: 3px;
 }
 
-.tabBtn {
-  padding: 3px var(--space-3);
-  border-radius: var(--radius-xs);
-  background: transparent;
+.segmentedBtn {
+  background: none;
   border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 5px 12px;
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--duration-fast, 150ms) ease;
 }
 
-.tabBtnActive {
+.segmentedBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.segmentedBtnActive {
   background-color: var(--surface-base);
   color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-sm);
 }
 
-.quickAddWrapper {
-  padding: 0 var(--space-6) var(--space-3) var(--space-6);
+.quickAddRow {
+  padding: var(--space-3) var(--space-6) var(--space-4) var(--space-6);
+  background: var(--surface-base);
   flex-shrink: 0;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .scrollArea {

@@ -22,6 +22,9 @@ interface QuickAddBarProps {
   placeholder?: string;
   onAdded?: () => void;
   defaultDueDate?: string | null;
+  defaultBucket?: 'anytime' | 'someday' | null;
+  defaultAreaId?: string | null;
+  defaultProjectId?: string | null;
 }
 
 interface AutocompleteMenuOption {
@@ -43,6 +46,9 @@ export function QuickAddBar({
   placeholder = "Add a task (e.g. 'my first task :notes description: #work')...",
   onAdded,
   defaultDueDate,
+  defaultBucket,
+  defaultAreaId,
+  defaultProjectId,
 }: QuickAddBarProps): React.ReactElement {
   const [input, setInput] = useState('');
   const [parsed, setParsed] = useState<ParsedQuickAddResult | null>(null);
@@ -318,6 +324,22 @@ export function QuickAddBar({
         recurrenceRule = parsed.recurrenceRule;
       }
 
+      if (defaultAreaId && !targetAreaId) {
+        targetAreaId = defaultAreaId;
+      }
+      if (defaultProjectId && !targetProjectId) {
+        targetProjectId = defaultProjectId;
+      }
+
+      let bucket: 'anytime' | 'someday' | null = defaultBucket ?? null;
+      if (!bucket) {
+        if (activeListId === 'smart_someday') {
+          bucket = 'someday';
+        } else if (activeListId === 'smart_anytime') {
+          bucket = 'anytime';
+        }
+      }
+
       if (activeListId === 'smart_my_day') {
         myDayDate = new Date().toISOString().split('T')[0];
       }
@@ -345,7 +367,12 @@ export function QuickAddBar({
         all_day: allDay ? 1 : 0,
         recurrence_rule: recurrenceRule,
         my_day_date: myDayDate,
+        bucket,
       });
+
+      if (bucket && createdTask?.id) {
+        await useTaskStore.getState().setBucket(createdTask.id, bucket);
+      }
 
       // Link or create all extracted tags
       for (const tagName of extractedTags) {

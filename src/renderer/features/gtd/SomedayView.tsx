@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task } from '@shared/types/task.js';
 import type { Project } from '@shared/types/index.js';
-import { useSomedayTasks } from '../../stores/taskStore.js';
+import { useSomedayTasks, useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { TaskCard } from '../tasks/TaskCard.js';
+import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { QuickAddBar } from '../quickadd/QuickAddBar.js';
 import { Button } from '../../components/Button/Button.js';
@@ -21,8 +23,11 @@ export function SomedayView({
   const tasks = useSomedayTasks();
   const projectsById = useProjectStore((s) => s.projectsById);
   const updateProject = useProjectStore((s) => s.updateProject);
+  const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
 
   const [activeTab, setActiveTab] = useState<'tasks' | 'projects'>('tasks');
+  const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
+  const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
 
   const somedayProjects = useMemo(() => {
     return (Object.values(projectsById) as Project[]).filter(
@@ -34,41 +39,49 @@ export function SomedayView({
     await updateProject(project.id, { is_someday: 0, status: 'active' });
   };
 
+  const handleContextMenu = (e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setContextMenuTask(task);
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuPos(null);
+    setContextMenuTask(null);
+  };
+
   const totalCount = tasks.length + somedayProjects.length;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.titleArea}>
-          <h1 className={styles.title}>
-            <span>📦</span> Someday / Maybe
-          </h1>
+          <h1 className={styles.title}>Someday / Maybe</h1>
           <span className={styles.badge}>{totalCount}</span>
         </div>
 
-        <div className={styles.tabButtons}>
+        <div className={styles.segmentedControl} role="tablist" aria-label="Someday views">
           <button
             type="button"
-            className={`${styles.tabBtn} ${activeTab === 'tasks' ? styles.tabBtnActive : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'tasks'}
+            className={`${styles.segmentedBtn} ${activeTab === 'tasks' ? styles.segmentedBtnActive : ''}`}
             onClick={() => setActiveTab('tasks')}
           >
             Tasks ({tasks.length})
           </button>
           <button
             type="button"
-            className={`${styles.tabBtn} ${activeTab === 'projects' ? styles.tabBtnActive : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'projects'}
+            className={`${styles.segmentedBtn} ${activeTab === 'projects' ? styles.segmentedBtnActive : ''}`}
             onClick={() => setActiveTab('projects')}
           >
             Projects ({somedayProjects.length})
           </button>
         </div>
       </header>
-
-      {activeTab === 'tasks' && (
-        <div className={styles.quickAddWrapper}>
-          <QuickAddBar placeholder="Capture a someday/maybe idea..." />
-        </div>
-      )}
 
       <div className={styles.scrollArea}>
         {activeTab === 'tasks' ? (
@@ -79,18 +92,28 @@ export function SomedayView({
               description="Park ideas, aspirational goals, or deferred tasks here until you are ready to review them."
             />
           ) : (
-            <div className={styles.taskList}>
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isSelected={task.id === selectedTaskId}
-                  onSelect={() => onSelectTask?.(task)}
-                  onOpenDetail={() => onSelectTask?.(task)}
-                  disableDrag
-                />
-              ))}
-            </div>
+            <SortableContext
+              items={tasks.map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className={styles.taskList}>
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isSelected={task.id === selectedTaskId}
+                    onSelect={() => onSelectTask?.(task)}
+                    onOpenDetail={() => onSelectTask?.(task)}
+                    onToggleComplete={() => toggleComplete(task.id)}
+                    onToggleStar={() => toggleStar(task.id)}
+                    onDelete={() => deleteTask(task.id)}
+                    onDuplicate={() => duplicateTask(task.id)}
+                    onContextMenu={(e) => handleContextMenu(e, task)}
+                    disableDrag={false}
+                  />
+                ))}
+              </div>
+            </SortableContext>
           )
         ) : somedayProjects.length === 0 ? (
           <EmptyState
@@ -127,6 +150,39 @@ export function SomedayView({
           ))
         )}
       </div>
+
+      {activeTab === 'tasks' && (
+        <div className={styles.quickAddRow}>
+          <QuickAddBar
+            placeholder="Capture a someday/maybe idea..."
+            defaultBucket="someday"
+          />
+        </div>
+      )}
+
+      {contextMenuPos && contextMenuTask && (
+        <TaskContextMenu
+          task={contextMenuTask}
+          position={contextMenuPos}
+          onClose={handleCloseContextMenu}
+          onToggleComplete={(id) => toggleComplete(id)}
+          onToggleStar={(id) => toggleStar(id)}
+          onDelete={(id) => deleteTask(id)}
+          onDuplicate={(id) => duplicateTask(id)}
+          onOpenDetail={(task) => {
+            onSelectTask?.(task);
+            handleCloseContextMenu();
+          }}
+          onMoveToList={async (id, listId) => {
+            await updateTask({ id, list_id: listId, bucket: null });
+            handleCloseContextMenu();
+          }}
+          onMoveTo={async (id, dest) => {
+            await updateTask({ id, ...dest, bucket: null });
+            handleCloseContextMenu();
+          }}
+        />
+      )}
     </div>
   );
 }
