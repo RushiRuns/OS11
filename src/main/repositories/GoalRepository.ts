@@ -7,7 +7,15 @@ export class GoalRepository extends BaseRepository {
   public getAll(): Goal[] {
     const stmt = this.db.prepare(`
       SELECT * FROM goals
-      ORDER BY target_date ASC, created_at DESC
+      ORDER BY 
+        CASE status 
+          WHEN 'active' THEN 1 
+          WHEN 'paused' THEN 2 
+          WHEN 'completed' THEN 3 
+          WHEN 'archived' THEN 4 
+          ELSE 5 
+        END,
+        target_date ASC, created_at DESC
     `);
     return stmt.all() as Goal[];
   }
@@ -27,24 +35,26 @@ export class GoalRepository extends BaseRepository {
       title: payload.title,
       description: payload.description ?? null,
       goal_type: payload.goal_type,
+      status: payload.status ?? 'active',
       target_date: payload.target_date ?? null,
       target_value: payload.target_value ?? 100,
       current_value: payload.current_value ?? 0,
       streak_count: payload.streak_count ?? 0,
       last_progress_at: payload.last_progress_at ?? null,
+      completed_at: payload.completed_at ?? null,
       created_at: payload.created_at ?? now,
       updated_at: now,
     };
 
     const stmt = this.db.prepare(`
       INSERT INTO goals (
-        id, title, description, goal_type, target_date,
+        id, title, description, goal_type, status, target_date,
         target_value, current_value, streak_count, last_progress_at,
-        created_at, updated_at
+        completed_at, created_at, updated_at
       ) VALUES (
-        @id, @title, @description, @goal_type, @target_date,
+        @id, @title, @description, @goal_type, @status, @target_date,
         @target_value, @current_value, @streak_count, @last_progress_at,
-        @created_at, @updated_at
+        @completed_at, @created_at, @updated_at
       )
     `);
 
@@ -70,11 +80,13 @@ export class GoalRepository extends BaseRepository {
         title = @title,
         description = @description,
         goal_type = @goal_type,
+        status = @status,
         target_date = @target_date,
         target_value = @target_value,
         current_value = @current_value,
         streak_count = @streak_count,
         last_progress_at = @last_progress_at,
+        completed_at = @completed_at,
         updated_at = @updated_at
       WHERE id = @id
     `);

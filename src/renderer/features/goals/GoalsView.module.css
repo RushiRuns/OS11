@@ -463,3 +463,221 @@
   left: var(--space-6);
   z-index: var(--z-notification, 500);
 }
+
+/* Status Filter Segmented Control */
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.segmentedControl {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  padding: 3px;
+  gap: 3px;
+}
+
+.filterBtn {
+  background: none;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 6px 14px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.filterBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.filterBtnActive {
+  background-color: var(--surface-base);
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-sm);
+}
+
+.countBadge {
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--surface-overlay, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary);
+}
+
+.filterBtnActive .countBadge {
+  background-color: var(--accent-subtle, rgba(59, 130, 246, 0.15));
+  color: var(--accent-primary, #3b82f6);
+}
+
+/* Status Badges */
+.badgeCompleted {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.badgePaused {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.badgeArchived {
+  background-color: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+}
+
+/* Goal Card Completed Styling */
+.goalCardCompleted {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(180deg, var(--surface-raised) 0%, rgba(16, 185, 129, 0.04) 100%);
+}
+
+.goalCardPaused {
+  border-color: rgba(245, 158, 11, 0.3);
+  opacity: 0.88;
+}
+
+.goalCardArchived {
+  border-color: var(--border-subtle);
+  opacity: 0.75;
+}
+
+/* Celebration Modal */
+.celebrationBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: fadeIn 200ms ease;
+}
+
+.celebrationBox {
+  background: linear-gradient(135deg, var(--surface-raised) 0%, var(--surface-base) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-xl, 16px);
+  padding: var(--space-8);
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-4);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 30px rgba(16, 185, 129, 0.2);
+  animation: scaleUp 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.celebrationTrophy {
+  font-size: 54px;
+  line-height: 1;
+  margin-bottom: 4px;
+  animation: bounce 1.2s infinite alternate ease-in-out;
+}
+
+.celebrationTitle {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.celebrationGoalTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: #10b981;
+  margin: 0;
+}
+
+.celebrationSubtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.celebrationStatsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  width: 100%;
+  margin: var(--space-2) 0;
+}
+
+.celebrationStatCard {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.celebrationStatVal {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.celebrationStatLbl {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.celebrationDismissBtn {
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+  width: 100%;
+}
+
+.celebrationDismissBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bounce {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-8px) scale(1.05); }
+}
+

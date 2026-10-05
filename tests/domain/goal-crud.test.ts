@@ -15,11 +15,13 @@ describe('Domain: Goal CRUD, Editing & Progress Capabilities', () => {
     title: 'Read 25 Books',
     description: 'Personal development target',
     goal_type: 'outcome',
+    status: 'active',
     target_date: '2026-12-31',
     target_value: 25,
     current_value: 5,
     streak_count: 3,
     last_progress_at: '2026-10-01T12:00:00.000Z',
+    completed_at: null,
     created_at: '2026-09-01T12:00:00.000Z',
     updated_at: '2026-10-01T12:00:00.000Z',
   };

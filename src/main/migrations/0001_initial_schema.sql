@@ -221,11 +221,13 @@ CREATE TABLE IF NOT EXISTS goals (
   title            TEXT NOT NULL,
   description      TEXT,
   goal_type        TEXT NOT NULL,                -- 'habit' | 'milestone' | 'outcome'
+  status           TEXT NOT NULL DEFAULT 'active', -- 'active' | 'completed' | 'paused' | 'archived'
   target_date      TEXT,
   target_value     REAL DEFAULT 100,
   current_value    REAL NOT NULL DEFAULT 0,
   streak_count     INTEGER NOT NULL DEFAULT 0,
   last_progress_at TEXT,
+  completed_at     TEXT,
   created_at       TEXT NOT NULL,
   updated_at       TEXT NOT NULL
 );

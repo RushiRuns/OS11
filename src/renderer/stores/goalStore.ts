@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { IPC } from '../../shared/ipc-channels.js';
-import type { Goal, CreateGoalPayload, UpdateGoalPayload, GoalLink, Task } from '../../shared/types/index.js';
+import type { Goal, GoalStatus, CreateGoalPayload, UpdateGoalPayload, GoalLink, Task } from '../../shared/types/index.js';
 import { invoke } from '../services/ipc.js';
 
 export interface GoalStoreState {
@@ -19,6 +19,8 @@ export interface GoalStoreState {
   incrementStreak: (goalId: string) => Promise<void>;
   computeProgress: (goalId: string, tasksById: Record<string, Task>) => number;
   adjustGoalProgress: (goalId: string, delta: number) => Promise<Goal | undefined>;
+  setGoalStatus: (id: string, status: GoalStatus) => Promise<Goal>;
+  archiveGoal: (id: string) => Promise<Goal>;
   restoreGoal: (goal: Goal, links?: GoalLink[]) => Promise<void>;
 }
 
@@ -192,6 +194,27 @@ export const useGoalStore = create<GoalStoreState>((set, get) => ({
       current_value: nextVal,
       last_progress_at: new Date().toISOString(),
     });
+  },
+
+  setGoalStatus: async (id: string, status: GoalStatus) => {
+    const goal = get().goalsById[id];
+    if (!goal) {
+      throw new Error(`Goal not found: ${id}`);
+    }
+
+    const completedAt =
+      status === 'completed'
+        ? goal.completed_at || new Date().toISOString()
+        : null;
+
+    return await get().updateGoal(id, {
+      status,
+      completed_at: completedAt,
+    });
+  },
+
+  archiveGoal: async (id: string) => {
+    return await get().setGoalStatus(id, 'archived');
   },
 
   restoreGoal: async (goal: Goal, links: GoalLink[] = []) => {

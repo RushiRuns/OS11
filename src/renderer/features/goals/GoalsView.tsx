@@ -11,6 +11,8 @@ import { HabitTracker } from './HabitTracker.js';
 import type { Goal, CreateGoalPayload, UpdateGoalPayload } from '../../../shared/types/index.js';
 import styles from './GoalsView.module.css';
 
+export type GoalFilterTab = 'active' | 'completed' | 'archived' | 'all';
+
 export function GoalsView(): React.ReactElement {
   const isHabitsEnabled = useModuleStore((state) => state.isEnabled('habit_tracker'));
   const [activeTab, setActiveTab] = useState<'goals' | 'habits'>('goals');
@@ -27,11 +29,16 @@ export function GoalsView(): React.ReactElement {
     unlinkTask,
     incrementStreak,
     adjustGoalProgress,
+    setGoalStatus,
+    archiveGoal,
     restoreGoal,
   } = useGoalStore();
 
   const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
   const tasksById = useTaskStore((state) => state.tasksById);
+
+  const [statusFilter, setStatusFilter] = useState<GoalFilterTab>('active');
+  const [celebratingGoal, setCelebratingGoal] = useState<Goal | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -50,14 +57,41 @@ export function GoalsView(): React.ReactElement {
     loadGoals();
   }, [loadGoals]);
 
-  const goals = useMemo(() => {
-    return Object.values(goalsById).sort((a, b) => {
-      if (a.target_date && b.target_date) return a.target_date.localeCompare(b.target_date);
-      if (a.target_date) return -1;
-      if (b.target_date) return 1;
-      return b.created_at.localeCompare(a.created_at);
-    });
-  }, [goalsById]);
+  const allGoalsList = useMemo(() => Object.values(goalsById), [goalsById]);
+
+  const activeCount = useMemo(
+    () => allGoalsList.filter((g) => (g.status ?? 'active') === 'active' || g.status === 'paused').length,
+    [allGoalsList]
+  );
+  const completedCount = useMemo(
+    () => allGoalsList.filter((g) => g.status === 'completed').length,
+    [allGoalsList]
+  );
+  const archivedCount = useMemo(
+    () => allGoalsList.filter((g) => g.status === 'archived').length,
+    [allGoalsList]
+  );
+  const allCount = allGoalsList.length;
+
+  const filteredGoals = useMemo(() => {
+    return allGoalsList
+      .filter((g) => {
+        const s = g.status ?? 'active';
+        if (statusFilter === 'active') return s === 'active' || s === 'paused';
+        if (statusFilter === 'completed') return s === 'completed';
+        if (statusFilter === 'archived') return s === 'archived';
+        return true; // 'all'
+      })
+      .sort((a, b) => {
+        const statusOrder: Record<string, number> = { active: 1, paused: 2, completed: 3, archived: 4 };
+        const orderDiff = (statusOrder[a.status ?? 'active'] ?? 1) - (statusOrder[b.status ?? 'active'] ?? 1);
+        if (orderDiff !== 0) return orderDiff;
+        if (a.target_date && b.target_date) return a.target_date.localeCompare(b.target_date);
+        if (a.target_date) return -1;
+        if (b.target_date) return 1;
+        return b.created_at.localeCompare(a.created_at);
+      });
+  }, [allGoalsList, statusFilter]);
 
   // Is today Friday? (Day 5)
   const isFriday = useMemo(() => new Date().getDay() === 5, []);
@@ -107,6 +141,7 @@ export function GoalsView(): React.ReactElement {
         title: title.trim(),
         description: description.trim() || null,
         goal_type: goalType,
+        status: 'active',
         target_date: targetDate || null,
         target_value: tVal,
         current_value: cVal,
@@ -116,6 +151,28 @@ export function GoalsView(): React.ReactElement {
 
     setIsModalOpen(false);
     setEditingGoal(null);
+  };
+
+  const handleMarkCompleted = async (goal: Goal) => {
+    await setGoalStatus(goal.id, 'completed');
+    setCelebratingGoal(goal);
+  };
+
+  const handleReopenGoal = async (goal: Goal) => {
+    await setGoalStatus(goal.id, 'active');
+  };
+
+  const handleTogglePause = async (goal: Goal) => {
+    const next = goal.status === 'paused' ? 'active' : 'paused';
+    await setGoalStatus(goal.id, next);
+  };
+
+  const handleToggleArchive = async (goal: Goal) => {
+    if (goal.status === 'archived') {
+      await setGoalStatus(goal.id, 'active');
+    } else {
+      await archiveGoal(goal.id);
+    }
   };
 
   const handleDeleteGoal = async (goal: Goal) => {
@@ -246,25 +303,85 @@ export function GoalsView(): React.ReactElement {
         </div>
       )}
 
+      {/* Status Filter Segmented Control */}
+      <div className={styles.filterBar}>
+        <div className={styles.segmentedControl} role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={statusFilter === 'active'}
+            className={`${styles.filterBtn} ${statusFilter === 'active' ? styles.filterBtnActive : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
+            <span>Active</span>
+            <span className={styles.countBadge}>{activeCount}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={statusFilter === 'completed'}
+            className={`${styles.filterBtn} ${statusFilter === 'completed' ? styles.filterBtnActive : ''}`}
+            onClick={() => setStatusFilter('completed')}
+          >
+            <span>Completed</span>
+            <span className={styles.countBadge}>{completedCount}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={statusFilter === 'archived'}
+            className={`${styles.filterBtn} ${statusFilter === 'archived' ? styles.filterBtnActive : ''}`}
+            onClick={() => setStatusFilter('archived')}
+          >
+            <span>Archived</span>
+            <span className={styles.countBadge}>{archivedCount}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={statusFilter === 'all'}
+            className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.filterBtnActive : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            <span>All</span>
+            <span className={styles.countBadge}>{allCount}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Goals Grid */}
-      {goals.length === 0 ? (
+      {filteredGoals.length === 0 ? (
         <EmptyState
-          icon="🎯"
-          title="No Goals Defined"
-          description="Create your first goal to link tasks and track your journey toward meaningful milestones."
+          icon={statusFilter === 'completed' ? '🏆' : statusFilter === 'archived' ? '📦' : '🎯'}
+          title={
+            statusFilter === 'completed'
+              ? 'No Completed Goals Yet'
+              : statusFilter === 'archived'
+                ? 'No Archived Goals'
+                : 'No Active Goals'
+          }
+          description={
+            statusFilter === 'completed'
+              ? 'Keep tracking and progressing. When a goal hits 100%, mark it complete to celebrate here!'
+              : statusFilter === 'archived'
+                ? 'Goals you no longer actively pursue can be archived to keep your active workspace clutter-free.'
+                : 'Create your first goal to link tasks and track your journey toward meaningful milestones.'
+          }
           action={
-            <button
-              type="button"
-              className={styles.createBtn}
-              onClick={handleOpenCreate}
-            >
-              + Create First Goal
-            </button>
+            statusFilter === 'active' || statusFilter === 'all' ? (
+              <button
+                type="button"
+                className={styles.createBtn}
+                onClick={handleOpenCreate}
+              >
+                + Create First Goal
+              </button>
+            ) : undefined
           }
         />
       ) : (
         <div className={styles.goalsGrid}>
-          {goals.map((goal) => {
+          {filteredGoals.map((goal) => {
             const progress = computeGoalProgress(goal);
             const links = linksByGoalId[goal.id] ?? [];
 
@@ -275,13 +392,39 @@ export function GoalsView(): React.ReactElement {
                   ? styles.badgeOutcome
                   : styles.badgeMilestone;
 
+            const cardClass = [
+              styles.goalCard,
+              goal.status === 'completed' ? styles.goalCardCompleted : '',
+              goal.status === 'paused' ? styles.goalCardPaused : '',
+              goal.status === 'archived' ? styles.goalCardArchived : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+
             return (
-              <div key={goal.id} className={styles.goalCard}>
+              <div key={goal.id} className={cardClass}>
                 <div className={styles.cardHeader}>
                   <div className={styles.cardHeaderLeft}>
-                    <span className={`${styles.goalTypeBadge} ${typeBadgeClass}`}>
-                      {goal.goal_type}
-                    </span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span className={`${styles.goalTypeBadge} ${typeBadgeClass}`}>
+                        {goal.goal_type}
+                      </span>
+                      {goal.status === 'completed' && (
+                        <span className={`${styles.goalTypeBadge} ${styles.badgeCompleted}`}>
+                          ✓ Completed
+                        </span>
+                      )}
+                      {goal.status === 'paused' && (
+                        <span className={`${styles.goalTypeBadge} ${styles.badgePaused}`}>
+                          ⏸ Paused
+                        </span>
+                      )}
+                      {goal.status === 'archived' && (
+                        <span className={`${styles.goalTypeBadge} ${styles.badgeArchived}`}>
+                          📦 Archived
+                        </span>
+                      )}
+                    </div>
                     <h2 className={styles.goalTitle}>{goal.title}</h2>
                     {goal.description && <p className={styles.goalDesc}>{goal.description}</p>}
                   </div>
@@ -301,7 +444,7 @@ export function GoalsView(): React.ReactElement {
                     label={links.length > 0 ? `${links.length} linked tasks (${progress}%)` : `${goal.current_value} / ${goal.target_value} (${progress}%)`}
                   />
 
-                  {links.length === 0 && (
+                  {links.length === 0 && goal.status !== 'archived' && (
                     <div className={styles.stepperRow}>
                       <span>
                         Target: <strong className={styles.stepperValue} title="Click to edit values" onClick={() => handleOpenEdit(goal)}>{goal.current_value} / {goal.target_value}</strong>
@@ -334,13 +477,15 @@ export function GoalsView(): React.ReactElement {
                 <div className={styles.linkedTasksSection}>
                   <div className={styles.linkedTasksHeader}>
                     <span>Linked Tasks ({links.length})</span>
-                    <button
-                      type="button"
-                      className={styles.cardBtn}
-                      onClick={() => setLinkingGoalId(linkingGoalId === goal.id ? null : goal.id)}
-                    >
-                      {linkingGoalId === goal.id ? 'Close' : '+ Link Task'}
-                    </button>
+                    {goal.status !== 'archived' && (
+                      <button
+                        type="button"
+                        className={styles.cardBtn}
+                        onClick={() => setLinkingGoalId(linkingGoalId === goal.id ? null : goal.id)}
+                      >
+                        {linkingGoalId === goal.id ? 'Close' : '+ Link Task'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Task picker dropdown if linking */}
@@ -386,14 +531,16 @@ export function GoalsView(): React.ReactElement {
                               {task.is_completed === 1 ? '✓ ' : '○ '}
                               {task.title}
                             </span>
-                            <button
-                              type="button"
-                              className={styles.unlinkBtn}
-                              onClick={() => unlinkTask(goal.id, link.resource_id)}
-                              title="Unlink task"
-                            >
-                              ✕
-                            </button>
+                            {goal.status !== 'archived' && (
+                              <button
+                                type="button"
+                                className={styles.unlinkBtn}
+                                onClick={() => unlinkTask(goal.id, link.resource_id)}
+                                title="Unlink task"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
                         );
                       })}
@@ -404,26 +551,82 @@ export function GoalsView(): React.ReactElement {
                 {/* Footer Controls */}
                 <div className={styles.cardFooter}>
                   <span>
-                    {goal.target_date ? `🎯 Target: ${goal.target_date}` : 'No target date'}
+                    {goal.status === 'completed' && goal.completed_at
+                      ? `🏆 Completed: ${new Date(goal.completed_at).toLocaleDateString()}`
+                      : goal.target_date
+                        ? `🎯 Target: ${goal.target_date}`
+                        : 'No target date'}
                   </span>
 
                   <div className={styles.cardActions}>
+                    {goal.status !== 'archived' && (
+                      <button
+                        type="button"
+                        className={styles.cardBtn}
+                        onClick={() => handleOpenEdit(goal)}
+                        title="Edit goal"
+                      >
+                        ✏️ Edit
+                      </button>
+                    )}
+
+                    {/* Completion / Reopen action */}
+                    {goal.status === 'completed' ? (
+                      <button
+                        type="button"
+                        className={styles.cardBtn}
+                        onClick={() => handleReopenGoal(goal)}
+                        title="Reopen goal as active"
+                      >
+                        ↺ Reopen
+                      </button>
+                    ) : goal.status !== 'archived' ? (
+                      <button
+                        type="button"
+                        className={styles.cardBtn}
+                        onClick={() => handleMarkCompleted(goal)}
+                        title="Mark goal as completed"
+                        style={progress >= 100 ? { borderColor: '#10b981', color: '#10b981', fontWeight: 'bold' } : undefined}
+                      >
+                        {progress >= 100 ? '🎉 Complete' : '✓ Complete'}
+                      </button>
+                    ) : null}
+
+                    {/* Pause / Resume for active/paused */}
+                    {(goal.status === 'active' || goal.status === 'paused') && (
+                      <button
+                        type="button"
+                        className={styles.cardBtn}
+                        onClick={() => handleTogglePause(goal)}
+                        title={goal.status === 'paused' ? 'Resume goal' : 'Pause goal'}
+                      >
+                        {goal.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
+                      </button>
+                    )}
+
+                    {/* Archive / Unarchive */}
                     <button
                       type="button"
                       className={styles.cardBtn}
-                      onClick={() => handleOpenEdit(goal)}
-                      title="Edit goal"
+                      onClick={() => handleToggleArchive(goal)}
+                      title={goal.status === 'archived' ? 'Unarchive (restore to active)' : 'Archive goal'}
                     >
-                      ✏️ Edit
+                      {goal.status === 'archived' ? '↺ Unarchive' : '📦 Archive'}
                     </button>
-                    <button
-                      type="button"
-                      className={styles.cardBtn}
-                      onClick={() => incrementStreak(goal.id)}
-                      title="Add +1 to streak"
-                    >
-                      +🔥 Streak
-                    </button>
+
+                    {/* Streak for active goals */}
+                    {(goal.status === 'active' || !goal.status) && (
+                      <button
+                        type="button"
+                        className={styles.cardBtn}
+                        onClick={() => incrementStreak(goal.id)}
+                        title="Add +1 to streak"
+                      >
+                        +🔥
+                      </button>
+                    )}
+
+                    {/* Delete */}
                     <button
                       type="button"
                       className={styles.cardBtn}
@@ -549,6 +752,43 @@ export function GoalsView(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* Milestone Celebration Modal */}
+      {celebratingGoal && (
+        <div className={styles.celebrationBackdrop} onClick={() => setCelebratingGoal(null)}>
+          <div className={styles.celebrationBox} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.celebrationTrophy}>🏆</div>
+            <h2 className={styles.celebrationTitle}>Goal Accomplished!</h2>
+            <h3 className={styles.celebrationGoalTitle}>{celebratingGoal.title}</h3>
+            <p className={styles.celebrationSubtitle}>
+              Outstanding work! You set a meaningful target, stayed consistent, and reached the finish line.
+            </p>
+
+            <div className={styles.celebrationStatsRow}>
+              <div className={styles.celebrationStatCard}>
+                <span className={styles.celebrationStatVal}>
+                  {celebratingGoal.target_value}
+                </span>
+                <span className={styles.celebrationStatLbl}>Target Reached</span>
+              </div>
+              <div className={styles.celebrationStatCard}>
+                <span className={styles.celebrationStatVal}>
+                  {celebratingGoal.streak_count}🔥
+                </span>
+                <span className={styles.celebrationStatLbl}>Streak Record</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.celebrationDismissBtn}
+              onClick={() => setCelebratingGoal(null)}
+            >
+              Awesome! Celebrate & Continue →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Undo Toast Container */}
       {lastToastAction && (
