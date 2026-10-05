@@ -981,7 +981,7 @@ export function useCompletedTasks(containerId?: string): Task[] {
             return t.area_id === containerId.slice(5) && !t.project_id;
           }
           if (containerId === 'list_inbox') {
-            return !t.area_id && !t.project_id;
+            return (t.area_id === null && t.project_id === null) || t.list_id === 'list_inbox';
           }
           return t.list_id === containerId || t.project_id === containerId;
         }

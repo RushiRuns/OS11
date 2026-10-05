@@ -80,4 +80,32 @@ describe('Inbox Triage Fast Actions & Rules', () => {
     expect(nextState.waitingOn).toBe('Bob for approval');
     expect(nextState.followUpDate).toBe('2026-10-10');
   });
+
+  it('filters tasks for inbox scope: incomplete, not trashed, list_inbox or (area_id is null and project_id is null)', () => {
+    const taskListScopeFilter = (t: {
+      is_trashed: number;
+      is_completed: number;
+      list_id?: string | null;
+      area_id?: string | null;
+      project_id?: string | null;
+    }) => {
+      if (t.is_trashed !== 0 || t.is_completed !== 0) return false;
+      return (t.area_id === null && t.project_id === null) || t.list_id === 'list_inbox';
+    };
+
+    const taskInbox1 = { id: '1', is_trashed: 0, is_completed: 0, list_id: 'list_inbox', area_id: null, project_id: null };
+    const taskUnassignedRoot = { id: '2', is_trashed: 0, is_completed: 0, list_id: null, area_id: null, project_id: null };
+    const taskProject = { id: '3', is_trashed: 0, is_completed: 0, list_id: 'proj-1', area_id: null, project_id: 'proj-1' };
+    const taskArea = { id: '4', is_trashed: 0, is_completed: 0, list_id: null, area_id: 'area-1', project_id: null };
+    const taskCompletedInbox = { id: '5', is_trashed: 0, is_completed: 1, list_id: 'list_inbox', area_id: null, project_id: null };
+    const taskTrashedInbox = { id: '6', is_trashed: 1, is_completed: 0, list_id: 'list_inbox', area_id: null, project_id: null };
+
+    expect(taskListScopeFilter(taskInbox1)).toBe(true);
+    expect(taskListScopeFilter(taskUnassignedRoot)).toBe(true);
+    expect(taskListScopeFilter(taskProject)).toBe(false);
+    expect(taskListScopeFilter(taskArea)).toBe(false);
+    expect(taskListScopeFilter(taskCompletedInbox)).toBe(false);
+    expect(taskListScopeFilter(taskTrashedInbox)).toBe(false);
+  });
 });
+

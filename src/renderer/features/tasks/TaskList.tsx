@@ -366,7 +366,10 @@ export function TaskList({
             }
             if (activeListId === 'list_inbox') {
               return tasks
-                .filter((t) => !t.area_id && !t.project_id)
+                .filter(
+                  (t) =>
+                    ((t.area_id === null && t.project_id === null) || t.list_id === 'list_inbox')
+                )
                 .sort((a, b) => a.sort_order - b.sort_order);
             }
             return tasks
