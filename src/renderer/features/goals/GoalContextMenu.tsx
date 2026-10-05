@@ -51,8 +51,8 @@ export function GoalContextMenu({
 
   const menuWidth = 200;
   const menuHeight = 280;
-  const posX = Math.min(position.x, window.innerWidth - menuWidth - 12);
-  const posY = Math.min(position.y, window.innerHeight - menuHeight - 12);
+  const posX = Math.max(12, Math.min(position.x, window.innerWidth - menuWidth - 12));
+  const posY = Math.max(12, Math.min(position.y, window.innerHeight - menuHeight - 12));
 
   const isCompleted = goal.status === 'completed';
   const isPaused = goal.status === 'paused';

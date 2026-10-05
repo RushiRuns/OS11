@@ -6,9 +6,9 @@ import { useModuleStore } from '../../stores/moduleStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 import { Toast } from '../../components/Toast/Toast.js';
-import { ProgressBar } from '../../components/ProgressBar/ProgressBar.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { HabitTracker } from './HabitTracker.js';
+import { GoalCard } from './GoalCard.js';
 import { GoalContextMenu, type GoalContextMenuPosition } from './GoalContextMenu.js';
 import { GoalAnalyticsBanner } from './GoalAnalyticsBanner.js';
 import { GoalHistoryModal } from './GoalHistoryModal.js';
@@ -58,7 +58,6 @@ export function GoalsView(): React.ReactElement {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [linkingGoalId, setLinkingGoalId] = useState<string | null>(null);
   const [contextMenuGoal, setContextMenuGoal] = useState<Goal | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<GoalContextMenuPosition | null>(null);
   const [historyModalGoal, setHistoryModalGoal] = useState<Goal | null>(null);
@@ -336,25 +335,6 @@ export function GoalsView(): React.ReactElement {
     }
   };
 
-  const availableTasksToLink = useMemo(() => {
-    if (!linkingGoalId) return [];
-    const existing = new Set(
-      (linksByGoalId[linkingGoalId] ?? [])
-        .filter((l) => l.resource_type === 'task')
-        .map((l) => l.resource_id)
-    );
-    return Object.values(tasksById).filter((t) => !existing.has(t.id) && t.is_trashed === 0);
-  }, [linkingGoalId, linksByGoalId, tasksById]);
-
-  const availableProjectsToLink = useMemo(() => {
-    if (!linkingGoalId) return [];
-    const existing = new Set(
-      (linksByGoalId[linkingGoalId] ?? [])
-        .filter((l) => l.resource_type === 'project')
-        .map((l) => l.resource_id)
-    );
-    return Object.values(projectsById).filter((p) => !existing.has(p.id) && p.status !== 'archived');
-  }, [linkingGoalId, linksByGoalId, projectsById]);
 
   return (
     <div className={styles.pageContainer}>
@@ -401,6 +381,31 @@ export function GoalsView(): React.ReactElement {
               </div>
 
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {/* Keyword Search */}
+                <div className={styles.searchFilterWrap}>
+                  <span className={styles.searchIcon}>🔍</span>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Search goals... (/)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search goals"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      className={styles.searchClearBtn}
+                      onClick={() => setSearchQuery('')}
+                      title="Clear search"
+                      aria-label="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   className={`${styles.analyticsToggleBtn} ${showAnalytics ? styles.analyticsToggleBtnActive : ''}`}
@@ -510,31 +515,6 @@ export function GoalsView(): React.ReactElement {
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Keyword Search */}
-          <div className={styles.searchFilterWrap}>
-            <span className={styles.searchIcon}>🔍</span>
-            <input
-              ref={searchInputRef}
-              type="text"
-              className={styles.searchInput}
-              placeholder="Search goals... (/)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search goals"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className={styles.searchClearBtn}
-                onClick={() => setSearchQuery('')}
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
           {/* Sort By Dropdown */}
           <div className={styles.typeFilterWrap}>
             <select
@@ -622,457 +602,39 @@ export function GoalsView(): React.ReactElement {
           {filteredGoals.map((goal) => {
             const progress = computeGoalProgress(goal);
             const links = linksByGoalId[goal.id] ?? [];
+            const subGoals = useGoalStore.getState().getSubGoals(goal.id);
             const isHabit = goal.goal_type === 'habit';
             const streakStatus = isHabit ? getStreakStatus(goal.id) : null;
             const deadlineInfo = getDeadlineInfo(goal);
-
-            const typeBadgeClass =
-              goal.goal_type === 'habit'
-                ? styles.badgeHabit
-                : goal.goal_type === 'outcome'
-                  ? styles.badgeOutcome
-                  : styles.badgeMilestone;
-
-            const cardClass = [
-              styles.goalCard,
-              goal.status === 'completed' ? styles.goalCardCompleted : '',
-              goal.status === 'paused' ? styles.goalCardPaused : '',
-              goal.status === 'archived' ? styles.goalCardArchived : '',
-              deadlineInfo.state === 'overdue' ? styles.goalCardOverdue : '',
-              deadlineInfo.state === 'due_today' ? styles.goalCardDueToday : '',
-            ]
-              .filter(Boolean)
-              .join(' ');
+            const parentGoalTitle = goal.parent_goal_id ? goalsById[goal.parent_goal_id]?.title : undefined;
 
             return (
-              <div
+              <GoalCard
                 key={goal.id}
-                className={cardClass}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenuGoal(goal);
-                  setContextMenuPos({ x: e.clientX, y: e.clientY });
+                goal={goal}
+                progress={progress}
+                links={links}
+                subGoals={subGoals}
+                isHabit={isHabit}
+                streakStatus={streakStatus}
+                deadlineInfo={deadlineInfo}
+                parentGoalTitle={parentGoalTitle}
+                tasksById={tasksById}
+                projectsById={projectsById}
+                onOpenContextMenu={(g, pos) => {
+                  setContextMenuGoal(g);
+                  setContextMenuPos(pos);
                 }}
-              >
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardHeaderLeft}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span className={`${styles.goalTypeBadge} ${typeBadgeClass}`}>
-                        {goal.goal_type}
-                      </span>
-                      {goal.category && (
-                        <span className={styles.categoryBadge} title={`Category: ${goal.category}`}>
-                          🏷️ {goal.category}
-                        </span>
-                      )}
-                      {goal.status === 'completed' && (
-                        <span className={`${styles.goalTypeBadge} ${styles.badgeCompleted}`}>
-                          ✓ Completed
-                        </span>
-                      )}
-                      {goal.status === 'paused' && (
-                        <span className={`${styles.goalTypeBadge} ${styles.badgePaused}`}>
-                          ⏸ Paused
-                        </span>
-                      )}
-                      {goal.status === 'archived' && (
-                        <span className={`${styles.goalTypeBadge} ${styles.badgeArchived}`}>
-                          📦 Archived
-                        </span>
-                      )}
-                    </div>
-                    {goal.parent_goal_id && goalsById[goal.parent_goal_id] && (
-                      <div className={styles.parentGoalTag}>
-                        <span>↳ Sub-goal of:</span>
-                        <strong>{goalsById[goal.parent_goal_id].title}</strong>
-                      </div>
-                    )}
-                    <h2 className={styles.goalTitle}>{goal.title}</h2>
-                    {goal.description && <p className={styles.goalDesc}>{goal.description}</p>}
-                  </div>
-
-                  {isHabit && streakStatus ? (
-                    <div>
-                      {streakStatus.health === 'completed_today' && (
-                        <span
-                          className={styles.streakBadgeCompleted}
-                          title={`Completed today! Longest streak: ${streakStatus.longestStreak}d`}
-                        >
-                          🔥 {streakStatus.currentStreak}d Streak
-                        </span>
-                      )}
-                      {streakStatus.health === 'due_today' && (
-                        <span
-                          className={styles.streakBadgeDue}
-                          title={`Due today! Longest streak: ${streakStatus.longestStreak}d`}
-                        >
-                          ⏳ {streakStatus.currentStreak}d Due
-                        </span>
-                      )}
-                      {streakStatus.health === 'broken' && (
-                        <span
-                          className={styles.streakBadgeBroken}
-                          title={`Streak broken. Best record: ${streakStatus.longestStreak}d`}
-                        >
-                          ⚠️ Broken (Best: {streakStatus.longestStreak}d)
-                        </span>
-                      )}
-                      {streakStatus.health === 'inactive' && (
-                        <span
-                          className={styles.streakBadgeInactive}
-                          title="No check-ins yet"
-                        >
-                          💤 Inactive
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    goal.streak_count > 0 && (
-                      <span className={styles.streakBadge} title="Active streak">
-                        🔥 {goal.streak_count}d
-                      </span>
-                    )
-                  )}
-                </div>
-
-                {/* 7-Day Consistency Strip for Habits */}
-                {isHabit && streakStatus && (
-                  <div className={styles.habitStripWrap}>
-                    <div className={styles.habitStripHeader}>
-                      <span className={styles.habitStripLabel}>Last 7 Days</span>
-                      <span className={styles.habitBestStreak}>
-                        Best: <strong>{streakStatus.longestStreak}d</strong>
-                      </span>
-                    </div>
-                    <div className={styles.recentDaysStrip}>
-                      {streakStatus.recentDays.map((d) => (
-                        <div
-                          key={d.date}
-                          className={`${styles.dayDot} ${d.checked ? styles.dayDotChecked : ''} ${d.isToday ? styles.dayDotToday : ''}`}
-                          title={`${d.date} (${d.dayLabel}): ${d.checked ? 'Checked in' : 'Missed'}${d.isToday ? ' (Today)' : ''}`}
-                        >
-                          <span className={styles.dayDotLabel}>{d.dayLabel}</span>
-                          <span className={styles.dayDotIndicator}>{d.checked ? '✓' : '·'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Progress Bar & Stepper */}
-                <div>
-                  <ProgressBar
-                    progress={progress}
-                    showLabel
-                    label={links.length > 0 ? `${links.length} linked resources (${progress}%)` : `${goal.current_value} / ${goal.target_value} (${progress}%)`}
-                  />
-
-                  {links.length === 0 && goal.status !== 'archived' && (
-                    <div className={styles.stepperRow}>
-                      <span>
-                        Target: <strong className={styles.stepperValue} title="Click to edit values" onClick={() => handleOpenEdit(goal)}>{goal.current_value} / {goal.target_value}</strong>
-                      </span>
-                      <div className={styles.stepperGroup}>
-                        <button
-                          type="button"
-                          className={styles.stepperBtn}
-                          onClick={() => adjustGoalProgress(goal.id, -1)}
-                          title="Decrease progress (-1)"
-                          aria-label="Decrease progress"
-                        >
-                          −
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.stepperBtn}
-                          onClick={() => adjustGoalProgress(goal.id, 1)}
-                          title="Increase progress (+1)"
-                          aria-label="Increase progress"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Sub-goals Section */}
-                {(() => {
-                  const subGoals = useGoalStore.getState().getSubGoals(goal.id);
-                  if (subGoals.length === 0) return null;
-                  return (
-                    <div className={styles.subGoalsSection}>
-                      <span className={styles.subGoalsHeader}>Sub-goals / OKRs ({subGoals.length})</span>
-                      <div className={styles.subGoalsList}>
-                        {subGoals.map((sub) => {
-                          const subProg = useGoalStore.getState().computeProgress(sub.id, tasksById, projectsById);
-                          return (
-                            <div key={sub.id} className={styles.subGoalItem}>
-                              <div className={styles.subGoalTitleRow}>
-                                <span className={styles.subGoalBullet}>▸</span>
-                                <span className={styles.subGoalTitle}>{sub.title}</span>
-                                <span className={styles.subGoalPercent}>{subProg}%</span>
-                              </div>
-                              <div className={styles.subGoalProgressTrack}>
-                                <div className={styles.subGoalProgressBar} style={{ width: `${subProg}%` }} />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Linked Resources Section */}
-                <div className={styles.linkedTasksSection}>
-                  <div className={styles.linkedTasksHeader}>
-                    <span>Linked Resources ({links.length})</span>
-                    {goal.status !== 'archived' && (
-                      <button
-                        type="button"
-                        className={styles.cardBtn}
-                        onClick={() => setLinkingGoalId(linkingGoalId === goal.id ? null : goal.id)}
-                      >
-                        {linkingGoalId === goal.id ? 'Close' : '+ Link Resource'}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Resource picker dropdown if linking */}
-                  {linkingGoalId === goal.id && (
-                    <div style={{ margin: '4px 0' }}>
-                      <select
-                        className={styles.formInput}
-                        style={{ width: '100%', fontSize: '11px', padding: '4px 8px' }}
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            const [type, id] = e.target.value.split(':') as ['task' | 'project', string];
-                            linkTask(goal.id, id, type);
-                            setLinkingGoalId(null);
-                          }
-                        }}
-                      >
-                        <option value="">Select a project or task to link...</option>
-                        {availableProjectsToLink.length > 0 && (
-                          <optgroup label="Projects">
-                            {availableProjectsToLink.map((p) => (
-                              <option key={`project:${p.id}`} value={`project:${p.id}`}>
-                                📁 {p.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                        {availableTasksToLink.length > 0 && (
-                          <optgroup label="Tasks">
-                            {availableTasksToLink.map((t) => (
-                              <option key={`task:${t.id}`} value={`task:${t.id}`}>
-                                ✓ {t.title}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </select>
-                    </div>
-                  )}
-
-                  {links.length > 0 && (
-                    <div className={styles.linkList}>
-                      {links.map((link) => {
-                        if (link.resource_type === 'project') {
-                          const project = projectsById[link.resource_id];
-                          if (!project) return null;
-                          return (
-                            <div key={`project-${link.resource_id}`} className={styles.linkItem}>
-                              <span
-                                style={{
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  color: 'var(--text-primary)',
-                                }}
-                              >
-                                📁 {project.name}
-                              </span>
-                              {goal.status !== 'archived' && (
-                                <button
-                                  type="button"
-                                  className={styles.unlinkBtn}
-                                  onClick={() => unlinkTask(goal.id, link.resource_id, 'project')}
-                                  title="Unlink project"
-                                >
-                                  ✕
-                                </button>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        const task = tasksById[link.resource_id];
-                        if (!task) return null;
-                        return (
-                          <div key={`task-${link.resource_id}`} className={styles.linkItem}>
-                            <span
-                              style={{
-                                textDecoration: task.is_completed === 1 ? 'line-through' : 'none',
-                                color: task.is_completed === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {task.is_completed === 1 ? '✓ ' : '○ '}
-                              {task.title}
-                            </span>
-                            {goal.status !== 'archived' && (
-                              <button
-                                type="button"
-                                className={styles.unlinkBtn}
-                                onClick={() => unlinkTask(goal.id, link.resource_id, 'task')}
-                                title="Unlink task"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer Controls */}
-                <div className={styles.cardFooter}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span>
-                      {goal.status === 'completed' && goal.completed_at
-                        ? `🏆 Completed: ${new Date(goal.completed_at).toLocaleDateString()}`
-                        : goal.target_date
-                          ? `🎯 Target: ${goal.target_date}`
-                          : 'No target date'}
-                    </span>
-                    {goal.status !== 'completed' && goal.status !== 'archived' && deadlineInfo.state !== 'none' && (
-                      <span
-                        className={
-                          deadlineInfo.state === 'overdue'
-                            ? styles.deadlineBadgeOverdue
-                            : deadlineInfo.state === 'due_today'
-                              ? styles.deadlineBadgeDueToday
-                              : deadlineInfo.state === 'due_soon'
-                                ? styles.deadlineBadgeDueSoon
-                                : styles.deadlineBadgeOnTrack
-                        }
-                      >
-                        {deadlineInfo.label}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className={styles.cardActions}>
-                    <button
-                      type="button"
-                      className={styles.cardBtn}
-                      onClick={() => setHistoryModalGoal(goal)}
-                      title="View progress history"
-                    >
-                      📈 History
-                    </button>
-
-                    {goal.status !== 'archived' && (
-                      <button
-                        type="button"
-                        className={styles.cardBtn}
-                        onClick={() => handleOpenEdit(goal)}
-                        title="Edit goal"
-                      >
-                        ✏️ Edit
-                      </button>
-                    )}
-
-                    {/* Completion / Reopen action */}
-                    {goal.status === 'completed' ? (
-                      <button
-                        type="button"
-                        className={styles.cardBtn}
-                        onClick={() => handleReopenGoal(goal)}
-                        title="Reopen goal as active"
-                      >
-                        ↺ Reopen
-                      </button>
-                    ) : goal.status !== 'archived' ? (
-                      <button
-                        type="button"
-                        className={styles.cardBtn}
-                        onClick={() => handleMarkCompleted(goal)}
-                        title="Mark goal as completed"
-                        style={progress >= 100 ? { borderColor: '#10b981', color: '#10b981', fontWeight: 'bold' } : undefined}
-                      >
-                        {progress >= 100 ? '🎉 Complete' : '✓ Complete'}
-                      </button>
-                    ) : null}
-
-                    {/* Pause / Resume for active/paused */}
-                    {(goal.status === 'active' || goal.status === 'paused') && (
-                      <button
-                        type="button"
-                        className={styles.cardBtn}
-                        onClick={() => handleTogglePause(goal)}
-                        title={goal.status === 'paused' ? 'Resume goal' : 'Pause goal'}
-                      >
-                        {goal.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-                      </button>
-                    )}
-
-                    {/* Archive / Unarchive */}
-                    <button
-                      type="button"
-                      className={styles.cardBtn}
-                      onClick={() => handleToggleArchive(goal)}
-                      title={goal.status === 'archived' ? 'Unarchive (restore to active)' : 'Archive goal'}
-                    >
-                      {goal.status === 'archived' ? '↺ Unarchive' : '📦 Archive'}
-                    </button>
-
-                    {/* Habit Check-In or Streak Increment */}
-                    {isHabit && goal.status !== 'archived' && streakStatus ? (
-                      <button
-                        type="button"
-                        className={`${styles.cardBtn} ${streakStatus.checkedInToday ? styles.habitDoneBtn : styles.habitCheckInBtn}`}
-                        onClick={() => checkInHabit(goal.id)}
-                        title={streakStatus.checkedInToday ? 'Checked in today! Click to undo' : 'Check in for today'}
-                      >
-                        {streakStatus.checkedInToday
-                          ? '✓ Done Today'
-                          : streakStatus.health === 'broken'
-                            ? '+ Restart'
-                            : '+ Check In'}
-                      </button>
-                    ) : (
-                      (goal.status === 'active' || !goal.status) && (
-                        <button
-                          type="button"
-                          className={styles.cardBtn}
-                          onClick={() => incrementStreak(goal.id)}
-                          title="Add +1 to streak"
-                        >
-                          +🔥
-                        </button>
-                      )
-                    )}
-
-                    {/* Delete */}
-                    <button
-                      type="button"
-                      className={styles.cardBtn}
-                      onClick={() => handleDeleteGoal(goal)}
-                      title="Delete goal"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </div>
+                onCheckInHabit={(g) => checkInHabit(g.id)}
+                onIncrementStreak={(g) => incrementStreak(g.id)}
+                onAdjustProgress={(id, delta) => adjustGoalProgress(id, delta)}
+                onMarkCompleted={(g) => handleMarkCompleted(g)}
+                onReopenGoal={(g) => handleReopenGoal(g)}
+                onToggleArchive={(g) => handleToggleArchive(g)}
+                onOpenEdit={(g) => handleOpenEdit(g)}
+                onLinkResource={(id, resId, resType) => linkTask(id, resId, resType)}
+                onUnlinkResource={(id, resId, resType) => unlinkTask(id, resId, resType)}
+              />
             );
           })}
         </div>
@@ -1306,7 +868,7 @@ export function GoalsView(): React.ReactElement {
           onLinkResource={(g) => {
             setContextMenuGoal(null);
             setContextMenuPos(null);
-            setLinkingGoalId(g.id);
+            handleOpenEdit(g);
           }}
           onViewHistory={(g) => {
             setContextMenuGoal(null);

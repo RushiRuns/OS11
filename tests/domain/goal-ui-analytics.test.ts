@@ -5,11 +5,8 @@ import { useProjectStore } from '../../src/renderer/stores/projectStore.js';
 import { IPC } from '../../src/shared/ipc-channels.js';
 import type {
   Goal,
-  GoalSortOption,
   CreateGoalPayload,
   GoalProgressLog,
-  Task,
-  Project,
 } from '../../src/shared/types/index.js';
 
 vi.mock('../../src/renderer/services/ipc.js', () => ({

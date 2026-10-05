@@ -1,0 +1,594 @@
+.goalCard {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl, 14px);
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  position: relative;
+  transition: all var(--duration-fast, 150ms) ease;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  outline: none;
+}
+
+.goalCard:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  transform: translateY(-2px);
+}
+
+/* Card Health / Deadline States */
+.goalCardOverdue {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2), var(--shadow-sm) !important;
+}
+
+.goalCardDueToday {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2), var(--shadow-sm) !important;
+}
+
+/* Status States */
+.goalCardCompleted {
+  opacity: 0.88;
+}
+
+.goalCardPaused {
+  opacity: 0.8;
+  border-style: dashed;
+}
+
+.goalCardArchived {
+  opacity: 0.65;
+  filter: grayscale(0.4);
+}
+
+/* Card Header */
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+}
+
+.cardHeaderBadges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: var(--weight-medium, 500);
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 9999px);
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badgeHabit {
+  background-color: rgba(249, 115, 22, 0.12);
+  color: #ea580c;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+
+.badgeMilestone {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.badgeOutcome {
+  background-color: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.badgeCategory {
+  background-color: var(--surface-base);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.badgeStatus {
+  background-color: var(--surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.badgeCompleted {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badgePaused {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badgeArchived {
+  background-color: var(--surface-hover);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+
+.streakFlame {
+  font-size: 11px;
+  font-weight: var(--weight-bold, 700);
+  color: #f97316;
+  background-color: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 9999px);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Overflow Menu Button (···) */
+.menuTriggerBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 6px);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.menuTriggerBtn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* Title & Description */
+.cardTitleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parentGoalTag {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.parentGoalTag strong {
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium, 500);
+}
+
+.goalTitle {
+  font-size: var(--text-base, 14px);
+  font-weight: var(--weight-semibold, 600);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.goalDesc {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Progress Area */
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressInfoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.progressPercentage {
+  font-weight: var(--weight-semibold, 600);
+  color: var(--text-primary);
+}
+
+/* Interactive Chips Row (Tier 2 Progressive Disclosure) */
+.chipsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chipBtn {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: var(--weight-medium, 500);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.chipBtn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.chipBtnActive {
+  background-color: var(--accent-subtle, rgba(59, 130, 246, 0.12));
+  border-color: var(--accent);
+  color: var(--accent-primary, #3b82f6);
+}
+
+/* Expandable Drawer (GPU Accelerated via CSS Grid) */
+.drawerContainer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms ease;
+  opacity: 0;
+}
+
+.drawerContainerOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.drawerInner {
+  overflow: hidden;
+}
+
+.drawerBox {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-3, 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--text-secondary);
+}
+
+/* Sub-goals inside drawer */
+.subGoalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subGoalItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subGoalTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.subGoalBullet {
+  color: var(--accent-primary, #3b82f6);
+  margin-right: 4px;
+}
+
+.subGoalTitle {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subGoalPercent {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium, 500);
+}
+
+.subGoalProgressTrack {
+  height: 3px;
+  background-color: var(--surface-hover);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.subGoalProgressBar {
+  height: 100%;
+  background-color: var(--accent-primary, #3b82f6);
+  border-radius: var(--radius-full);
+  transition: width 200ms ease;
+}
+
+/* Linked Resources inside drawer */
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.linkItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 4px);
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.unlinkBtn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 1px 4px;
+  font-size: 10px;
+  border-radius: var(--radius-sm);
+}
+
+.unlinkBtn:hover {
+  background-color: var(--surface-hover);
+  color: #ef4444;
+}
+
+.linkPickerSelect {
+  width: 100%;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 8px;
+  color: var(--text-primary);
+  font-size: 11px;
+  outline: none;
+}
+
+.linkPickerSelect:focus {
+  border-color: var(--accent);
+}
+
+/* Habit 7-Day Consistency Strip inside drawer */
+.habitStripRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.dayDot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  font-size: 9px;
+  color: var(--text-tertiary);
+  min-width: 24px;
+}
+
+.dayDotToday {
+  border-color: var(--accent);
+}
+
+.dayDotChecked {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.dayDotIndicator {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+}
+
+/* Card Footer */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  padding-top: var(--space-2, 8px);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
+}
+
+.cardFooterLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Deadline Badges in footer */
+.deadlineBadgeOverdue {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.deadlineBadgeDueToday {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.deadlineBadgeDueSoon {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.deadlineBadgeOnTrack {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Primary Fast Action Buttons in Footer */
+.primaryActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.primaryActionBtn {
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--duration-fast, 150ms) ease;
+  white-space: nowrap;
+}
+
+.primaryActionBtn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-default);
+}
+
+.btnCheckIn {
+  background-color: var(--accent);
+  color: var(--text-on-accent, #ffffff);
+  border-color: var(--accent);
+}
+
+.btnCheckIn:hover {
+  background-color: var(--accent-hover, #2563eb);
+  border-color: var(--accent-hover, #2563eb);
+}
+
+.btnDoneToday {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.btnDoneToday:hover {
+  background-color: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.btnCompleteCelebration {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+}
+
+.btnCompleteCelebration:hover {
+  opacity: 0.95;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.35);
+}
+
+/* Stepper inside footer */
+.stepperWrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background-color: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  padding: 2px 4px;
+}
+
+.stepperBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.stepperBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.stepperLabel {
+  font-size: 11px;
+  font-weight: var(--weight-medium, 500);
+  color: var(--text-primary);
+  padding: 0 4px;
+  min-width: 48px;
+  text-align: center;
+}
