@@ -1,6 +1,7 @@
 import { Tray, Menu, nativeImage, app } from 'electron';
 import { showMainWindow, toggleMainWindow } from '../window/main-window.js';
 import { showOmnibarWindow } from '../window/omnibar-window.js';
+import { getTrayIconPath } from '../utils/icon.js';
 
 let tray: Tray | null = null;
 let currentTaskCount = 0;
@@ -53,10 +54,86 @@ export function createTrayIcon(
   pomodoro?: string | null,
   progress?: number
 ): Electron.NativeImage {
+  const iconPath = getTrayIconPath();
+  if (iconPath && typeof nativeImage?.createFromPath === 'function') {
+    try {
+      const baseImg = nativeImage.createFromPath(iconPath);
+      if (baseImg && !baseImg.isEmpty()) {
+        const size = baseImg.getSize();
+        const sized =
+          size.width === 32 && size.height === 32
+            ? baseImg
+            : baseImg.resize({ width: 32, height: 32 });
+
+        // If no tasks pending and no pomodoro, return clean desktop app icon
+        if (count <= 0 && !pomodoro) {
+          return sized;
+        }
+
+        // Draw a neat notification dot in the corner so the desktop app icon remains clearly visible
+        const bmp = Buffer.from(sized.toBitmap());
+        if (bmp.length === 32 * 32 * 4) {
+          const width = 32;
+          const height = 32;
+
+          const setPixel = (x: number, y: number, b: number, g: number, r: number, a = 255) => {
+            if (x < 0 || x >= width || y < 0 || y >= height) return;
+            const idx = (y * width + x) * 4;
+            const oldB = bmp[idx];
+            const oldG = bmp[idx + 1];
+            const oldR = bmp[idx + 2];
+            const alpha = a / 255;
+            bmp[idx] = Math.round(b * alpha + oldB * (1 - alpha));
+            bmp[idx + 1] = Math.round(g * alpha + oldG * (1 - alpha));
+            bmp[idx + 2] = Math.round(r * alpha + oldR * (1 - alpha));
+            bmp[idx + 3] = 255;
+          };
+
+          const drawCircle = (cx: number, cy: number, r: number, b: number, g: number, rCol: number) => {
+            for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) {
+              for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
+                const dist = Math.hypot(x - cx, y - cy);
+                if (dist <= r - 0.5) {
+                  setPixel(x, y, b, g, rCol, 255);
+                } else if (dist <= r + 0.5) {
+                  const a = Math.round((1 - (dist - (r - 0.5))) * 255);
+                  setPixel(x, y, b, g, rCol, a);
+                }
+              }
+            }
+          };
+
+          // Draw small status dot at corner (24, 24)
+          const cx = 24;
+          const cy = 24;
+          drawCircle(cx, cy, 4.5, 15, 23, 42); // dark outline
+          if (pomodoro) {
+            drawCircle(cx, cy, 3.5, 68, 68, 239); // Red for pomodoro
+          } else {
+            drawCircle(cx, cy, 3.5, 246, 130, 59); // Bright Blue for tasks
+          }
+
+          const badged = nativeImage.createFromBuffer(bmp, { width: 32, height: 32 });
+          if (badged && !badged.isEmpty()) {
+            return badged;
+          }
+        }
+
+        return sized;
+      }
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fallback to SVG data URL for test/headless environments where raster icon isn't available
   const svg = generateTraySvg(count, pomodoro, progress);
   const base64 = Buffer.from(svg).toString('base64');
-  const img = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${base64}`);
-  return img.resize({ width: 16, height: 16 });
+  if (typeof nativeImage?.createFromDataURL === 'function') {
+    const img = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${base64}`);
+    return typeof img?.resize === 'function' ? img.resize({ width: 16, height: 16 }) : img;
+  }
+  return nativeImage?.createEmpty ? nativeImage.createEmpty() : ({} as Electron.NativeImage);
 }
 
 export function buildTrayContextMenuTemplate(): Electron.MenuItemConstructorOptions[] {

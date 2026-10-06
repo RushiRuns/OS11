@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { APP_DEFAULTS } from '@shared/constants/index.js';
 import { IPC } from '@shared/ipc-channels.js';
+import { getAppIconPath } from '../utils/icon.js';
 
 let mainWindow: BrowserWindow | null = null;
 let isAppQuitting = false;
@@ -19,6 +20,7 @@ export function createMainWindow(): BrowserWindow {
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
+  const appIcon = getAppIconPath();
 
   mainWindow = new BrowserWindow({
     width: APP_DEFAULTS.WINDOW_WIDTH,
@@ -32,6 +34,7 @@ export function createMainWindow(): BrowserWindow {
     backgroundColor: '#0f172a',
     title: APP_DEFAULTS.APP_TITLE,
     autoHideMenuBar: true,
+    ...(appIcon ? { icon: appIcon } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

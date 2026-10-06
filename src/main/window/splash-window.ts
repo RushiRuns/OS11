@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { getAppIconPath } from '../utils/icon.js';
 
 let splashWindow: BrowserWindow | null = null;
 
@@ -33,6 +34,8 @@ export function createSplashWindow(): BrowserWindow {
     return splashWindow;
   }
 
+  const appIcon = getAppIconPath();
+
   splashWindow = new BrowserWindow({
     width: 420,
     height: 280,
@@ -42,6 +45,7 @@ export function createSplashWindow(): BrowserWindow {
     center: true,
     resizable: false,
     show: false,
+    ...(appIcon ? { icon: appIcon } : {}),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

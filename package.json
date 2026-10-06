@@ -36,6 +36,7 @@
       "dist-electron/**/*"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -53,6 +54,7 @@
       "deleteAppDataOnUninstall": false
     },
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -66,6 +68,7 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "linux": {
+      "icon": "build/icons",
       "target": [
         {
           "target": "AppImage",
