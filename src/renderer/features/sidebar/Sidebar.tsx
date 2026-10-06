@@ -25,19 +25,8 @@ import type { Tag } from '@shared/types/Tag.js';
 import { useCountsStore } from '../../stores/countsStore.js';
 import { isStalled } from '@shared/utils/project-health.js';
 import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
+import { Popover } from '../../components/Popover/Popover.js';
 import styles from './Sidebar.module.css';
-
-interface NavView {
-  id: string;
-  label: string;
-  icon: string;
-  moduleName?: string;
-}
-
-const VIEWS: NavView[] = [
-  { id: 'view_goals', label: 'Goals', icon: '🎯', moduleName: 'goals_habits' },
-  { id: 'view_pomodoro', label: 'Pomodoro', icon: '⏱️', moduleName: 'pomodoro' },
-];
 
 const KNOWN_ICON_MAP: Record<string, string> = {
   Layers: '⚡',
@@ -174,8 +163,9 @@ export function Sidebar(): React.ReactElement {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>('Local User');
   const [userAvatarEmoji, setUserAvatarEmoji] = useState<string | null>(null);
-  const profileRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const profileTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [focusedMenuItemIndex, setFocusedMenuItemIndex] = useState(0);
 
   // Auto-hiding scrollbar state
   const [isScrolling, setIsScrolling] = useState(false);
@@ -468,34 +458,6 @@ export function Sidebar(): React.ReactElement {
     });
   };
 
-  // Click-outside listener for profile menu
-  useEffect(() => {
-    if (!isProfileMenuOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(target) &&
-        menuRef.current &&
-        !menuRef.current.contains(target)
-      ) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsProfileMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isProfileMenuOpen]);
 
   // Global shortcut: Ctrl+P / Ctrl+L (or Cmd+P / Cmd+L) to open Create Project modal
   useEffect(() => {
@@ -841,11 +803,147 @@ export function Sidebar(): React.ReactElement {
     navigator.clipboard.writeText(json);
   };
 
-  // Filter views based on moduleStore.isEnabled()
-  const enabledViews = VIEWS.filter((view) => {
-    if (!view.moduleName) return true;
-    return isEnabled(view.moduleName);
-  });
+  const profileMenuItems = useMemo(() => {
+    const items: Array<{
+      id: string;
+      label: string;
+      icon: React.ReactNode;
+    }> = [];
+
+    if (isEnabled('dashboard') !== false) {
+      items.push({
+        id: 'view_dashboard',
+        label: 'Dashboard',
+        icon: (
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+          </svg>
+        ),
+      });
+    }
+
+    if (isEnabled('goals_habits')) {
+      items.push({
+        id: 'view_goals',
+        label: 'Goals',
+        icon: (
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="6" />
+            <circle cx="12" cy="12" r="2" />
+          </svg>
+        ),
+      });
+    }
+
+    if (isEnabled('pomodoro')) {
+      items.push({
+        id: 'view_pomodoro',
+        label: 'Pomodoro',
+        icon: (
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="10" y1="2" x2="14" y2="2" />
+            <line x1="12" y1="14" x2="12" y2="8" />
+            <circle cx="12" cy="14" r="8" />
+          </svg>
+        ),
+      });
+    }
+
+    items.push({
+      id: 'view_settings',
+      label: 'Settings',
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="4" y1="21" x2="4" y2="14" />
+          <line x1="4" y1="10" x2="4" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12" y2="3" />
+          <line x1="20" y1="21" x2="20" y2="16" />
+          <line x1="20" y1="12" x2="20" y2="3" />
+          <line x1="1" y1="14" x2="7" y2="14" />
+          <line x1="9" y1="8" x2="15" y2="8" />
+          <line x1="17" y1="16" x2="23" y2="16" />
+        </svg>
+      ),
+    });
+
+    return items;
+  }, [isEnabled]);
+
+  useEffect(() => {
+    if (isProfileMenuOpen) {
+      setFocusedMenuItemIndex(0);
+      requestAnimationFrame(() => {
+        menuItemRefs.current[0]?.focus();
+      });
+    }
+  }, [isProfileMenuOpen]);
+
+  const handleProfileMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedMenuItemIndex((prev) => {
+        const next = (prev + 1) % profileMenuItems.length;
+        menuItemRefs.current[next]?.focus();
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedMenuItemIndex((prev) => {
+        const next = (prev - 1 + profileMenuItems.length) % profileMenuItems.length;
+        menuItemRefs.current[next]?.focus();
+        return next;
+      });
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsProfileMenuOpen(false);
+      profileTriggerRef.current?.focus();
+    }
+  };
 
   return (
     <aside
@@ -855,29 +953,80 @@ export function Sidebar(): React.ReactElement {
     >
       {/* Top Profile Header & Collapse Toggle */}
       <div className={styles.header}>
-        <div
-          ref={profileRef}
-          className={styles.profileTrigger}
-          onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setIsProfileMenuOpen((prev) => !prev);
+        <Popover
+          open={isProfileMenuOpen}
+          onOpenChange={(open) => {
+            setIsProfileMenuOpen(open);
+            if (!open) {
+              profileTriggerRef.current?.focus();
             }
           }}
-          role="button"
-          tabIndex={0}
-          aria-haspopup="true"
-          aria-expanded={isProfileMenuOpen}
-          aria-label="User profile and menu"
-          title={userName}
+          variant="glass"
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          showArrow={false}
+          trigger={
+            <button
+              ref={profileTriggerRef}
+              type="button"
+              className={`${styles.profileTrigger} ${
+                isProfileMenuOpen ? styles.profileTriggerOpen : ''
+              }`}
+              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+              aria-haspopup="true"
+              aria-expanded={isProfileMenuOpen}
+              aria-label="User profile and menu"
+              title={userName}
+            >
+              <div className={styles.avatar}>{userAvatarEmoji || getInitials(userName)}</div>
+              <div className={styles.profileInfo}>
+                <span className={styles.profileName}>{userName}</span>
+              </div>
+              <svg
+                className={styles.chevronIcon}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="7 15 12 20 17 15" />
+                <polyline points="7 9 12 4 17 9" />
+              </svg>
+            </button>
+          }
         >
-          <div className={styles.avatar}>{userAvatarEmoji || getInitials(userName)}</div>
-          <div className={styles.profileInfo}>
-            <span className={styles.profileName}>{userName}</span>
+          <div
+            className={styles.profileMenuList}
+            role="menu"
+            aria-label="Profile navigation options"
+            onKeyDown={handleProfileMenuKeyDown}
+          >
+            {profileMenuItems.map((item, idx) => (
+              <button
+                key={item.id}
+                ref={(el) => {
+                  menuItemRefs.current[idx] = el;
+                }}
+                type="button"
+                className={styles.menuItem}
+                onClick={() => {
+                  setActiveListId(item.id);
+                  setIsProfileMenuOpen(false);
+                  profileTriggerRef.current?.focus();
+                }}
+                role="menuitem"
+                tabIndex={idx === focusedMenuItemIndex ? 0 : -1}
+              >
+                <span className={styles.menuItemIcon}>{item.icon}</span>
+                <span className={styles.menuItemLabel}>{item.label}</span>
+              </button>
+            ))}
           </div>
-          <span className={styles.chevron}>{isProfileMenuOpen ? '▴' : '▾'}</span>
-        </div>
+        </Popover>
 
         <button
           type="button"
@@ -900,37 +1049,6 @@ export function Sidebar(): React.ReactElement {
             <path d="M9 3v18" />
           </svg>
         </button>
-
-        {/* Profile Dropdown Menu */}
-        {isProfileMenuOpen && (
-          <div ref={menuRef} className={styles.profileMenu} role="menu" aria-label="Profile navigation options">
-            <button
-              type="button"
-              className={`${styles.menuItem} ${activeListId === 'view_dashboard' ? styles.menuItemActive : ''}`}
-              onClick={() => {
-                setActiveListId('view_dashboard');
-                setIsProfileMenuOpen(false);
-              }}
-              role="menuitem"
-            >
-              <span className={styles.menuItemIcon}>📊</span>
-              <span>Dashboard</span>
-            </button>
-
-            <button
-              type="button"
-              className={`${styles.menuItem} ${activeListId === 'view_settings' ? styles.menuItemActive : ''}`}
-              onClick={() => {
-                setActiveListId('view_settings');
-                setIsProfileMenuOpen(false);
-              }}
-              role="menuitem"
-            >
-              <span className={styles.menuItemIcon}>⚙️</span>
-              <span>Settings</span>
-            </button>
-          </div>
-        )}
       </div>
 
       <div
@@ -1208,59 +1326,6 @@ export function Sidebar(): React.ReactElement {
                           await useTagStore.getState().addTagToTask(taskId, tag.id);
                         }
                       }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Views Section */}
-        {enabledViews.length > 0 && (
-          <>
-            <div
-              className={styles.sectionLabel}
-              onClick={() => toggleSection('views')}
-              role="button"
-              tabIndex={0}
-              aria-expanded={!collapsedSections['views']}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  toggleSection('views');
-                }
-              }}
-            >
-              <span>Views</span>
-            </div>
-
-            <div
-              className={styles.collapsibleWrapper}
-              data-collapsed={collapsedSections['views'] ? 'true' : 'false'}
-            >
-              <div className={styles.collapsibleInner}>
-                {enabledViews.map((item) => {
-                  const isActive = activeListId === item.id;
-                  const pseudoList: List = {
-                    id: item.id,
-                    name: item.label,
-                    icon: item.icon,
-                    color: null,
-                    background_type: 'none',
-                    background_value: null,
-                    sort_order: 0,
-                    is_smart: 1,
-                    notification_enabled: 0,
-                    created_at: '',
-                    updated_at: '',
-                  };
-                  return (
-                    <ListItem
-                      key={item.id}
-                      list={pseudoList}
-                      isActive={isActive}
-                      onClick={(id) => setActiveListId(id)}
                     />
                   );
                 })}

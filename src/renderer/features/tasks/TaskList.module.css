@@ -3,14 +3,14 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background: var(--surface-base);
+  background: transparent;
   overflow: hidden;
   position: relative;
 }
 
 .quickAddRow {
   padding: var(--space-3) var(--space-6) var(--space-4) var(--space-6);
-  background: var(--surface-base);
+  background: transparent;
   flex-shrink: 0;
 }
 

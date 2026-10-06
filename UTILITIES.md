@@ -43,11 +43,11 @@
 
 | Component | File Path | Radix Primitive Wrapped? | Framer Motion Site? | Description |
 |---|---|---|---|---|
-| `Titlebar` | `src/renderer/components/Titlebar/Titlebar.tsx` | No | No (CSS transitions) | Custom frameless window titlebar with drag zone, window controls, and Always on Top pin |
+| `Titlebar` | `src/renderer/components/Titlebar/Titlebar.tsx` | No | No (CSS transitions) | Custom frameless window titlebar with drag zone, window controls, Always on Top pin, and active Pomodoro countdown pill |
 | `Checkbox` | `src/renderer/components/Checkbox/Checkbox.tsx` | No | **Site #1 (Spring completion)** | Accessible task completion checkbox with 180ms spring bounce |
 | `Button` | `src/renderer/components/Button/Button.tsx` | No | No (CSS transitions) | Base button with 3 semantic variants (`primary`, `ghost`, `danger`) and `sm` / `md` sizes |
 | `Input` | `src/renderer/components/Input/Input.tsx` | No | No (CSS transitions) | Styled text input with error state, accent border, and focus ring |
-| `Popover` | `src/renderer/components/Popover/Popover.tsx` | **Yes (`@radix-ui/react-popover`)** | No (CSS `opacity` + `scaleY`) | Floating picker overlay container with focus trap |
+| `Popover` | `src/renderer/components/Popover/Popover.tsx` | **Yes (`@radix-ui/react-popover`)** | No (CSS `opacity` + `scaleY` / glass animation) | Floating picker overlay container with focus trap; supports default and frosted glass (`variant="glass"`) styling |
 | `Toast` | `src/renderer/components/Toast/Toast.tsx` | No | No (CSS slide-up/down) | In-app notification toast with auto-dismiss and inline "Undo" action |
 | `EmptyState` | `src/renderer/components/EmptyState/EmptyState.tsx` | No | No (Static) | Universal empty state with calm typography and optional CTA button |
 | `LoadingSpinner` | `src/renderer/components/LoadingSpinner/LoadingSpinner.tsx` | No | No (CSS spin, reduced-motion static) | Accent-colored CSS spinner with reduced-motion static mode |

@@ -29,6 +29,40 @@
   --surface-selected: rgba(27, 136, 255, 0.1); /* Selected sidebar item */
   --surface-active: rgba(27, 136, 255, 0.07); /* Active / pressed state */
 
+  /* Main Pane Background */
+  --surface-main: var(--surface-base);
+  --surface-main-glow: transparent;
+  --surface-main-vignette: transparent;
+  --background-main: var(--surface-base);
+
+  /* Glass Popover */
+  --surface-glass: var(--surface-overlay);
+  --border-glass: var(--border-subtle);
+  --blur-glass: 20px;
+  --shadow-popover-glass: var(--shadow-md);
+
+  /* Profile row & menu */
+  --surface-profile-hover: rgba(0, 0, 0, 0.05);
+  --border-avatar: rgba(0, 0, 0, 0.09);
+  --radius-avatar-tile: 10px;
+  --radius-profile-row: 12px;
+  --radius-profile-menu-item: 7px;
+  --height-profile-menu-item: 30px;
+  --surface-profile-menu-hover: rgba(0, 0, 0, 0.06);
+  --width-profile-menu: 200px;
+  --motion-popover: 150ms;
+  --motion-menu-hover: 120ms;
+  --text-profile-name: 14.5px;
+  --tracking-profile: -0.01em;
+  --size-chevron: 14px;
+
+  /* Pomodoro Titlebar Pill */
+  --pomodoro-pill-border: rgba(27, 136, 255, 0.32);
+  --pomodoro-pill-bg: rgba(27, 136, 255, 0.13);
+  --pomodoro-pill-text: #0070e0;
+  --size-pill-dot: 6px;
+  --motion-pill-pulse: 2s;
+
   /* ----------------------------------------------------------
      TEXT
      Three-tier hierarchy. Use t1 for primary content,
@@ -285,6 +319,42 @@
     --surface-selected: rgba(77, 163, 255, 0.15);
     --surface-active: rgba(77, 163, 255, 0.1);
 
+    /* Main Pane Background */
+    --surface-main: #141418;
+    --surface-main-glow: rgba(96, 118, 255, 0.11);
+    --surface-main-vignette: rgba(0, 0, 0, 0.4);
+    --background-main: radial-gradient(900px 380px at 50% -120px, var(--surface-main-glow), transparent 70%),
+      radial-gradient(140% 100% at 50% 0%, transparent 55%, var(--surface-main-vignette) 100%),
+      var(--surface-main);
+
+    /* Glass Popover */
+    --surface-glass: rgba(38, 37, 44, 0.74);
+    --border-glass: rgba(255, 255, 255, 0.1);
+    --blur-glass: 20px;
+    --shadow-popover-glass: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    /* Profile row & menu */
+    --surface-profile-hover: rgba(255, 255, 255, 0.07);
+    --border-avatar: rgba(255, 255, 255, 0.09);
+    --radius-avatar-tile: 10px;
+    --radius-profile-row: 12px;
+    --radius-profile-menu-item: 7px;
+    --height-profile-menu-item: 30px;
+    --surface-profile-menu-hover: rgba(255, 255, 255, 0.08);
+    --width-profile-menu: 200px;
+    --motion-popover: 150ms;
+    --motion-menu-hover: 120ms;
+    --text-profile-name: 14.5px;
+    --tracking-profile: -0.01em;
+    --size-chevron: 14px;
+
+    /* Pomodoro Titlebar Pill */
+    --pomodoro-pill-border: rgba(77, 163, 255, 0.32);
+    --pomodoro-pill-bg: rgba(77, 163, 255, 0.13);
+    --pomodoro-pill-text: #8ac4ff;
+    --size-pill-dot: 6px;
+    --motion-pill-pulse: 2s;
+
     --text-primary: #f0eff0;
     --text-secondary: #8c8b90;
     --text-tertiary: #4e4d52;
@@ -347,6 +417,42 @@
   --surface-hover: rgba(255, 255, 255, 0.05);
   --surface-selected: rgba(77, 163, 255, 0.15);
   --surface-active: rgba(77, 163, 255, 0.1);
+
+  /* Main Pane Background */
+  --surface-main: #141418;
+  --surface-main-glow: rgba(96, 118, 255, 0.11);
+  --surface-main-vignette: rgba(0, 0, 0, 0.4);
+  --background-main: radial-gradient(900px 380px at 50% -120px, var(--surface-main-glow), transparent 70%),
+    radial-gradient(140% 100% at 50% 0%, transparent 55%, var(--surface-main-vignette) 100%),
+    var(--surface-main);
+
+  /* Glass Popover */
+  --surface-glass: rgba(38, 37, 44, 0.74);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --blur-glass: 20px;
+  --shadow-popover-glass: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* Profile row & menu */
+  --surface-profile-hover: rgba(255, 255, 255, 0.07);
+  --border-avatar: rgba(255, 255, 255, 0.09);
+  --radius-avatar-tile: 10px;
+  --radius-profile-row: 12px;
+  --radius-profile-menu-item: 7px;
+  --height-profile-menu-item: 30px;
+  --surface-profile-menu-hover: rgba(255, 255, 255, 0.08);
+  --width-profile-menu: 200px;
+  --motion-popover: 150ms;
+  --motion-menu-hover: 120ms;
+  --text-profile-name: 14.5px;
+  --tracking-profile: -0.01em;
+  --size-chevron: 14px;
+
+  /* Pomodoro Titlebar Pill */
+  --pomodoro-pill-border: rgba(77, 163, 255, 0.32);
+  --pomodoro-pill-bg: rgba(77, 163, 255, 0.13);
+  --pomodoro-pill-text: #8ac4ff;
+  --size-pill-dot: 6px;
+  --motion-pill-pulse: 2s;
 
   --text-primary: #f0eff0;
   --text-secondary: #8c8b90;
@@ -487,6 +593,9 @@ body {
     --text-primary: #ffffff;
     --text-secondary: #e0e0e0;
     --text-tertiary: #c0c0c0;
+    --surface-glass: #2a2930;
+    --border-glass: rgba(255, 255, 255, 0.4);
+    --blur-glass: 0px;
   }
 
   /* Remove glass effects and blurred transparencies for maximum legibility */

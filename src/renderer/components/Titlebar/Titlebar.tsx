@@ -3,6 +3,8 @@ import { settingsServiceAdapter } from '../../services/settings-service-adapter.
 import { useNotificationStore } from '../../stores/notificationStore.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
+import { usePomodoroStore } from '../../stores/pomodoroStore.js';
+import { useAppStore } from '../../stores/app-store.js';
 import styles from './Titlebar.module.css';
 
 interface TitlebarProps {
@@ -34,6 +36,18 @@ export function Titlebar({
   const isMac =
     typeof navigator !== 'undefined' &&
     (navigator.userAgent.includes('Mac') || navigator.platform?.includes('Mac'));
+
+  const activeSession = usePomodoroStore((state) => state.activeSession);
+  const remainingSeconds = activeSession
+    ? Math.max(0, activeSession.durationSeconds - activeSession.elapsedSeconds)
+    : 0;
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  const timeFormatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const ariaMinutes = Math.floor(remainingSeconds / 60);
+  const ariaLabel = React.useMemo(() => {
+    return `${activeSession?.isPaused ? 'Pomodoro paused' : 'Pomodoro running'}, ${ariaMinutes} minute${ariaMinutes === 1 ? '' : 's'} left`;
+  }, [ariaMinutes, activeSession?.isPaused]);
 
   const clearHideTimer = () => {
     if (hideTimerRef.current !== null) {
@@ -167,6 +181,25 @@ export function Titlebar({
               <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
             </svg>
           </button>
+
+          {/* Running Pomodoro Live Timer Pill */}
+          {activeSession && (
+            <button
+              type="button"
+              className={styles.pomodoroPill}
+              onClick={() => useAppStore.getState().setActiveListId('view_pomodoro')}
+              aria-label={ariaLabel}
+              title={ariaLabel}
+            >
+              <span
+                className={`${styles.pomodoroDot} ${
+                  activeSession.isPaused ? styles.pomodoroDotPaused : ''
+                }`}
+                aria-hidden="true"
+              />
+              <span>{timeFormatted}</span>
+            </button>
+          )}
 
           {/* Windows / Linux Window Chrome Controls */}
           {!isMac && (

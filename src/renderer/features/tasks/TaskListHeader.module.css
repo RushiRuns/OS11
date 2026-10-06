@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-8) var(--space-6) var(--space-6) var(--space-6);
-  background: var(--surface-base);
+  background: transparent;
 }
 
 .topRow {

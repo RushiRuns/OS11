@@ -11,6 +11,9 @@ export interface PopoverProps {
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';
   sideOffset?: number;
+  variant?: 'default' | 'glass';
+  showArrow?: boolean;
+  className?: string;
 }
 
 export function Popover({
@@ -21,21 +24,28 @@ export function Popover({
   align = 'center',
   side = 'bottom',
   sideOffset = 6,
+  variant = 'default',
+  showArrow,
+  className,
 }: PopoverProps): React.ReactElement {
   const portalContainer = getRadixPortalContainer();
+  const shouldShowArrow = showArrow !== undefined ? showArrow : variant !== 'glass';
+  const contentClassName = `${variant === 'glass' ? styles.glassContent : styles.content} ${
+    className || ''
+  }`.trim();
 
   return (
     <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
       <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
       <RadixPopover.Portal container={portalContainer}>
         <RadixPopover.Content
-          className={styles.content}
+          className={contentClassName}
           align={align}
           side={side}
           sideOffset={sideOffset}
         >
           {children}
-          <RadixPopover.Arrow className={styles.arrow} />
+          {shouldShowArrow && <RadixPopover.Arrow className={styles.arrow} />}
         </RadixPopover.Content>
       </RadixPopover.Portal>
     </RadixPopover.Root>

@@ -3,6 +3,21 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-06] — OS11 Shell Redesign: Ambient Background, Titlebar Pomodoro Pill, Profile Block & Glass Profile Menu
+- **What was built:**
+  - `src/renderer/styles/tokens.css`: Added design tokens for dark-mode `--surface-main` (#141418), ambient top glow `--surface-main-glow`, edge darkening `--surface-main-vignette`, composite static `--background-main`, frosted glass popover tokens (`--surface-glass`, `--border-glass`, `--blur-glass`, `--shadow-popover-glass`), profile row & avatar tokens (`--surface-profile-hover`, `--border-avatar`, `--radius-avatar-tile`, `--radius-profile-row`, `--text-profile-name`, `--tracking-profile`, `--size-chevron`, `--radius-profile-menu-item`, `--height-profile-menu-item`, `--surface-profile-menu-hover`, `--width-profile-menu`), and Pomodoro live pill tokens (`--pomodoro-pill-border`, `--pomodoro-pill-bg`, `--pomodoro-pill-text`, `--size-pill-dot`, `--motion-pill-pulse`). Configured `@media (prefers-contrast: more)` high contrast accessibility fallback.
+  - `src/renderer/styles/layout.module.css`: Applied `--background-main` to `.mainCol` container.
+  - `src/renderer/features/tasks/TaskList.module.css`, `TaskListHeader.module.css`, `MyDayView.module.css`, `PlannedView.module.css`, `AnytimeView.module.css`, `SomedayView.module.css`: Set list container backgrounds to transparent so the ambient depth gradient renders continuously under list chrome.
+  - `src/renderer/components/Titlebar/Titlebar.tsx` & `.module.css`: Added live Pomodoro timer pill with tabular numerals (mm:ss), pulsing dot with pause and reduced-motion handling, `-webkit-app-region: no-drag`, per-minute updating aria-label, and click navigation to Pomodoro view without increasing titlebar height.
+  - `src/renderer/components/Popover/Popover.tsx` & `.module.css`: Extended Popover with `variant="glass"` support featuring 20px blur, 12px radius, and 150ms ease-out entrance animation.
+  - `src/renderer/features/sidebar/Sidebar.tsx` & `.module.css`: Removed `VIEWS` section entirely without shifting remaining items. Redesigned profile header row into a 12px radius interactive button with rounded-square tile avatar (`--surface-overlay` fill, 10px radius, 1px border), clean 14.5px font styling, up-down chevron icon, and hooked to glass Popover containing compact Dashboard, Goals, Pomodoro, and Settings rows with full arrow-key and Escape keyboard navigation.
+  - `UTILITIES.md`: Updated entries for `Titlebar` and `Popover`.
+- **What changed architecturally:**
+  - Sidebar decluttered by relocating Goals and Pomodoro into the profile menu popover, respecting module toggles (`goals_habits`, `pomodoro`, `dashboard`).
+  - Active Pomodoro sessions surfaced persistently via titlebar countdown pill.
+  - Zero hardcoded colors, sizes, radii, or durations in component files.
+  - All 83 test files and 591 tests pass with zero regressions.
+
 ### [2026-10-04] — GTD steps 9-13: Parked Projects, Shortcuts, Follow-Up Notifications & Weekly Review Main-Pane Takeover
 - **What was built:**
   - `src/renderer/features/projects/ProjectHeader.tsx` & `.module.css`: Added stalled indicator warning badge (`⚠️ Stalled: no next action`) and Someday badge (`📦 Someday / Maybe`), with Park / Unpark action in the header menu.

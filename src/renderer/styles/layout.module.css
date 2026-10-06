@@ -56,7 +56,7 @@
 
 /* Center Content / TaskList Column */
 .mainCol {
-  background-color: var(--surface-base);
+  background: var(--background-main);
   display: flex;
   flex-direction: column;
   overflow: hidden;
