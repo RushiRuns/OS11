@@ -17,6 +17,8 @@ export function MiniTimerView(): React.ReactElement {
           setSession(data.activeSession);
           if (data.timeText) {
             setTimeText(data.timeText);
+          } else if (!data.activeSession) {
+            setTimeText('25:00');
           }
         }
       }
@@ -29,6 +31,10 @@ export function MiniTimerView(): React.ReactElement {
 
   const handleAction = async (action: 'pause' | 'resume' | 'skip' | 'reset') => {
     try {
+      if (action === 'reset') {
+        setTimeText('25:00');
+        setSession(null);
+      }
       await invoke(IPC.POMODORO.ACTION, action);
     } catch {
       // Ignore
