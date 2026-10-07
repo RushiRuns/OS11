@@ -18,6 +18,7 @@ pids
 # Build artifacts
 dist
 dist-electron
+release
 
 # Node dependencies
 node_modules/

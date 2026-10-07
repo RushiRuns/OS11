@@ -93,6 +93,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Vendor chunk for React core to prevent circular chunk initialization issues
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/scheduler')) {
+            return 'vendor-react';
+          }
           // Recharts and data viz are bundled with dashboard chunk (PERFORMANCE.md §5)
           if (id.includes('node_modules/recharts')) {
             return 'dashboard';
@@ -100,9 +104,6 @@ export default defineConfig({
           // Lazy feature chunks
           if (id.includes('node_modules/chrono-node')) {
             return 'chrono';
-          }
-          if (id.includes('DropdownMenu') || id.includes('@radix-ui/react-dropdown-menu')) {
-            return 'DropdownMenu';
           }
           if (id.includes('src/renderer/features/dashboard')) {
             return 'dashboard';
