@@ -93,35 +93,17 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Vendor chunk for React core to prevent circular chunk initialization issues
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/scheduler')) {
-            return 'vendor-react';
-          }
           // Recharts and data viz are bundled with dashboard chunk (PERFORMANCE.md §5)
           if (id.includes('node_modules/recharts')) {
             return 'dashboard';
           }
-          // Lazy feature chunks
+          // Chrono natural language date parser
           if (id.includes('node_modules/chrono-node')) {
             return 'chrono';
           }
-          if (id.includes('src/renderer/features/dashboard')) {
-            return 'dashboard';
-          }
-          if (id.includes('src/renderer/features/goals')) {
-            return 'goals';
-          }
-          if (id.includes('src/renderer/features/projects')) {
-            return 'projects';
-          }
-          if (id.includes('src/renderer/features/settings')) {
-            return 'settings';
-          }
-          if (id.includes('src/renderer/features/pomodoro')) {
-            return 'pomodoro';
-          }
-          if (id.includes('src/renderer/features/gtd') || id.includes('src/renderer/features/review')) {
-            return 'gtd';
+          // Vendor chunk for all other external dependencies
+          if (id.includes('node_modules')) {
+            return 'vendor';
           }
         },
       },
