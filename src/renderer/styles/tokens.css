@@ -311,8 +311,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface-base: #23272a;
-    --surface-sidebar: #1e1d22;
+    --surface-base: #1c1c1c;
+    --surface-sidebar: #2a2a2a;
     --surface-raised: #252427;
     --surface-overlay: #2a2930;
     --surface-hover: rgba(255, 255, 255, 0.05);
@@ -320,18 +320,17 @@
     --surface-active: rgba(77, 163, 255, 0.1);
 
     /* Main Pane Background */
-    --surface-main: #141418;
-    --surface-main-glow: rgba(96, 118, 255, 0.11);
-    --surface-main-vignette: rgba(0, 0, 0, 0.4);
-    --background-main: radial-gradient(900px 380px at 50% -120px, var(--surface-main-glow), transparent 70%),
-      radial-gradient(140% 100% at 50% 0%, transparent 55%, var(--surface-main-vignette) 100%),
-      var(--surface-main);
+    --surface-main: #1c1c1c;
+    --surface-main-glow: transparent;
+    --surface-main-vignette: transparent;
+    --background-main: var(--surface-main);
 
     /* Glass Popover */
     --surface-glass: rgba(38, 37, 44, 0.74);
     --border-glass: rgba(255, 255, 255, 0.1);
     --blur-glass: 20px;
-    --shadow-popover-glass: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --shadow-popover-glass:
+      0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
     /* Profile row & menu */
     --surface-profile-hover: rgba(255, 255, 255, 0.07);
@@ -410,8 +409,8 @@
 }
 
 [data-theme='dark'] {
-  --surface-base: #23272a;
-  --surface-sidebar: #1e1d22;
+  --surface-base: #1c1c1c;
+  --surface-sidebar: #2a2a2a;
   --surface-raised: #252427;
   --surface-overlay: #2a2930;
   --surface-hover: rgba(255, 255, 255, 0.05);
@@ -419,12 +418,10 @@
   --surface-active: rgba(77, 163, 255, 0.1);
 
   /* Main Pane Background */
-  --surface-main: #141418;
-  --surface-main-glow: rgba(96, 118, 255, 0.11);
-  --surface-main-vignette: rgba(0, 0, 0, 0.4);
-  --background-main: radial-gradient(900px 380px at 50% -120px, var(--surface-main-glow), transparent 70%),
-    radial-gradient(140% 100% at 50% 0%, transparent 55%, var(--surface-main-vignette) 100%),
-    var(--surface-main);
+  --surface-main: #1c1c1c;
+  --surface-main-glow: transparent;
+  --surface-main-vignette: transparent;
+  --background-main: var(--surface-main);
 
   /* Glass Popover */
   --surface-glass: rgba(38, 37, 44, 0.74);
@@ -640,4 +637,3 @@ body.dnd-cursor-not-allowed,
 body.dnd-cursor-not-allowed * {
   cursor: not-allowed !important;
 }
-

@@ -5,7 +5,7 @@
   overflow-y: auto;
   padding: var(--space-6, 24px) var(--space-8, 32px);
   box-sizing: border-box;
-  background: var(--surface-base, #121214);
+  background: transparent;
 }
 
 .header {
@@ -96,13 +96,16 @@
   border: 1px solid var(--border-subtle, #2a2a2e);
   border-radius: var(--radius-lg, 12px);
   cursor: pointer;
-  transition: transform var(--transition-fast, 150ms), border-color var(--transition-fast, 150ms), box-shadow var(--transition-fast, 150ms);
+  transition:
+    transform var(--transition-fast, 150ms),
+    border-color var(--transition-fast, 150ms),
+    box-shadow var(--transition-fast, 150ms);
   min-height: 110px;
 }
 
 .projectCard:hover {
   transform: translateY(-2px);
-  border-color: var(--accent, #1B88FF);
+  border-color: var(--accent, #1b88ff);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
@@ -162,7 +165,7 @@
 
 .progressBarFill {
   height: 100%;
-  background: var(--accent, #1B88FF);
+  background: var(--accent, #1b88ff);
   border-radius: 2px;
   transition: width 300ms ease;
 }
@@ -179,11 +182,13 @@
   border-radius: var(--radius-lg, 12px);
   color: var(--text-secondary, #aaa);
   cursor: pointer;
-  transition: border-color var(--transition-fast, 150ms), color var(--transition-fast, 150ms);
+  transition:
+    border-color var(--transition-fast, 150ms),
+    color var(--transition-fast, 150ms);
   min-height: 110px;
 }
 
 .newProjectCard:hover {
-  border-color: var(--accent, #1B88FF);
-  color: var(--accent, #1B88FF);
+  border-color: var(--accent, #1b88ff);
+  color: var(--accent, #1b88ff);
 }
