@@ -3,6 +3,8 @@ import type { TaskFilterConfig, SortOption, SortDirection } from '../../hooks/us
 import { Button } from '../../components/Button/Button.js';
 import { Tooltip } from '../../components/Tooltip/Tooltip.js';
 import type { DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
+import type { GroupByOption } from '../../stores/viewGroupStore.js';
+import { GROUP_BY_LABELS } from '../../stores/viewGroupStore.js';
 import styles from './TaskListHeader.module.css';
 
 const DropdownMenu = lazy(() => import('../../components/primitives/DropdownMenu/DropdownMenu.js'));
@@ -18,6 +20,10 @@ export interface TaskListHeaderProps {
   isSchedulerOpen?: boolean;
   onToggleScheduler?: () => void;
   suggestionsCount?: number;
+  groupBy?: GroupByOption;
+  isGroupByVisible?: boolean;
+  onGroupByChange?: (opt: GroupByOption) => void;
+  onToggleGroupBy?: () => void;
 }
 
 export function TaskListHeader({
@@ -31,6 +37,10 @@ export function TaskListHeader({
   isSchedulerOpen = false,
   onToggleScheduler,
   suggestionsCount,
+  groupBy = 'none',
+  isGroupByVisible = false,
+  onGroupByChange,
+  onToggleGroupBy,
 }: TaskListHeaderProps): React.ReactElement {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
@@ -48,9 +58,7 @@ export function TaskListHeader({
     {
       id: 'group_by',
       label: 'Group by',
-      onClick: () => {
-        // Action stub for Group by
-      },
+      onClick: () => onToggleGroupBy?.(),
     },
     'separator',
     {
@@ -102,6 +110,26 @@ export function TaskListHeader({
     });
   }, []);
 
+  const GROUP_BY_OPTIONS: GroupByOption[] = [
+    'none',
+    'time',
+    'date',
+    'tag',
+    'project',
+    'area',
+    'priority',
+  ];
+
+  const groupByMenuItems: DropdownMenuItemConfig[] = React.useMemo(
+    () =>
+      GROUP_BY_OPTIONS.map((opt) => ({
+        id: `groupby-${opt}`,
+        label: `${GROUP_BY_LABELS[opt]}${groupBy === opt ? ' ✓' : ''}`,
+        onClick: () => onGroupByChange?.(opt),
+      })),
+    [groupBy, onGroupByChange]
+  );
+
   return (
     <div className={styles.headerContainer}>
       <div className={styles.topRow}>
@@ -118,6 +146,37 @@ export function TaskListHeader({
         </div>
 
         <div className={styles.headerControls}>
+          {isGroupByVisible && (
+            <div className={styles.groupByControl}>
+              <label className={styles.groupByLabel}>Group by:</label>
+              <Suspense fallback={null}>
+                <DropdownMenu
+                  trigger={
+                    <button
+                      type="button"
+                      className={styles.groupTriggerBtn}
+                      aria-label={`Group by: ${GROUP_BY_LABELS[groupBy ?? 'none']}`}
+                    >
+                      <span>{GROUP_BY_LABELS[groupBy ?? 'none']}</span>
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  }
+                  items={groupByMenuItems}
+                  align="end"
+                  compact
+                />
+              </Suspense>
+            </div>
+          )}
           {isMyDayList && (
             <>
               <Tooltip

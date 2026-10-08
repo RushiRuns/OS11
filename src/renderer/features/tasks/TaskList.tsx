@@ -19,7 +19,10 @@ import {
 import { useAppStore } from '../../stores/app-store.js';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
+import { useTagStore } from '../../stores/tagStore.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
+import { useViewGroupStore } from '../../stores/viewGroupStore.js';
+import { useGroupedTasks, resolveGroupDropMutation } from '../../hooks/useGroupedTasks.js';
 import { TaskCard } from './TaskCard.js';
 import { TaskListHeader } from './TaskListHeader.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from './TaskContextMenu.js';
@@ -234,6 +237,38 @@ export function createTaskListVirtualizerOptions<TElement extends Element>(
   };
 }
 
+interface DroppableGroupHeaderProps {
+  groupKey: string;
+  title: string;
+  isEmpty?: boolean;
+}
+
+function DroppableGroupHeader({
+  groupKey,
+  title,
+  isEmpty,
+}: DroppableGroupHeaderProps): React.ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `group-header:${groupKey}`,
+    data: {
+      type: 'group-header',
+      groupKey,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${styles.groupHeader} ${isOver ? styles.groupHeaderDropActive : ''} ${isEmpty ? styles.groupHeaderEmpty : ''}`}
+      role="region"
+      aria-label={title}
+    >
+      <span>{title}</span>
+      {isEmpty && <span className={styles.emptyDropHint}>(Drop tasks here)</span>}
+    </div>
+  );
+}
+
 export function TaskList({
   onSelectTask,
   selectedTaskId,
@@ -245,6 +280,13 @@ export function TaskList({
   suggestionsCount: propSuggestionsCount,
 }: TaskListProps): React.ReactElement {
   const { activeListId } = useAppStore();
+  const groupBy = useViewGroupStore((s) => s.getGroupBy(activeListId));
+  const isGroupByVisible = useViewGroupStore((s) => s.isVisible(activeListId));
+  const { setGroupBy, toggleVisible } = useViewGroupStore.getState();
+  const projectsById = useProjectStore((s) => s.projectsById);
+  const areasById = useAreaStore((s) => s.areasById);
+  const tagsById = useTagStore((s) => s.tagsById);
+  const taskTagsByTaskId = useTagStore((s) => s.taskTagsByTaskId);
   const {
     loadTasks,
     updateTask,
@@ -534,6 +576,29 @@ export function TaskList({
 
   // --- Outliner-style drop planning ----------------------------------------
   // The geometry lives in planDrop() at the top of this file (pure, unit-testable).
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const groupedTasks = useGroupedTasks({
+    items: flattenedIncomplete,
+    groupBy,
+    projectsById,
+    areasById,
+    tagsById,
+    taskTagsByTaskId,
+    todayStr,
+    includeEmpty: Boolean(draggingTaskId),
+  });
+
+  const displayedItems = useMemo(
+    () => (groupBy === 'none' ? flattenedIncomplete : groupedTasks.flatMap((g) => g.items)),
+    [groupBy, flattenedIncomplete, groupedTasks]
+  );
+
+  const sortableTaskIds = useMemo(
+    () => (groupBy === 'none' ? allTaskIds : displayedItems.map((item) => item.task.id)),
+    [groupBy, allTaskIds, displayedItems]
+  );
+
   const computeDropPlan = useCallback(
     (
       activeId: string,
@@ -543,7 +608,7 @@ export function TaskList({
       overRect: { top: number; height: number }
     ): DropPlan | null =>
       planDrop({
-        items: flattenedIncomplete,
+        items: displayedItems,
         activeId,
         overId,
         deltaX,
@@ -552,7 +617,7 @@ export function TaskList({
         indentPx: INDENT_PX,
         rowGapPx: ROW_GAP_PX,
       }),
-    [flattenedIncomplete]
+    [displayedItems]
   );
 
   const clearDragState = () => {
@@ -578,7 +643,8 @@ export function TaskList({
     if (
       !over ||
       active.data?.current?.type === 'time-block' ||
-      isExternalDropTarget(String(over.id))
+      isExternalDropTarget(String(over.id)) ||
+      String(over.id).startsWith('group-header:')
     ) {
       setDropIndicator(null);
       return;
@@ -628,6 +694,121 @@ export function TaskList({
     const activeTask = tasksById[activeId];
     if (!activeTask || activeTask.is_completed === 1) return;
 
+    const prevParentId = activeTask.parent_task_id ?? null;
+    const displayedParentId =
+      prevParentId && allTaskIds.includes(prevParentId) ? prevParentId : null;
+    const prevSortOrder = activeTask.sort_order;
+
+    // 1. Dropped directly onto a group header
+    if (overIdStr.startsWith('group-header:')) {
+      const targetGroupKey = overIdStr.replace('group-header:', '');
+      const targetGroup = groupedTasks.find((g) => g.key === targetGroupKey);
+
+      let newSortOrder: number;
+      if (targetGroup && targetGroup.items.length > 0) {
+        const firstItem = targetGroup.items[0];
+        if (firstItem.task.id === activeId) {
+          newSortOrder = activeTask.sort_order;
+        } else {
+          newSortOrder = between(null, firstItem.task.sort_order);
+        }
+      } else {
+        newSortOrder = Date.now();
+      }
+
+      const mutation = resolveGroupDropMutation({
+        task: activeTask,
+        groupBy,
+        targetGroupKey,
+        targetTask: null,
+        projectsById,
+        areasById,
+        taskTagsByTaskId,
+        todayStr,
+      });
+
+      const nextParentId = undefined; // unnest to root of group
+      await moveTask(activeId, { parentId: nextParentId, sortOrder: newSortOrder });
+
+      if (mutation) {
+        if (Object.keys(mutation.updates).length > 0) {
+          await updateTask({ id: activeId, ...mutation.updates });
+        }
+        if (mutation.tagChanges) {
+          if (mutation.tagChanges.removeTagId) {
+            await useTagStore.getState().removeTagFromTask(activeId, mutation.tagChanges.removeTagId);
+          }
+          if (mutation.tagChanges.addTagId) {
+            await useTagStore.getState().addTagToTask(activeId, mutation.tagChanges.addTagId);
+          }
+        }
+      }
+
+      pushAction({
+        description: mutation?.description ?? `Moved "${activeTask.title}"`,
+        undoFn: async () => {
+          await moveTask(activeId, {
+            parentId: prevParentId,
+            sortOrder: prevSortOrder,
+          });
+          if (mutation) {
+            if (Object.keys(mutation.previousValues).length > 0) {
+              await updateTask({ id: activeId, ...mutation.previousValues });
+            }
+            if (mutation.tagChanges) {
+              if (mutation.tagChanges.addTagId) {
+                await useTagStore.getState().removeTagFromTask(activeId, mutation.tagChanges.addTagId);
+              }
+              if (mutation.tagChanges.removeTagId) {
+                await useTagStore.getState().addTagToTask(activeId, mutation.tagChanges.removeTagId);
+              }
+            }
+          }
+        },
+        redoFn: async () => {
+          await moveTask(activeId, {
+            parentId: nextParentId,
+            sortOrder: newSortOrder,
+          });
+          if (mutation) {
+            if (Object.keys(mutation.updates).length > 0) {
+              await updateTask({ id: activeId, ...mutation.updates });
+            }
+            if (mutation.tagChanges) {
+              if (mutation.tagChanges.removeTagId) {
+                await useTagStore.getState().removeTagFromTask(activeId, mutation.tagChanges.removeTagId);
+              }
+              if (mutation.tagChanges.addTagId) {
+                await useTagStore.getState().addTagToTask(activeId, mutation.tagChanges.addTagId);
+              }
+            }
+          }
+        },
+      });
+      return;
+    }
+
+    // 2. Dropped onto another task row
+    const targetTask = tasksById[overIdStr] ?? null;
+    const targetGroup =
+      groupBy !== 'none'
+        ? groupedTasks.find((g) => g.items.some((i) => i.task.id === overIdStr))
+        : null;
+
+    const mutation =
+      groupBy !== 'none' && targetGroup
+        ? resolveGroupDropMutation({
+            task: activeTask,
+            groupBy,
+            targetGroupKey: targetGroup.key,
+            targetTask,
+            projectsById,
+            areasById,
+            taskTagsByTaskId,
+            todayStr,
+          })
+        : null;
+
     const plan = computeDropPlan(
       activeId,
       overIdStr,
@@ -635,36 +816,71 @@ export function TaskList({
       active.rect.current.translated ?? active.rect.current.initial ?? null,
       over.rect
     );
-    if (!plan || plan.isNoop) return;
+    if ((!plan || plan.isNoop) && !mutation) return;
 
-    // Compare against the parent that is actually DISPLAYED. A subtask whose real parent is
-    // not in this list shows as a root, and reordering it must not promote (detach) it.
-    const prevParentId = activeTask.parent_task_id ?? null;
-    const displayedParentId =
-      prevParentId && allTaskIds.includes(prevParentId) ? prevParentId : null;
-    const parentChanged = plan.parentId !== displayedParentId;
+    const parentChanged = plan ? plan.parentId !== displayedParentId : false;
+    const prevSibling = plan?.prevSiblingId ? tasksById[plan.prevSiblingId] : null;
+    const nextSibling = plan?.nextSiblingId ? tasksById[plan.nextSiblingId] : null;
+    const newSortOrder = plan
+      ? between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null)
+      : activeTask.sort_order;
+    const nextParentId = parentChanged ? plan?.parentId : undefined;
 
-    const prevSibling = plan.prevSiblingId ? tasksById[plan.prevSiblingId] : null;
-    const nextSibling = plan.nextSiblingId ? tasksById[plan.nextSiblingId] : null;
-    const newSortOrder = between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null);
-
-    const prevSortOrder = activeTask.sort_order;
-    const nextParentId = parentChanged ? plan.parentId : undefined; // undefined = leave parent alone
-
-    // One store write for parent + position, so the row jumps once instead of hopping twice.
-    // Errors roll back inside the store and propagate; nothing is swallowed here.
     await moveTask(activeId, { parentId: nextParentId, sortOrder: newSortOrder });
 
+    if (mutation) {
+      if (Object.keys(mutation.updates).length > 0) {
+        await updateTask({ id: activeId, ...mutation.updates });
+      }
+      if (mutation.tagChanges) {
+        if (mutation.tagChanges.removeTagId) {
+          await useTagStore.getState().removeTagFromTask(activeId, mutation.tagChanges.removeTagId);
+        }
+        if (mutation.tagChanges.addTagId) {
+          await useTagStore.getState().addTagToTask(activeId, mutation.tagChanges.addTagId);
+        }
+      }
+    }
+
     pushAction({
-      description: `Moved "${activeTask.title}"`,
+      description: mutation?.description ?? `Moved "${activeTask.title}"`,
       undoFn: async () => {
         await moveTask(activeId, {
           parentId: parentChanged ? prevParentId : undefined,
           sortOrder: prevSortOrder,
         });
+        if (mutation) {
+          if (Object.keys(mutation.previousValues).length > 0) {
+            await updateTask({ id: activeId, ...mutation.previousValues });
+          }
+          if (mutation.tagChanges) {
+            if (mutation.tagChanges.addTagId) {
+              await useTagStore.getState().removeTagFromTask(activeId, mutation.tagChanges.addTagId);
+            }
+            if (mutation.tagChanges.removeTagId) {
+              await useTagStore.getState().addTagToTask(activeId, mutation.tagChanges.removeTagId);
+            }
+          }
+        }
       },
       redoFn: async () => {
-        await moveTask(activeId, { parentId: nextParentId, sortOrder: newSortOrder });
+        await moveTask(activeId, {
+          parentId: nextParentId,
+          sortOrder: newSortOrder,
+        });
+        if (mutation) {
+          if (Object.keys(mutation.updates).length > 0) {
+            await updateTask({ id: activeId, ...mutation.updates });
+          }
+          if (mutation.tagChanges) {
+            if (mutation.tagChanges.removeTagId) {
+              await useTagStore.getState().removeTagFromTask(activeId, mutation.tagChanges.removeTagId);
+            }
+            if (mutation.tagChanges.addTagId) {
+              await useTagStore.getState().addTagToTask(activeId, mutation.tagChanges.addTagId);
+            }
+          }
+        }
       },
     });
   };
@@ -705,7 +921,6 @@ export function TaskList({
     }
   })();
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const calculatedSuggestionsCount = useMemo(() => {
     if (!isMyDay) return 0;
     if (propSuggestionsCount !== undefined) return propSuggestionsCount;
@@ -732,6 +947,10 @@ export function TaskList({
         isSchedulerOpen={isSchedulerOpen}
         onToggleScheduler={onToggleScheduler}
         suggestionsCount={calculatedSuggestionsCount}
+        groupBy={groupBy}
+        isGroupByVisible={isGroupByVisible}
+        onGroupByChange={(opt) => setGroupBy(activeListId, opt)}
+        onToggleGroupBy={() => toggleVisible(activeListId)}
       />
 
       {/* Inline FTS5 Search View (Ctrl+F or /) */}
@@ -746,7 +965,7 @@ export function TaskList({
 
       {/* Virtual Scroll Area wrapped in SortableContext */}
       <SortableContext
-        items={allTaskIds}
+        items={sortableTaskIds}
         strategy={verticalListSortingStrategy}
       >
         <div
@@ -763,7 +982,7 @@ export function TaskList({
               title="All clear"
               description="No tasks in this list. Press Ctrl+N to add one."
             />
-          ) : (
+          ) : groupBy === 'none' ? (
             <div
               className={styles.virtualInner}
               style={{ height: `${virtualizer.getTotalSize()}px` }}
@@ -794,7 +1013,7 @@ export function TaskList({
                       subtaskCount={subtaskCount}
                       onToggleExpand={toggleParentExpand}
                       isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                      allTaskIds={allTaskIds}
+                      allTaskIds={sortableTaskIds}
                       onSelect={(t) => setFocusedTaskId(t.id)}
                       onOpenDetail={(t) => onSelectTask?.(t)}
                       onToggleComplete={toggleComplete}
@@ -810,6 +1029,51 @@ export function TaskList({
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div className={styles.groupedContainer} role="list" aria-label="Grouped tasks">
+              {groupedTasks.map((group) => (
+                <section
+                  key={group.key}
+                  className={styles.groupSection}
+                  role="region"
+                  aria-label={group.title}
+                >
+                  <DroppableGroupHeader
+                    groupKey={group.key}
+                    title={group.title}
+                    isEmpty={group.items.length === 0}
+                  />
+                  {group.items.length > 0 && (
+                    <div className={styles.groupedTaskList}>
+                      {group.items.map((item) => (
+                        <TaskCard
+                          key={item.task.id}
+                          task={item.task}
+                          depth={item.depth}
+                          hasSubtasks={item.hasSubtasks}
+                          isExpanded={item.isExpanded}
+                          subtaskCount={item.subtaskCount}
+                          onToggleExpand={toggleParentExpand}
+                          isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
+                          allTaskIds={sortableTaskIds}
+                          onSelect={(t) => setFocusedTaskId(t.id)}
+                          onOpenDetail={(t) => onSelectTask?.(t)}
+                          onToggleComplete={toggleComplete}
+                          onToggleStar={toggleStar}
+                          onUpdateTitle={(id, title) => updateTask({ id, title })}
+                          onDelete={handleDeleteTask}
+                          onDuplicate={duplicateTask}
+                          onContextMenu={(e, t) => {
+                            setContextMenuTask(t);
+                            setContextMenuPos({ x: e.clientX, y: e.clientY });
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
             </div>
           )}
 

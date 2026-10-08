@@ -19,6 +19,7 @@ interface DropdownMenuProps {
   onOpenChange?: (open: boolean) => void;
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';
+  compact?: boolean;
 }
 
 export function DropdownMenu({
@@ -28,6 +29,7 @@ export function DropdownMenu({
   onOpenChange,
   align = 'end',
   side = 'bottom',
+  compact = false,
 }: DropdownMenuProps): React.ReactElement {
   const portalContainer = getRadixPortalContainer();
 
@@ -53,7 +55,7 @@ export function DropdownMenu({
             return (
               <RadixDropdownMenu.Item
                 key={item.id}
-                className={`${styles.item} ${item.danger ? styles.itemDanger : ''}`}
+                className={`${styles.item}${compact ? ' ' + styles.itemCompact : ''} ${item.danger ? styles.itemDanger : ''}`}
                 disabled={item.disabled}
                 onSelect={item.onClick}
               >

@@ -109,3 +109,36 @@
   font-size: var(--text-xs);
   color: var(--text-secondary);
 }
+
+.groupByControl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.groupByLabel {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Mirrors AnytimeView.module.css .groupTriggerBtn */
+.groupTriggerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 4px var(--space-3);
+  background-color: var(--surface-raised);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.groupTriggerBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
