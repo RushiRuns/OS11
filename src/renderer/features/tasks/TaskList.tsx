@@ -27,7 +27,7 @@ import { TaskCard } from './TaskCard.js';
 import { TaskListHeader } from './TaskListHeader.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from './TaskContextMenu.js';
 import { BulkActionBar } from './BulkActionBar.js';
-import { QuickAddBar } from '../quickadd/QuickAddBar.js';
+import { InlineTaskCreator } from './InlineTaskCreator.js';
 import { SearchView } from '../search/SearchView.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { Toast } from '../../components/Toast/Toast.js';
@@ -561,8 +561,13 @@ export function TaskList({
     onToggleComplete: toggleComplete,
     onToggleStar: toggleStar,
     onOpenQuickAdd: () => {
-      const input = document.querySelector('input[aria-label="Quick add task"]') as HTMLInputElement;
-      input?.focus();
+      const trigger = document.querySelector('button[aria-label="New task trigger"]') as HTMLButtonElement;
+      if (trigger) {
+        trigger.click();
+      } else {
+        const input = document.querySelector('input[aria-label="New Task"]') as HTMLInputElement;
+        input?.focus();
+      }
     },
   });
 
@@ -963,6 +968,9 @@ export function TaskList({
         }}
       />
 
+      {/* Inline Task Creator (Active row rendered at top, resting trigger anchored at bottom) */}
+      <InlineTaskCreator listId={activeListId} />
+
       {/* Virtual Scroll Area wrapped in SortableContext */}
       <SortableContext
         items={sortableTaskIds}
@@ -1134,11 +1142,6 @@ export function TaskList({
           )}
         </div>
       </SortableContext>
-
-      {/* Quick Add Bar anchored at bottom with spacing */}
-      <div className={styles.quickAddRow}>
-        <QuickAddBar />
-      </div>
 
       {/* Insertion-point indicator: a thin line at the exact row-gap the
           dragged task would land in, indented to preview the nesting depth

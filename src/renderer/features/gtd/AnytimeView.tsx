@@ -8,7 +8,7 @@ import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
-import { QuickAddBar } from '../quickadd/QuickAddBar.js';
+import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import styles from './AnytimeView.module.css';
 
 interface AnytimeViewProps {
@@ -181,6 +181,8 @@ export function AnytimeView({
         </div>
       </header>
 
+      <InlineTaskCreator defaultBucket="anytime" />
+
       <div className={styles.scrollArea}>
         {tasks.length === 0 ? (
           <EmptyState
@@ -222,13 +224,6 @@ export function AnytimeView({
             </section>
           ))
         )}
-      </div>
-
-      <div className={styles.quickAddRow}>
-        <QuickAddBar
-          placeholder="Capture a task to Anytime..."
-          defaultBucket="anytime"
-        />
       </div>
 
       {contextMenuPos && contextMenuTask && (

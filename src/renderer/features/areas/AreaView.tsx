@@ -5,7 +5,7 @@ import { useTaskStore, useTasksByArea } from '../../stores/taskStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
-import { QuickAddBar } from '../quickadd/QuickAddBar.js';
+import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { CreateProjectModal } from '../projects/CreateProjectModal.js';
 import { Button } from '../../components/Button/Button.js';
 import type { Task } from '@shared/types/index.js';
@@ -95,10 +95,8 @@ export function AreaView({
           <h2 className={styles.sectionTitle}>Loose Tasks</h2>
         </div>
 
-        {/* Quick add loose task inside this Area */}
-        <QuickAddBar
-          placeholder={`Add a loose task to ${area.name}...`}
-        />
+        {/* Inline task creator for loose tasks inside this Area */}
+        <InlineTaskCreator defaultAreaId={area.id} />
 
         {looseTasks.length === 0 ? (
           <div className={styles.emptyNotice}>

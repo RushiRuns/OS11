@@ -7,7 +7,7 @@ import { useProjectStore } from '../../stores/projectStore.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
-import { QuickAddBar } from '../quickadd/QuickAddBar.js';
+import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { Button } from '../../components/Button/Button.js';
 import styles from './SomedayView.module.css';
 
@@ -83,6 +83,8 @@ export function SomedayView({
         </div>
       </header>
 
+      {activeTab === 'tasks' && <InlineTaskCreator defaultBucket="someday" />}
+
       <div className={styles.scrollArea}>
         {activeTab === 'tasks' ? (
           tasks.length === 0 ? (
@@ -150,15 +152,6 @@ export function SomedayView({
           ))
         )}
       </div>
-
-      {activeTab === 'tasks' && (
-        <div className={styles.quickAddRow}>
-          <QuickAddBar
-            placeholder="Capture a someday/maybe idea..."
-            defaultBucket="someday"
-          />
-        </div>
-      )}
 
       {contextMenuPos && contextMenuTask && (
         <TaskContextMenu

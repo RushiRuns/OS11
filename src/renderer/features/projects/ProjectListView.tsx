@@ -12,6 +12,7 @@ import { between } from '@shared/utils/fractional-index.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
+import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import styles from './ProjectListView.module.css';
 
@@ -37,7 +38,6 @@ export function ProjectListView({
   selectedTaskId,
 }: ProjectListViewProps): React.ReactElement {
   const {
-    createTask,
     updateTask,
     toggleComplete,
     toggleStar,
@@ -47,7 +47,6 @@ export function ProjectListView({
     reorderTask,
   } = useTaskStore();
 
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
@@ -71,21 +70,6 @@ export function ProjectListView({
   const allActiveTaskIds = useMemo(() => activeTasks.map((t) => t.id), [activeTasks]);
   const allCompletedTaskIds = useMemo(() => completedTasks.map((t) => t.id), [completedTasks]);
 
-  const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const title = newTaskTitle.trim();
-      if (!title) return;
-
-      await createTask({
-        title,
-        project_id: project.id,
-        list_id: 'smart_all',
-      });
-      setNewTaskTitle('');
-    }
-  };
-
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -108,21 +92,8 @@ export function ProjectListView({
 
   return (
     <div className={styles.listContainer}>
-      {/* Quick Add Input Bar */}
-      <div className={styles.quickAddRow}>
-        <span className={styles.quickAddIcon} aria-hidden="true">
-          +
-        </span>
-        <input
-          type="text"
-          className={styles.quickAddInput}
-          placeholder={`Add a task to ${project.name}... (Press Enter)`}
-          aria-label="Add a task to project"
-          value={newTaskTitle}
-          onChange={(e) => setNewTaskTitle(e.target.value)}
-          onKeyDown={handleInputKeyDown}
-        />
-      </div>
+      {/* Inline Task Creator */}
+      <InlineTaskCreator defaultProjectId={project.id} />
 
       {/* Active Tasks Reorderable Stream */}
       {activeTasks.length > 0 ? (

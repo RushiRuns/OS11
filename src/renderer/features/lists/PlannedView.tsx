@@ -7,7 +7,7 @@ import { usePlannedGroups } from '../../hooks/usePlannedGroups.js';
 import { useCalendarDots } from '../../hooks/useCalendarDots.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 import { Toast } from '../../components/Toast/Toast.js';
-import { QuickAddBar } from '../quickadd/QuickAddBar.js';
+import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { PlannedTimeline } from './PlannedTimeline.js';
 import { PlannedMiniCalendar } from './PlannedMiniCalendar.js';
 import styles from './PlannedView.module.css';
@@ -86,8 +86,10 @@ export function PlannedView({
 
       {/* Main Two-Panel Content Area */}
       <div className={styles.contentSplit}>
-        {/* Left Column: Grouped Timeline & QuickAdd */}
+        {/* Left Column: Grouped Timeline & InlineTaskCreator */}
         <div className={styles.leftCol}>
+          <InlineTaskCreator defaultDueDate={selectedDate ?? todayStr} />
+
           <PlannedTimeline
             groups={groups}
             tasksById={tasksById}
@@ -96,13 +98,6 @@ export function PlannedView({
             selectedTaskId={selectedTaskId}
             targetScrollRequest={scrollRequest}
           />
-
-          <div className={styles.quickAddRow}>
-            <QuickAddBar
-              placeholder="Add a planned task..."
-              defaultDueDate={selectedDate ?? todayStr}
-            />
-          </div>
         </div>
 
         {/* Right Column: Mini Calendar (fades out when detail panel is open) */}
