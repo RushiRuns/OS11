@@ -51,6 +51,8 @@ export interface SettingsMap {
   // GTD Buckets
   gtd_someday_review_interval_days: number;
   gtd_auto_clear_waiting_on_complete: boolean;
+  // Custom Keyboard Shortcuts
+  custom_keyboard_shortcuts?: Record<string, string[]>;
 }
 
 export type SettingKey = keyof SettingsMap;

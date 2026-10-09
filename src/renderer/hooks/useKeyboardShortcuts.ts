@@ -5,6 +5,7 @@ import { useAppStore } from '../stores/app-store.js';
 import { useModuleStore } from '../stores/moduleStore.js';
 import { useSearchStore } from '../stores/searchStore.js';
 import { useUndoRedo } from './useUndoRedo.js';
+import { useShortcutStore, matchesShortcut } from '../stores/shortcutStore.js';
 import { ipc } from '../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '@shared/types/task.js';
@@ -36,7 +37,16 @@ export function useKeyboardShortcuts({
   const { undo, redo, pushAction } = useUndoRedo();
 
   useEffect(() => {
+    useShortcutStore.getState().loadShortcuts();
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Suspend all app hotkey execution during shortcut recording mode
+      if (useShortcutStore.getState().isSuspended) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
       const isInput =
         target.tagName === 'INPUT' ||
@@ -45,10 +55,12 @@ export function useKeyboardShortcuts({
 
       const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
       const modKey = isMac ? e.metaKey : e.ctrlKey;
+      const shortcuts = useShortcutStore.getState().shortcuts;
 
       // Global hotkeys (work even inside inputs)
       // 0. F12 or Ctrl+Shift+I / Cmd+Option+I -> Toggle Developer Tools
       if (
+        matchesShortcut(e, shortcuts['toggle_dev_tools'] || ['F12']) ||
         e.key === 'F12' ||
         (isMac
           ? modKey && e.altKey && (e.key.toLowerCase() === 'i' || e.key.toLowerCase() === 'c')
@@ -59,29 +71,29 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // 1. Ctrl+K -> Command Palette
-      if (modKey && e.key.toLowerCase() === 'k' && !e.shiftKey) {
+      // 1. Command Palette
+      if (matchesShortcut(e, shortcuts['command_palette'] || ['Ctrl', 'K'])) {
         e.preventDefault();
         onOpenCommandPalette?.();
         return;
       }
 
-      // 2. Ctrl+Shift+F -> Toggle Focus Mode
-      if (modKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+      // 2. Toggle Focus Mode
+      if (matchesShortcut(e, shortcuts['toggle_focus_mode'] || ['Ctrl', 'Shift', 'F'])) {
         e.preventDefault();
         onToggleFocusMode?.();
         return;
       }
 
-      // 3. Ctrl+F -> Search tasks
-      if (modKey && e.key.toLowerCase() === 'f' && !e.shiftKey) {
+      // 3. Search tasks
+      if (matchesShortcut(e, shortcuts['search_tasks'] || ['Ctrl', 'F'])) {
         e.preventDefault();
         openSearch();
         return;
       }
 
-      // 4. Ctrl+Shift+T -> Toggle Theme
-      if (modKey && e.shiftKey && e.key.toLowerCase() === 't') {
+      // 4. Toggle Theme
+      if (matchesShortcut(e, shortcuts['toggle_theme'] || ['Ctrl', 'Shift', 'T'])) {
         e.preventDefault();
         const root = document.documentElement;
         const currentTheme = root.getAttribute('data-theme') || 'dark';
@@ -91,8 +103,8 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // 5. Ctrl+Z -> Undo
-      if (modKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      // 5. Undo
+      if (matchesShortcut(e, shortcuts['undo'] || ['Ctrl', 'Z'])) {
         if (!isInput) {
           e.preventDefault();
           await undo();
@@ -100,8 +112,11 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // 6. Ctrl+Y (or Ctrl+Shift+Z) -> Redo
-      if ((modKey && e.key.toLowerCase() === 'y') || (modKey && e.shiftKey && e.key.toLowerCase() === 'z')) {
+      // 6. Redo
+      if (
+        matchesShortcut(e, shortcuts['redo'] || ['Ctrl', 'Shift', 'Z']) ||
+        (modKey && e.key.toLowerCase() === 'y')
+      ) {
         if (!isInput) {
           e.preventDefault();
           await redo();
@@ -153,7 +168,7 @@ export function useKeyboardShortcuts({
       }
 
       // Space -> Toggle complete
-      if (e.key === ' ' && selectedTaskId) {
+      if (matchesShortcut(e, shortcuts['complete_task'] || ['Space']) && selectedTaskId) {
         e.preventDefault();
         toggleComplete(selectedTaskId);
         return;
@@ -173,14 +188,21 @@ export function useKeyboardShortcuts({
       }
 
       // Delete or Backspace -> Delete selected task
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedTaskId) {
+      if (matchesShortcut(e, shortcuts['delete_task'] || ['Delete']) && selectedTaskId) {
         e.preventDefault();
         onDeleteTask?.(selectedTaskId);
         return;
       }
 
-      // Ctrl+I / Cmd+I -> Toggle detail panel
-      if (modKey && e.key.toLowerCase() === 'i') {
+      // Star / Unstar task
+      if (matchesShortcut(e, shortcuts['star_task'] || ['S']) && selectedTaskId) {
+        e.preventDefault();
+        toggleStar(selectedTaskId);
+        return;
+      }
+
+      // Toggle detail panel
+      if (matchesShortcut(e, shortcuts['toggle_detail'] || ['Ctrl', 'I'])) {
         e.preventDefault();
         onToggleDetail?.();
         return;
@@ -212,15 +234,19 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Ctrl+Shift+D -> Duplicate task
-      if (modKey && e.shiftKey && e.key.toLowerCase() === 'd' && selectedTaskId) {
+      // Duplicate task
+      if (
+        (matchesShortcut(e, shortcuts['duplicate_task'] || ['Ctrl', 'D']) ||
+          (modKey && e.shiftKey && e.key.toLowerCase() === 'd')) &&
+        selectedTaskId
+      ) {
         e.preventDefault();
         duplicateTask(selectedTaskId);
         return;
       }
 
-      // Ctrl+Shift+A -> Navigate to Anytime
-      if (modKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+      // Navigate to Anytime
+      if (matchesShortcut(e, shortcuts['nav_anytime'] || ['Ctrl', 'Shift', 'A'])) {
         if (useModuleStore.getState().isEnabled('anytime')) {
           e.preventDefault();
           setActiveListId('smart_anytime');
@@ -229,8 +255,8 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // Ctrl+Shift+S -> Navigate to Someday (or toggle My Day Scheduler panel if someday is disabled)
-      if (modKey && e.shiftKey && e.key.toLowerCase() === 's') {
+      // Navigate to Someday (or toggle My Day Scheduler panel if someday is disabled)
+      if (matchesShortcut(e, shortcuts['nav_someday'] || ['Ctrl', 'Shift', 'S'])) {
         if (useModuleStore.getState().isEnabled('someday')) {
           e.preventDefault();
           setActiveListId('smart_someday');
@@ -245,8 +271,8 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // Ctrl+Shift+W -> Navigate to Waiting For
-      if (modKey && e.shiftKey && e.key.toLowerCase() === 'w') {
+      // Navigate to Waiting For
+      if (matchesShortcut(e, shortcuts['nav_waiting'] || ['Ctrl', 'Shift', 'W'])) {
         if (useModuleStore.getState().isEnabled('waiting_for')) {
           e.preventDefault();
           setActiveListId('smart_waiting_for');

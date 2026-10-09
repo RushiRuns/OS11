@@ -2,6 +2,7 @@ import { ipcMain, app } from 'electron';
 import { IPC } from '@shared/ipc-channels.js';
 import { SettingsService } from '../services/settings/SettingsService.js';
 import { ThemeService } from '../services/settings/ThemeService.js';
+import { registerGlobalShortcuts } from '../shortcuts.js';
 import type { SettingsMap } from '@shared/types/index.js';
 
 export function registerSettingsHandlers(
@@ -36,6 +37,13 @@ export function registerSettingsHandlers(
         service.set('accent_color', value);
       } else if (key === 'launch_at_login') {
         service.applyLoginItem(Boolean(value));
+      } else if (key === 'custom_keyboard_shortcuts') {
+        service.set(key, value);
+        try {
+          registerGlobalShortcuts();
+        } catch {
+          // In test/headless
+        }
       } else {
         service.set(key, value);
         if (key === 'day_starts_at') {

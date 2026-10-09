@@ -295,10 +295,15 @@
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
+  transition: background-color var(--duration-fast, 150ms) ease;
 }
 
 .shortcutRow:last-child {
   border-bottom: none;
+}
+
+.shortcutRow:hover {
+  background-color: var(--surface-hover);
 }
 
 .shortcutKey {
@@ -313,6 +318,103 @@
   font-family: monospace;
   font-size: 11px;
   color: var(--text-primary);
+}
+
+.shortcutKeyInteractive {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px 8px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+  user-select: none;
+}
+
+.shortcutKeyInteractive:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.recordingPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  background: var(--surface-selected, rgba(27, 136, 255, 0.12));
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  box-shadow: 0 0 0 2px var(--accent-muted, rgba(27, 136, 255, 0.2));
+  animation: pulseRecording 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseRecording {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--accent-muted, rgba(27, 136, 255, 0.2));
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--accent-muted, rgba(27, 136, 255, 0.4));
+  }
+}
+
+.conflictBadge {
+  font-size: 11px;
+  color: var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shortcutActionButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.resetPillBtn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.resetPillBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.badgeCustom {
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(27, 136, 255, 0.12);
+  border: 1px solid rgba(27, 136, 255, 0.3);
+  padding: 1px 4px;
+  border-radius: var(--radius-xs, 3px);
+  margin-left: 6px;
 }
 
 /* Background preview */
