@@ -29,7 +29,7 @@ export function createTimerWindow(): BrowserWindow {
 
   timerWindow = new BrowserWindow({
     width: 220,
-    height: 76,
+    height: 84,
     x: initialX,
     y: initialY,
     frame: false,

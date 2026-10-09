@@ -85,6 +85,8 @@ export class PomodoroService {
     activeSession: ActivePomodoroSession | null;
     timeText: string | null;
     progress?: number;
+    taskTitle?: string | null;
+    sourceView?: string | null;
   }): void {
     this.currentActiveSession = payload.activeSession;
 

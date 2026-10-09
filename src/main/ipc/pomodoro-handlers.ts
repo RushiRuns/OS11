@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import { IPC } from '@shared/ipc-channels.js';
 import { PomodoroService } from '../services/pomodoro/PomodoroService.js';
 import { setTrayPomodoroActionCallback } from '../tray/tray.js';
-import { getMainWindow } from '../window/main-window.js';
+import { getMainWindow, showMainWindow } from '../window/main-window.js';
 import type { CreatePomodoroPayload, ActivePomodoroSession } from '@shared/types/index.js';
 
 export function registerPomodoroHandlers(service = new PomodoroService()): void {
@@ -58,6 +58,8 @@ export function registerPomodoroHandlers(service = new PomodoroService()): void 
         activeSession: ActivePomodoroSession | null;
         timeText: string | null;
         progress?: number;
+        taskTitle?: string | null;
+        sourceView?: string | null;
       }
     ) => {
       try {
@@ -87,17 +89,24 @@ export function registerPomodoroHandlers(service = new PomodoroService()): void 
     }
   });
 
-  ipcMain.handle(IPC.POMODORO.ACTION, async (_event, action: 'pause' | 'resume' | 'skip' | 'reset') => {
-    try {
-      const mainWin = getMainWindow();
-      if (mainWin && !mainWin.isDestroyed()) {
-        mainWin.webContents.send('pomodoro:remote-action', action);
+  ipcMain.handle(
+    IPC.POMODORO.ACTION,
+    async (_event, action: 'pause' | 'resume' | 'skip' | 'reset' | 'complete') => {
+      try {
+        if (action === 'complete') {
+          service.hideMiniWindow();
+          showMainWindow();
+        }
+        const mainWin = getMainWindow();
+        if (mainWin && !mainWin.isDestroyed()) {
+          mainWin.webContents.send('pomodoro:remote-action', action);
+        }
+        return { ok: true, data: true };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
       }
-      return { ok: true, data: true };
-    } catch (err: unknown) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
-  });
+  );
 }
 
 export default registerPomodoroHandlers;

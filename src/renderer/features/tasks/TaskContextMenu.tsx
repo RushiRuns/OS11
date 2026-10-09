@@ -4,6 +4,10 @@ import { useProjectStore } from '../../stores/projectStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useUndoRedoStore } from '../../hooks/useUndoRedo.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
+import { usePomodoroStore } from '../../stores/pomodoroStore.js';
+import { useAppStore } from '../../stores/app-store.js';
+import { IPC } from '@shared/ipc-channels.js';
+import { invoke } from '../../services/ipc.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
 import type { Task } from '@shared/types/task.js';
 import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
@@ -23,6 +27,7 @@ export interface TaskContextMenuProps {
   onSetPriority?: (id: string, priority: number) => void;
   onSetDueDate?: (id: string, date: string | null, time: string | null, allDay: boolean) => void;
   onToggleMyDay?: (id: string) => void;
+  onStartTimer?: (task: Task) => void;
   onMoveToList?: (id: string, listId: string) => void;
   onMoveTo?: (id: string, destination: { area_id: string | null; project_id: string | null }) => void;
   onDuplicate?: (id: string) => void;
@@ -32,6 +37,17 @@ export interface TaskContextMenuProps {
 }
 
 /* --- SVG Icons --- */
+function TomatoIcon() {
+  return (
+    <svg className={styles.itemIconSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2.5 2.5" />
+      <path d="M10 2h4" />
+      <path d="M12 2v3" />
+    </svg>
+  );
+}
+
 function StarIcon({ filled }: { filled?: boolean }) {
   return (
     <svg className={styles.itemIconSvg} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -173,6 +189,7 @@ export function TaskContextMenu({
   onSetPriority,
   onSetDueDate,
   onToggleMyDay,
+  onStartTimer,
   onMoveTo,
   onDelete,
 }: TaskContextMenuProps): React.ReactElement | null {
@@ -342,6 +359,28 @@ export function TaskContextMenu({
               <SunIcon />
             </span>
             <span className={styles.itemLabel}>{isInMyDay ? 'Remove from My Day' : 'Add to My Day'}</span>
+          </button>
+
+          {/* Start Timer */}
+          <button
+            type="button"
+            className={styles.item}
+            onClick={async () => {
+              onClose();
+              if (onStartTimer) {
+                onStartTimer(task);
+              } else {
+                const currentView = useAppStore.getState().activeListId;
+                await usePomodoroStore.getState().startSession(task.id, 'work', task.title, currentView);
+                await invoke(IPC.POMODORO.SHOW_MINI_WINDOW);
+                await invoke(IPC.APP.MINIMIZE);
+              }
+            }}
+          >
+            <span className={styles.itemIcon}>
+              <TomatoIcon />
+            </span>
+            <span className={styles.itemLabel}>Start Timer</span>
           </button>
 
           {/* Unschedule Time Block */}

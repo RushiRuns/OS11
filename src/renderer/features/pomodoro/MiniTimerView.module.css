@@ -2,9 +2,10 @@
   width: 100vw;
   height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-3);
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
   background-color: var(--surface-raised, #1e293b);
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   border-radius: var(--radius-lg, 12px);
@@ -17,14 +18,21 @@
   overflow: hidden;
 }
 
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .leftInfo {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-2, 8px);
 }
 
 .tomato {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .timeWrap {
@@ -33,7 +41,7 @@
 }
 
 .timeText {
-  font-size: var(--text-lg, 18px);
+  font-size: var(--text-md, 16px);
   font-weight: var(--weight-bold, 700);
   letter-spacing: var(--tracking-tight, -0.02em);
   font-variant-numeric: tabular-nums;
@@ -41,7 +49,7 @@
 }
 
 .typeLabel {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-secondary, #94a3b8);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -50,7 +58,7 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   -webkit-app-region: no-drag;
 }
 
@@ -58,10 +66,10 @@
   background-color: var(--surface-base);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  border-radius: var(--radius-sm);
-  width: 30px;
-  height: 30px;
-  font-size: 12px;
+  border-radius: var(--radius-sm, 4px);
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -71,5 +79,42 @@
 
 .actionBtn:hover {
   background-color: var(--surface-hover, rgba(255, 255, 255, 0.08));
-  border-color: var(--accent-primary, #3b82f6);
+  border-color: var(--border-subtle);
+}
+
+.completeBtn {
+  /* Discreet style that matches actionBtn seamlessly without standing out */
+  opacity: 0.9;
+}
+
+.taskRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-top: 2px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  -webkit-app-region: drag;
+}
+
+.taskTitle {
+  width: 100%;
+  font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  pointer-events: auto;
+}
+
+.taskPlaceholder {
+  width: 100%;
+  font-size: 10px;
+  color: var(--text-tertiary, #64748b);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }

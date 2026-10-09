@@ -9,6 +9,7 @@ import type {
 import { invoke, ipc } from '../services/ipc.js';
 import { playPomodoroSound } from '../utils/audio.js';
 import { useTaskStore } from './taskStore.js';
+import { useAppStore } from './app-store.js';
 
 export interface PomodoroState {
   activeSession: ActivePomodoroSession | null;
@@ -18,7 +19,12 @@ export interface PomodoroState {
   isMiniWindowOpen: boolean;
 
   // Actions
-  startSession: (taskId?: string | null, type?: PomodoroType) => Promise<void>;
+  startSession: (
+    taskId?: string | null,
+    type?: PomodoroType,
+    taskTitle?: string | null,
+    sourceView?: string | null
+  ) => Promise<void>;
   pauseSession: () => void;
   resumeSession: () => void;
   skipSession: () => Promise<void>;
@@ -49,6 +55,8 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
         activeSession: null,
         timeText: null,
         progress: 0,
+        taskTitle: null,
+        sourceView: null,
       }).catch(() => {});
       return;
     }
@@ -63,6 +71,8 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
       activeSession: session,
       timeText,
       progress,
+      taskTitle: session.taskTitle ?? null,
+      sourceView: session.sourceView ?? null,
     }).catch(() => {});
   };
 
@@ -83,7 +93,7 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
   // Wire listener for remote actions from Tray context menu or Mini Timer window
   if (typeof window !== 'undefined') {
     ipc.on('pomodoro:remote-action', (_event, rawAction: unknown) => {
-      const action = rawAction as 'pause' | 'resume' | 'skip' | 'reset';
+      const action = rawAction as 'pause' | 'resume' | 'skip' | 'reset' | 'complete';
       if (action === 'pause') {
         get().pauseSession();
       } else if (action === 'resume') {
@@ -92,6 +102,17 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
         get().skipSession();
       } else if (action === 'reset') {
         get().resetTimer();
+      } else if (action === 'complete') {
+        const session = get().activeSession;
+        const targetTaskId = session?.taskId;
+        const targetSourceView = session?.sourceView;
+        get().resetTimer();
+        if (targetTaskId) {
+          useTaskStore.getState().completeTask(targetTaskId).catch(() => {});
+        }
+        if (targetSourceView) {
+          useAppStore.getState().setActiveListId(targetSourceView);
+        }
       }
     });
   }
@@ -103,7 +124,12 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
     isFocusMode: false,
     isMiniWindowOpen: false,
 
-    startSession: async (taskId = null, type = 'work') => {
+    startSession: async (
+      taskId = null,
+      type = 'work',
+      taskTitle = null,
+      sourceView = null
+    ) => {
       stopInterval();
       const settings = get().settings;
       const duration =
@@ -125,6 +151,9 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
         // Fallback to local session ID
       }
 
+      const resolvedTitle =
+        taskTitle ?? (taskId ? useTaskStore.getState().tasksById[taskId]?.title ?? null : null);
+
       const session: ActivePomodoroSession = {
         id: sessionId,
         taskId: taskId ?? null,
@@ -132,6 +161,8 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
         durationSeconds: duration,
         elapsedSeconds: 0,
         isPaused: false,
+        taskTitle: resolvedTitle,
+        sourceView: sourceView ?? null,
       };
 
       set({ activeSession: session });
@@ -187,7 +218,12 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
       }
 
       set({ sessionCount: nextCount });
-      await get().startSession(session.taskId, nextType);
+      await get().startSession(
+        session.taskId,
+        nextType,
+        session.taskTitle,
+        session.sourceView
+      );
     },
 
     resetTimer: () => {
@@ -239,7 +275,12 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
         set({ sessionCount: nextCount });
 
         if (settings.autoStart) {
-          get().startSession(session.taskId, nextType);
+          get().startSession(
+            session.taskId,
+            nextType,
+            session.taskTitle,
+            session.sourceView
+          );
         } else {
           // Prepare next session in paused state
           const duration =
@@ -256,6 +297,8 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
             durationSeconds: duration,
             elapsedSeconds: 0,
             isPaused: true,
+            taskTitle: session.taskTitle,
+            sourceView: session.sourceView,
           };
           set({ activeSession: readySession });
           syncToMain(readySession);
@@ -270,7 +313,8 @@ export const usePomodoroStore = create<PomodoroState>((set, get) => {
     linkTask: (taskId: string | null) => {
       const session = get().activeSession;
       if (session) {
-        const updated = { ...session, taskId };
+        const title = taskId ? useTaskStore.getState().tasksById[taskId]?.title ?? null : null;
+        const updated = { ...session, taskId, taskTitle: title };
         set({ activeSession: updated });
         syncToMain(updated);
       }

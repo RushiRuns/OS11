@@ -35,6 +35,8 @@ export interface ActivePomodoroSession {
   durationSeconds: number;
   elapsedSeconds: number;
   isPaused: boolean;
+  taskTitle?: string | null;
+  sourceView?: string | null;
 }
 
 export interface PomodoroSettings {
