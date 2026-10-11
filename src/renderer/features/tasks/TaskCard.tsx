@@ -652,6 +652,8 @@ export const TaskCard = memo(function TaskCard({
           checked={task.is_completed === 1}
           onChange={() => onToggleComplete?.(task.id)}
           ariaLabel={`Mark "${task.title}" as ${task.is_completed === 1 ? 'incomplete' : 'complete'}`}
+          shape="circle"
+          size={depth > 0 ? 16 : 18}
         />
       </div>
 

@@ -10,9 +10,12 @@
   justify-content: center;
   padding: 0;
   color: var(--text-on-accent);
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
   outline: none;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .checkbox:hover {
@@ -28,6 +31,55 @@
   border-color: var(--accent);
 }
 
+/* Circle Mode */
+.circle {
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--card-ring);
+}
+
+.circle:hover {
+  border-color: var(--text-tertiary);
+}
+
+.circle.checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.circle.checked:hover {
+  border-color: var(--accent);
+}
+
+.circle[data-just-done='true'] {
+  animation:
+    circle-pop 360ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    circle-ring 360ms ease-out forwards;
+}
+
+@keyframes circle-pop {
+  0% {
+    transform: scale(1);
+  }
+  33% {
+    transform: scale(0.85);
+  }
+  66% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes circle-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--card-ring);
+  }
+  100% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
 .checkIcon {
   width: 12px;
   height: 12px;
@@ -36,4 +88,31 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
+}
+
+.circleCheckmarkPolyline {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 0;
+}
+
+.circle[data-just-done='true'] .circleCheckmarkPolyline {
+  animation: checkmark-draw 300ms ease-out forwards;
+}
+
+@keyframes checkmark-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circle[data-just-done='true'] {
+    animation: none;
+  }
+  .circle[data-just-done='true'] .circleCheckmarkPolyline {
+    animation: none;
+  }
 }
