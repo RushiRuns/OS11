@@ -6,9 +6,19 @@ import { exportProjectToCsv, exportProjectToMarkdown, exportProjectToPdf } from 
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
+import { useViewGroupStore, GROUP_BY_LABELS, type GroupByOption } from '../../stores/viewGroupStore.js';
+import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import { isStalled } from '@shared/utils/project-health.js';
 import styles from './ProjectHeader.module.css';
 import menuStyles from '../lists/ListContextMenu.module.css';
+
+const PROJECT_GROUP_BY_OPTIONS: GroupByOption[] = [
+  'none',
+  'time',
+  'date',
+  'tag',
+  'priority',
+];
 
 interface ProjectHeaderProps {
   project: Project;
@@ -38,10 +48,23 @@ export function ProjectHeader({
   const isSomedayEnabled = useModuleStore((state) => state.isEnabled('someday'));
   const stalled = isStalled(project, tasks);
 
+  const viewId = `project:${project.id}`;
+  const groupBy = useViewGroupStore((state) => state.getGroupBy(viewId));
+  const isGroupByVisible = useViewGroupStore((state) => state.isVisible(viewId));
+  const { setGroupBy, toggleVisible } = useViewGroupStore.getState();
+
+  const groupByMenuItems: DropdownMenuItemConfig[] = React.useMemo(
+    () =>
+      PROJECT_GROUP_BY_OPTIONS.map((opt) => ({
+        id: `groupby-${opt}`,
+        label: `${GROUP_BY_LABELS[opt]}${groupBy === opt ? ' ✓' : ''}`,
+        onClick: () => setGroupBy(viewId, opt),
+      })),
+    [groupBy, viewId, setGroupBy]
+  );
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExportSubmenuOpen, setIsExportSubmenuOpen] = useState(false);
-  const [isCustomizeViewsOpen, setIsCustomizeViewsOpen] = useState(false);
-  const [showProgressTooltip, setShowProgressTooltip] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -59,27 +82,12 @@ export function ProjectHeader({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMenuOpen]);
 
-  // Completion calculation
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((t) => t.is_completed === 1).length;
-  const today = new Date().toISOString().split('T')[0];
-  const overdueTasks = tasks.filter(
-    (t) => t.is_completed === 0 && t.due_date && t.due_date < today
-  ).length;
-
-  const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  // SVG Progress Ring
-  const radius = 18;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
   // Menu positioning
   const triggerRect = menuTriggerRef.current?.getBoundingClientRect();
   const menuWidth = 190;
   const menuHeight = 220;
   const posX = triggerRect
-    ? Math.max(8, Math.min(triggerRect.left, window.innerWidth - menuWidth - 8))
+    ? Math.max(8, Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - 8))
     : 8;
   const posY = triggerRect
     ? Math.max(8, Math.min(triggerRect.bottom + 6, window.innerHeight - menuHeight - 8))
@@ -99,114 +107,94 @@ export function ProjectHeader({
           <div className={styles.titleRow}>
             <span className={styles.projectIcon}>{project.icon || '📁'}</span>
             <h1 className={styles.titleHeading}>{project.name}</h1>
-            <button
-              ref={menuTriggerRef}
-              type="button"
-              className={styles.moreBtn}
-              aria-label="Project actions"
-              title="Project actions"
-              onClick={() => setIsMenuOpen((prev) => !prev)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setIsMenuOpen((prev) => !prev);
-                }
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="19" cy="12" r="2" />
-                <circle cx="5" cy="12" r="2" />
-              </svg>
-            </button>
-            <span
-              className={`${styles.statusBadge} ${
-                project.status === 'archived'
-                  ? styles.statusArchived
-                  : project.status === 'completed'
-                  ? styles.statusCompleted
-                  : styles.statusActive
-              }`}
-            >
-              {project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : 'Active'}
-            </span>
+            {project.status === 'archived' && (
+              <span className={`${styles.statusBadge} ${styles.statusArchived}`}>Archived</span>
+            )}
+            {project.status === 'completed' && (
+              <span className={`${styles.statusBadge} ${styles.statusCompleted}`}>Completed</span>
+            )}
             {project.is_someday === 1 && (
               <span className={styles.somedayBadge} title="Parked in Someday / Maybe">
                 📦 Someday / Maybe
               </span>
             )}
             {stalled && (
-              <span className={styles.stalledBadge} title="No incomplete active tasks scheduled. Add a next action or park it in Someday.">
-                ⚠️ Stalled: no next action
+              <span
+                className={styles.stalledBadge}
+                title="No incomplete active tasks scheduled. Add a next action or park it in Someday."
+              >
+                 ⚠️ Stalled: no next action
               </span>
             )}
           </div>
           {project.description && <p className={styles.description}>{project.description}</p>}
         </div>
 
-        {/* Compact Progress Pill with rich hover tooltip */}
-        <div className={styles.progressPillWrapper}>
-          <div
-            className={styles.progressPill}
-            onMouseEnter={() => setShowProgressTooltip(true)}
-            onMouseLeave={() => setShowProgressTooltip(false)}
-            tabIndex={0}
-            aria-label={`${completedTasks} of ${totalTasks} tasks done (${percentage}%)`}
-          >
-            <span
-              className={styles.pillDot}
-              style={{
-                backgroundColor:
-                  percentage === 100
-                    ? 'var(--color-success)'
-                    : percentage > 0
-                    ? 'var(--accent)'
-                    : 'var(--text-tertiary)',
-              }}
-            />
-            <span className={styles.pillText}>
-              {totalTasks === 0 ? '0 tasks' : `${completedTasks}/${totalTasks} done`}
-            </span>
-            {overdueTasks > 0 && <span className={styles.pillOverdue}>• {overdueTasks} overdue</span>}
-          </div>
-
-          {showProgressTooltip && (
-            <div className={styles.progressTooltip} role="tooltip">
-              <div className={styles.tooltipRingWrapper}>
-                <svg className={styles.tooltipRingSvg} viewBox="0 0 44 44">
-                  <circle className={styles.ringBg} cx="22" cy="22" r={radius} />
-                  <circle
-                    className={styles.ringProgress}
-                    cx="22"
-                    cy="22"
-                    r={radius}
-                    style={{
-                      strokeDasharray: circumference,
-                      strokeDashoffset,
-                    }}
-                  />
-                </svg>
-                <span className={styles.tooltipPercentage}>{percentage}%</span>
-              </div>
-              <div className={styles.tooltipStats}>
-                <span className={styles.tooltipHeading}>{percentage}% Completed</span>
-                <span className={styles.tooltipSub}>
-                  {completedTasks} of {totalTasks} tasks done
-                </span>
-                {overdueTasks > 0 && (
-                  <span className={styles.tooltipOverdue}>
-                    {overdueTasks} task{overdueTasks > 1 ? 's' : ''} overdue
-                  </span>
-                )}
-              </div>
+        {/* Header Controls: View Cycle Button to the left of the Three-Dot Menu */}
+        <div className={styles.headerControls}>
+          {currentView === 'list' && isGroupByVisible && (
+            <div className={styles.groupByControl}>
+              <label className={styles.groupByLabel}>Group by:</label>
+              <DropdownMenu
+                trigger={
+                  <button
+                    type="button"
+                    className={styles.groupTriggerBtn}
+                    aria-label={`Group by: ${GROUP_BY_LABELS[groupBy ?? 'none']}`}
+                  >
+                    <span>{GROUP_BY_LABELS[groupBy ?? 'none']}</span>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                }
+                items={groupByMenuItems}
+                align="end"
+                compact
+              />
             </div>
           )}
+
+          <ViewSwitcher
+            currentView={currentView}
+            availableViews={project.views}
+            onViewChange={onViewChange}
+            onUpdateViews={onUpdateViews}
+          />
+
+          <button
+            ref={menuTriggerRef}
+            type="button"
+            className={styles.moreBtn}
+            aria-label="Project actions"
+            title="Project actions"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsMenuOpen((prev) => !prev);
+              }
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="19" cy="12" r="2" />
+              <circle cx="5" cy="12" r="2" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -231,6 +219,24 @@ export function ProjectHeader({
               style={{ left: posX, top: posY, minWidth: menuWidth }}
               onClick={(e) => e.stopPropagation()}
             >
+              {currentView === 'list' && (
+                <>
+                  <button
+                    type="button"
+                    className={menuStyles.menuItem}
+                    onMouseEnter={() => setIsExportSubmenuOpen(false)}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      toggleVisible(viewId);
+                    }}
+                  >
+                    <span>🗂️</span>
+                    <span>Group by</span>
+                  </button>
+                  <div className={menuStyles.separator} />
+                </>
+              )}
+
               <button
                 type="button"
                 className={menuStyles.menuItem}
@@ -255,19 +261,6 @@ export function ProjectHeader({
               >
                 <span>📑</span>
                 <span>Template</span>
-              </button>
-
-              <button
-                type="button"
-                className={menuStyles.menuItem}
-                onMouseEnter={() => setIsExportSubmenuOpen(false)}
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setIsCustomizeViewsOpen(true);
-                }}
-              >
-                <span>🎛️</span>
-                <span>Customize Views...</span>
               </button>
 
               <button
@@ -392,17 +385,6 @@ export function ProjectHeader({
           </div>,
           document.getElementById('radix-portal') || document.body
         )}
-
-      <div className={styles.bottomRow}>
-        <ViewSwitcher
-          currentView={currentView}
-          availableViews={project.views}
-          onViewChange={onViewChange}
-          onUpdateViews={onUpdateViews}
-          isCustomizeOpen={isCustomizeViewsOpen}
-          onCustomizeOpenChange={setIsCustomizeViewsOpen}
-        />
-      </div>
     </header>
   );
 }

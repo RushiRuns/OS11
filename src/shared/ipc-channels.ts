@@ -12,6 +12,7 @@ export const IPC = {
     SET_OPACITY: 'app:set-opacity',
     SHOW_OMNIBAR: 'app:show-omnibar',
     HIDE_OMNIBAR: 'app:hide-omnibar',
+    RESIZE_OMNIBAR: 'app:resize-omnibar',
     FOCUS_QUICK_ADD: 'app:focus-quick-add',
     CHECK_FOR_UPDATES: 'app:check-for-updates',
     UPDATE_AVAILABLE: 'app:update-available',

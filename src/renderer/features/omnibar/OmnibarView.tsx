@@ -38,9 +38,69 @@ export function OmnibarView(): React.ReactElement {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const lastReportedHeightRef = useRef(0);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentModeConfig = MODES.find((m) => m.id === mode) || MODES[0];
+
+  // Ensure transparent background at DOM root level for transparent Electron window
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const htmlEl = document.documentElement;
+    const bodyEl = document.body;
+    const rootEl = document.getElementById('root');
+
+    const origHtmlBg = htmlEl.style.background;
+    const origBodyBg = bodyEl.style.background;
+    const origRootBg = rootEl?.style.background;
+
+    htmlEl.style.setProperty('background', 'transparent', 'important');
+    htmlEl.style.overflow = 'hidden';
+    bodyEl.style.setProperty('background', 'transparent', 'important');
+    bodyEl.style.overflow = 'hidden';
+    if (rootEl) {
+      rootEl.style.setProperty('background', 'transparent', 'important');
+      rootEl.style.overflow = 'hidden';
+    }
+
+    return () => {
+      htmlEl.style.background = origHtmlBg;
+      htmlEl.style.overflow = '';
+      bodyEl.style.background = origBodyBg;
+      bodyEl.style.overflow = '';
+      if (rootEl && origRootBg !== undefined) {
+        rootEl.style.background = origRootBg;
+        rootEl.style.overflow = '';
+      }
+    };
+  }, []);
+
+  // Dynamically resize window to match the exact omnibar card height
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+
+    const updateHeight = () => {
+      const rect = el.getBoundingClientRect();
+      const newHeight = Math.ceil(rect.height);
+      const newWidth = Math.ceil(rect.width) || 620;
+      if (newHeight > 0 && Math.abs(newHeight - lastReportedHeightRef.current) > 1) {
+        lastReportedHeightRef.current = newHeight;
+        ipc.invoke(IPC.APP.RESIZE_OMNIBAR, { width: newWidth, height: newHeight }).catch(() => {});
+      }
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        updateHeight();
+      });
+      observer.observe(el);
+      return () => observer.disconnect();
+    }
+  }, []);
 
   // Focus input on load
   useEffect(() => {
@@ -201,7 +261,7 @@ export function OmnibarView(): React.ReactElement {
         }
       }}
     >
-      <div className={styles.omnibarCard} onClick={(e) => e.stopPropagation()}>
+      <div ref={cardRef} className={styles.omnibarCard} onClick={(e) => e.stopPropagation()}>
         {/* Mode Switcher Tabs */}
         <div className={styles.tabsRow}>
           {MODES.map((m) => (

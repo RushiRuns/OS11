@@ -2,7 +2,7 @@ import { ipcMain, BrowserWindow, app } from 'electron';
 import { IPC } from '@shared/ipc-channels.js';
 import { getStartupData } from '../startup.js';
 import { getMainWindow, setAlwaysOnTop } from '../window/main-window.js';
-import { showOmnibarWindow, hideOmnibarWindow } from '../window/omnibar-window.js';
+import { showOmnibarWindow, hideOmnibarWindow, resizeOmnibarWindow } from '../window/omnibar-window.js';
 import { checkForUpdates } from '../services/updater.js';
 import { SettingsRepository } from '../repositories/SettingsRepository.js';
 import { ThemeService } from '../services/settings/ThemeService.js';
@@ -148,6 +148,18 @@ export function registerAppHandlers(): void {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
+
+  ipcMain.handle(
+    IPC.APP.RESIZE_OMNIBAR,
+    async (_event, payload: { width?: number; height: number }) => {
+      try {
+        resizeOmnibarWindow(payload?.width, payload?.height);
+        return { ok: true, data: true };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 
   // Update check
   ipcMain.handle(IPC.APP.CHECK_FOR_UPDATES, async () => {

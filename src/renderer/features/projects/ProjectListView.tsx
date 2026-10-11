@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   useDndMonitor,
+  useDroppable,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -14,7 +15,44 @@ import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskCont
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useViewGroupStore } from '../../stores/viewGroupStore.js';
+import { useTagStore } from '../../stores/tagStore.js';
+import { useGroupedTasks, resolveGroupDropMutation } from '../../hooks/useGroupedTasks.js';
+import type { FlattenedTaskItem } from '../tasks/TaskList.js';
 import styles from './ProjectListView.module.css';
+
+interface DroppableGroupHeaderProps {
+  groupKey: string;
+  title: string;
+  isEmpty?: boolean;
+}
+
+function DroppableGroupHeader({
+  groupKey,
+  title,
+  isEmpty,
+}: DroppableGroupHeaderProps): React.ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `group-header:${groupKey}`,
+    data: {
+      type: 'group-header',
+      groupKey,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${styles.groupHeader} ${isOver ? styles.groupHeaderDropActive : ''} ${
+        isEmpty ? styles.groupHeaderEmpty : ''
+      }`}
+      role="region"
+      aria-label={title}
+    >
+      <span className={styles.groupHeaderTitle}>{title}</span>
+    </div>
+  );
+}
 
 interface ProjectListViewProps {
   project: Project;
@@ -54,6 +92,11 @@ export function ProjectListView({
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
 
+  const viewId = `project:${project.id}`;
+  const groupBy = useViewGroupStore((state) => state.getGroupBy(viewId));
+  const tagsById = useTagStore((state) => state.tagsById);
+  const taskTagsByTaskId = useTagStore((state) => state.taskTagsByTaskId);
+
   // Filter tasks into active and completed
   const activeTasks = useMemo(() => {
     return tasks
@@ -67,12 +110,146 @@ export function ProjectListView({
       .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || '') || a.sort_order - b.sort_order);
   }, [tasks]);
 
+  const flattenedActiveItems: FlattenedTaskItem[] = useMemo(() => {
+    return activeTasks.map((t) => ({
+      task: t,
+      depth: 0,
+      hasSubtasks: false,
+      isExpanded: false,
+      subtaskCount: { completed: 0, total: 0 },
+    }));
+  }, [activeTasks]);
+
+  const groupedTasks = useGroupedTasks({
+    items: flattenedActiveItems,
+    groupBy,
+    tagsById,
+    taskTagsByTaskId,
+    includeEmpty: false,
+  });
+
   const allActiveTaskIds = useMemo(() => activeTasks.map((t) => t.id), [activeTasks]);
   const allCompletedTaskIds = useMemo(() => completedTasks.map((t) => t.id), [completedTasks]);
+
+  const sortableTaskIds = useMemo(
+    () => (groupBy === 'none' ? allActiveTaskIds : groupedTasks.flatMap((g) => g.items.map((i) => i.task.id))),
+    [groupBy, allActiveTaskIds, groupedTasks]
+  );
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
+    const activeTask = tasks.find((t) => t.id === activeIdStr);
+    if (!activeTask) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (groupBy !== 'none') {
+      const { addTagToTask, removeTagFromTask } = useTagStore.getState();
+
+      // 1. Dropped directly onto a group header
+      if (overIdStr.startsWith('group-header:')) {
+        const targetGroupKey = overIdStr.replace('group-header:', '');
+        const targetGroup = groupedTasks.find((g) => g.key === targetGroupKey);
+
+        let newSortOrder: number;
+        if (targetGroup && targetGroup.items.length > 0) {
+          const firstItem = targetGroup.items[0];
+          if (firstItem.task.id === activeIdStr) {
+            newSortOrder = activeTask.sort_order;
+          } else {
+            newSortOrder = between(null, firstItem.task.sort_order);
+          }
+        } else {
+          newSortOrder = Date.now();
+        }
+
+        const mutation = resolveGroupDropMutation({
+          task: activeTask,
+          groupBy,
+          targetGroupKey,
+          targetTask: null,
+          taskTagsByTaskId,
+          todayStr,
+        });
+
+        if (mutation) {
+          if (Object.keys(mutation.updates).length > 0) {
+            await updateTask({
+              id: activeTask.id,
+              sort_order: newSortOrder,
+              ...mutation.updates,
+            });
+          } else {
+            await reorderTask(activeTask.id, newSortOrder);
+          }
+          if (mutation.tagChanges) {
+            if (mutation.tagChanges.addTagId) {
+              await addTagToTask(activeTask.id, mutation.tagChanges.addTagId);
+            }
+            if (mutation.tagChanges.removeTagId) {
+              await removeTagFromTask(activeTask.id, mutation.tagChanges.removeTagId);
+            }
+          }
+        } else {
+          await reorderTask(activeTask.id, newSortOrder);
+        }
+        return;
+      }
+
+      // 2. Dropped over another task in a group
+      const targetGroup = groupedTasks.find((g) => g.items.some((i) => i.task.id === overIdStr));
+      const targetTask = tasks.find((t) => t.id === overIdStr) ?? null;
+
+      if (targetGroup) {
+        const mutation = resolveGroupDropMutation({
+          task: activeTask,
+          groupBy,
+          targetGroupKey: targetGroup.key,
+          targetTask,
+          taskTagsByTaskId,
+          todayStr,
+        });
+
+        const groupItems = targetGroup.items.map((i) => i.task);
+        const overIndex = groupItems.findIndex((t) => t.id === overIdStr);
+        const activeIndexInGroup = groupItems.findIndex((t) => t.id === activeIdStr);
+
+        let newSortOrder = activeTask.sort_order;
+        if (overIndex !== -1) {
+          const isMovingDown = activeIndexInGroup !== -1 && activeIndexInGroup < overIndex;
+          const prev = isMovingDown ? groupItems[overIndex] : groupItems[overIndex - 1] ?? null;
+          const next = isMovingDown ? groupItems[overIndex + 1] ?? null : groupItems[overIndex];
+          newSortOrder = between(prev?.sort_order ?? null, next?.sort_order ?? null);
+        }
+
+        if (mutation) {
+          if (Object.keys(mutation.updates).length > 0) {
+            await updateTask({
+              id: activeTask.id,
+              sort_order: newSortOrder,
+              ...mutation.updates,
+            });
+          } else {
+            await reorderTask(activeTask.id, newSortOrder);
+          }
+          if (mutation.tagChanges) {
+            if (mutation.tagChanges.addTagId) {
+              await addTagToTask(activeTask.id, mutation.tagChanges.addTagId);
+            }
+            if (mutation.tagChanges.removeTagId) {
+              await removeTagFromTask(activeTask.id, mutation.tagChanges.removeTagId);
+            }
+          }
+        } else {
+          await reorderTask(activeTask.id, newSortOrder);
+        }
+        return;
+      }
+    }
 
     const oldIndex = activeTasks.findIndex((t) => t.id === active.id);
     const newIndex = activeTasks.findIndex((t) => t.id === over.id);
@@ -97,33 +274,85 @@ export function ProjectListView({
 
       {/* Active Tasks Reorderable Stream */}
       {activeTasks.length > 0 ? (
-        <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
-          <div className={styles.tasksList} role="list" aria-label="Active tasks">
-            {activeTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                allTaskIds={allActiveTaskIds}
-                onSelect={(t) => {
-                  setFocusedTaskId(t.id);
-                  onSelectTask(t);
-                }}
-                onOpenDetail={(t) => onSelectTask(t)}
-                onToggleComplete={toggleComplete}
-                onToggleStar={toggleStar}
-                onUpdateTitle={(id, title) => updateTask({ id, title })}
-                onDelete={(id) => deleteTask(id)}
-                onDuplicate={duplicateTask}
-                onContextMenu={(e, t) => {
-                  e.preventDefault();
-                  setContextMenuTask(t);
-                  setContextMenuPos({ x: e.clientX, y: e.clientY });
-                }}
-              />
-            ))}
-          </div>
-        </SortableContext>
+        groupBy === 'none' ? (
+          <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
+            <div className={styles.tasksList} role="list" aria-label="Active tasks">
+              {activeTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                  allTaskIds={allActiveTaskIds}
+                  onSelect={(t) => {
+                    setFocusedTaskId(t.id);
+                    onSelectTask(t);
+                  }}
+                  onOpenDetail={(t) => onSelectTask(t)}
+                  onToggleComplete={toggleComplete}
+                  onToggleStar={toggleStar}
+                  onUpdateTitle={(id, title) => updateTask({ id, title })}
+                  onDelete={(id) => deleteTask(id)}
+                  onDuplicate={duplicateTask}
+                  onContextMenu={(e, t) => {
+                    e.preventDefault();
+                    setContextMenuTask(t);
+                    setContextMenuPos({ x: e.clientX, y: e.clientY });
+                  }}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        ) : (
+          <SortableContext items={sortableTaskIds} strategy={verticalListSortingStrategy}>
+            <div className={styles.groupedContainer} role="list" aria-label="Grouped tasks">
+              {groupedTasks.map((group) => (
+                <section
+                  key={group.key}
+                  className={styles.groupSection}
+                  role="region"
+                  aria-label={group.title}
+                >
+                  <DroppableGroupHeader
+                    groupKey={group.key}
+                    title={group.title}
+                    isEmpty={group.items.length === 0}
+                  />
+                  {group.items.length > 0 && (
+                    <div className={styles.groupedTaskList}>
+                      {group.items.map((item) => (
+                        <TaskCard
+                          key={item.task.id}
+                          task={item.task}
+                          depth={item.depth}
+                          hasSubtasks={item.hasSubtasks}
+                          isExpanded={item.isExpanded}
+                          subtaskCount={item.subtaskCount}
+                          isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
+                          allTaskIds={sortableTaskIds}
+                          onSelect={(t) => {
+                            setFocusedTaskId(t.id);
+                            onSelectTask(t);
+                          }}
+                          onOpenDetail={(t) => onSelectTask(t)}
+                          onToggleComplete={toggleComplete}
+                          onToggleStar={toggleStar}
+                          onUpdateTitle={(id, title) => updateTask({ id, title })}
+                          onDelete={(id) => deleteTask(id)}
+                          onDuplicate={duplicateTask}
+                          onContextMenu={(e, t) => {
+                            e.preventDefault();
+                            setContextMenuTask(t);
+                            setContextMenuPos({ x: e.clientX, y: e.clientY });
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          </SortableContext>
+        )
       ) : completedTasks.length === 0 ? (
         <div className={styles.emptyContainer}>
           <EmptyState

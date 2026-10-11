@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import type { ProjectViewMode } from '@shared/types/index.js';
-import { renderViewIcon, PlusIcon, CheckIcon } from './ProjectViewIcons.js';
+import { renderViewIcon, CheckIcon } from './ProjectViewIcons.js';
 import styles from './ViewSwitcher.module.css';
 
 export type { ProjectViewMode };
@@ -36,27 +35,22 @@ export function ViewSwitcher({
   const [internalOpen, setInternalOpen] = useState(false);
   const isMenuOpen = isControlled ? isCustomizeOpen : internalOpen;
 
-  const setIsMenuOpen = (open: boolean) => {
+  const setIsMenuOpen = (open: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof open === 'function' ? open(isMenuOpen) : open;
     if (isControlled) {
-      onCustomizeOpenChange?.(open);
+      onCustomizeOpenChange?.(nextVal);
     } else {
-      setInternalOpen(open);
+      setInternalOpen(nextVal);
     }
   };
 
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    viewId: ProjectViewMode;
-    label: string;
-  } | null>(null);
+  const activeViewsList =
+    availableViews && availableViews.length > 0
+      ? availableViews
+      : (['list', 'board', 'timeline', 'calendar', 'table'] as ProjectViewMode[]);
 
-  const activeViewsList = availableViews && availableViews.length > 0
-    ? availableViews
-    : (['list', 'board', 'timeline', 'calendar', 'table'] as ProjectViewMode[]);
-
-  const visibleOptions = ALL_VIEWS.filter((opt) => activeViewsList.includes(opt.id));
-  const finalVisibleOptions = visibleOptions.length > 0 ? visibleOptions : [ALL_VIEWS[0]];
+  const currentViewLabel =
+    ALL_VIEWS.find((v) => v.id === currentView)?.label || currentView;
 
   // Close popover when clicking outside or pressing Escape
   useEffect(() => {
@@ -82,19 +76,31 @@ export function ViewSwitcher({
     };
   }, [isMenuOpen]);
 
-  // Close context menu on click or Escape
-  useEffect(() => {
-    if (!contextMenu) return;
+  const handleViewCycleClick = (e: React.MouseEvent) => {
+    // Trackpad / Keyboard shortcut: Ctrl + click (or Cmd + click on macOS) opens the view menu
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setIsMenuOpen((prev) => !prev);
+      return;
+    }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setContextMenu(null);
-      }
-    };
+    // Case 1: Single view enabled - do not cycle
+    if (activeViewsList.length <= 1) {
+      return;
+    }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [contextMenu]);
+    // Case 2: Multiple views enabled - cycle in order user enabled them
+    const currentIndex = activeViewsList.indexOf(currentView);
+    const nextIndex =
+      currentIndex === -1 ? 0 : (currentIndex + 1) % activeViewsList.length;
+    const nextView = activeViewsList[nextIndex];
+    onViewChange(nextView);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsMenuOpen((prev) => !prev);
+  };
 
   const handleToggleView = (viewId: ProjectViewMode) => {
     if (activeViewsList.includes(viewId)) {
@@ -110,62 +116,37 @@ export function ViewSwitcher({
     }
   };
 
-  const handleRemoveFromContext = (viewId: ProjectViewMode) => {
-    if (activeViewsList.length <= 1) return;
-    const next = activeViewsList.filter((v) => v !== viewId);
-    onUpdateViews?.(next);
-    if (currentView === viewId) {
-      onViewChange(next[0]);
-    }
-    setContextMenu(null);
-  };
+  const buttonTitle =
+    activeViewsList.length <= 1
+      ? `Current view: ${currentViewLabel} (Only 1 view enabled. Right-click or Ctrl+click to configure views)`
+      : `Current view: ${currentViewLabel}. Click to switch view, Right-click or Ctrl+click to configure views`;
 
   return (
     <div ref={containerRef} className={styles.switcherWrapper}>
-      <div className={styles.switcherContainer} role="tablist" aria-label="Project View Switcher">
-        {finalVisibleOptions.map((opt) => {
-          const isActive = currentView === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              title={opt.label}
-              className={`${styles.viewButton} ${isActive ? styles.viewButtonActive : ''}`}
-              onClick={() => onViewChange(opt.id)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setContextMenu({
-                  x: Math.min(e.clientX, window.innerWidth - 170),
-                  y: Math.min(e.clientY, window.innerHeight - 80),
-                  viewId: opt.id,
-                  label: opt.label,
-                });
-              }}
-            >
-              <span className={styles.viewIcon}>{renderViewIcon(opt.id, 15)}</span>
-              {isActive && <span className={styles.viewLabel}>{opt.label}</span>}
-            </button>
-          );
-        })}
-
-        <div className={styles.divider} aria-hidden="true" />
-
-        <button
-          type="button"
-          className={`${styles.addBtn} ${isMenuOpen ? styles.addBtnActive : ''}`}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Add or remove views"
-          title="Add or remove views"
-          aria-expanded={isMenuOpen}
+      <button
+        type="button"
+        className={`${styles.cycleBtn} ${isMenuOpen ? styles.cycleBtnActive : ''}`}
+        onClick={handleViewCycleClick}
+        onContextMenu={handleContextMenu}
+        aria-label={`View switcher: currently ${currentViewLabel}`}
+        title={buttonTitle}
+        aria-expanded={isMenuOpen}
+        aria-haspopup="menu"
+      >
+        <span
+          key={currentView}
+          className={`${styles.cycleIcon} ${styles.cycleIconAnimate}`}
         >
-          <PlusIcon size={14} />
-        </button>
-      </div>
+          {renderViewIcon(currentView, 16)}
+        </span>
+      </button>
 
       {isMenuOpen && (
-        <div className={styles.popoverMenu} role="menu" aria-label="Manage project views">
+        <div
+          className={styles.popoverMenu}
+          role="menu"
+          aria-label="Manage project views"
+        >
           <div className={styles.popoverHeader}>Project Views</div>
           {ALL_VIEWS.map((opt) => {
             const isEnabled = activeViewsList.includes(opt.id);
@@ -189,7 +170,7 @@ export function ViewSwitcher({
                 }
               >
                 <div className={styles.popoverItemLeft}>
-                  <span className={styles.viewIcon}>{renderViewIcon(opt.id, 14)}</span>
+                  <span className={styles.cycleIcon}>{renderViewIcon(opt.id, 14)}</span>
                   <span>{opt.label}</span>
                 </div>
                 <span
@@ -204,39 +185,6 @@ export function ViewSwitcher({
           })}
         </div>
       )}
-
-      {contextMenu &&
-        createPortal(
-          <div
-            className={styles.contextMenuOverlay}
-            onClick={() => setContextMenu(null)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setContextMenu(null);
-            }}
-          >
-            <div
-              className={styles.contextMenu}
-              style={{ left: contextMenu.x, top: contextMenu.y }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                className={styles.contextMenuItem}
-                disabled={activeViewsList.length <= 1}
-                onClick={() => handleRemoveFromContext(contextMenu.viewId)}
-              >
-                <span>✕</span>
-                <span>
-                  {activeViewsList.length <= 1
-                    ? 'Cannot remove only view'
-                    : `Remove ${contextMenu.label} view`}
-                </span>
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
     </div>
   );
 }
