@@ -269,6 +269,11 @@
   --task-height-cozy: 56px;
   --task-height: var(--task-height-comfortable); /* Default */
 
+  /* Task Card Redesign Tokens */
+  --card-time: #0284c7;
+  --card-overdue: #dc2626;
+  --card-ring: #cbd5e1;
+
   /* Checkbox */
   --checkbox-size: 20px;
   --checkbox-border-width: 1.5px;
@@ -416,6 +421,10 @@
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
     --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
 
+    --card-time: #38bdf8;
+    --card-overdue: #f87171;
+    --card-ring: #334155;
+
     --shadow-focus: 0 0 0 3px rgba(77, 163, 255, 0.3);
   }
 }
@@ -515,6 +524,10 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+
+  --card-time: #38bdf8;
+  --card-overdue: #f87171;
+  --card-ring: #334155;
 
   --shadow-focus: 0 0 0 3px rgba(77, 163, 255, 0.3);
 }
