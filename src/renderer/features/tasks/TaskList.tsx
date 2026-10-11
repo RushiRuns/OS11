@@ -209,22 +209,53 @@ export function planDrop({
 }
 
 export function computeTaskItemEstimate(item?: {
-  task?: { notes?: string | null };
+  task?: {
+    notes?: string | null;
+    due_date?: string | null;
+    bucket?: string | null;
+    waiting_on?: string | null;
+    my_day_date?: string | null;
+    project_id?: string | null;
+    area_id?: string | null;
+    list_id?: string | null;
+  };
   hasSubtasks?: boolean;
 }): number {
-  if (!item) return 32;
-  let height = 32; // base single-line title compact height
+  if (!item) return 40;
+  let height = 40; // base single-line title compact height
   if (item.task?.notes) {
     height += 20; // notes row
   }
-  if (item.hasSubtasks) {
-    height += 18; // subtask count badge / chevron row
+  const hasMeta = Boolean(
+    item.task?.due_date ||
+      item.task?.bucket ||
+      item.task?.waiting_on ||
+      item.task?.my_day_date ||
+      item.task?.project_id ||
+      item.task?.area_id ||
+      (item.task?.list_id && item.task.list_id !== 'default')
+  );
+  if (hasMeta) {
+    height += 19; // metadata row
   }
   return height;
 }
 
 export function createTaskListVirtualizerOptions<TElement extends Element>(
-  items: Array<{ task: { id: string; notes?: string | null }; hasSubtasks?: boolean }>,
+  items: Array<{
+    task: {
+      id: string;
+      notes?: string | null;
+      due_date?: string | null;
+      bucket?: string | null;
+      waiting_on?: string | null;
+      my_day_date?: string | null;
+      project_id?: string | null;
+      area_id?: string | null;
+      list_id?: string | null;
+    };
+    hasSubtasks?: boolean;
+  }>,
   getScrollElement: () => TElement | null
 ) {
   return {

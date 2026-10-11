@@ -21,38 +21,38 @@ describe('TaskList Virtualization Regression Test', () => {
     initialRect: { width: 500, height: 800 },
   });
 
-  it('computes dynamic size estimates based on task contents (compact 32px base)', () => {
+  it('computes dynamic size estimates based on task contents (compact 40px base)', () => {
     // 1. Title only (compact base)
     expect(
       computeTaskItemEstimate({
         task: { notes: null } as any,
         hasSubtasks: false,
       })
-    ).toBe(32);
+    ).toBe(40);
 
-    // 2. Title + notes (32 + 20)
+    // 2. Title + notes (40 + 20)
     expect(
       computeTaskItemEstimate({
         task: { notes: 'Some notes' } as any,
         hasSubtasks: false,
       })
-    ).toBe(52);
+    ).toBe(60);
 
-    // 3. Title + subtasks (32 + 18)
+    // 3. Title + meta (40 + 19)
     expect(
       computeTaskItemEstimate({
-        task: { notes: null } as any,
-        hasSubtasks: true,
+        task: { notes: null, due_date: '2026-10-15' } as any,
+        hasSubtasks: false,
       })
-    ).toBe(50);
+    ).toBe(59);
 
-    // 4. Title + notes + subtasks (32 + 20 + 18)
+    // 4. Title + notes + meta (40 + 20 + 19)
     expect(
       computeTaskItemEstimate({
-        task: { notes: 'Some notes' } as any,
-        hasSubtasks: true,
+        task: { notes: 'Some notes', due_date: '2026-10-15' } as any,
+        hasSubtasks: false,
       })
-    ).toBe(70);
+    ).toBe(79);
   });
 
   it('preserves item heights and prevents ghost gaps/overlaps when tasks are reordered', () => {

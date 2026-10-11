@@ -233,6 +233,7 @@ export const TaskCard = memo(function TaskCard({
   const sortableStyle: React.CSSProperties = {
     opacity: isDragging ? 0.35 : 1,
     marginLeft: depth > 0 ? `${depth * 28 - 12}px` : undefined,
+    width: depth > 0 ? `calc(100% - ${depth * 28 - 12}px)` : undefined,
   };
 
   useEffect(() => {
