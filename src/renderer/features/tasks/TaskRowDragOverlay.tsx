@@ -1,5 +1,7 @@
 import React from 'react';
-import type { Task } from '@shared/types/task.js';
+import type { Task } from '../../shared/types/task.js';
+import { Checkbox } from '../../components/Checkbox/Checkbox.js';
+import { CardGlyph } from './card-glyphs.js';
 
 interface TaskRowDragOverlayProps {
   task: Task;
@@ -7,18 +9,18 @@ interface TaskRowDragOverlayProps {
 }
 
 export function TaskRowDragOverlay({ task, subtaskCount }: TaskRowDragOverlayProps): React.ReactElement {
-  const getPriorityColor = (p: number): string => {
+  const getPriorityColor = (p: number): string | undefined => {
     switch (p) {
       case 1:
-        return 'var(--color-priority-1, #3b82f6)';
+        return 'var(--color-priority-1)';
       case 2:
-        return 'var(--color-priority-2, #eab308)';
+        return 'var(--color-priority-2)';
       case 3:
-        return 'var(--color-priority-3, #f97316)';
+        return 'var(--color-priority-3)';
       case 4:
-        return 'var(--color-priority-4, #ef4444)';
+        return 'var(--color-priority-4)';
       default:
-        return 'var(--text-tertiary, #888888)';
+        return undefined;
     }
   };
 
@@ -31,12 +33,12 @@ export function TaskRowDragOverlay({ task, subtaskCount }: TaskRowDragOverlayPro
         alignItems: 'center',
         gap: '10px',
         padding: '10px 14px',
-        borderRadius: 'var(--radius-md, 10px)',
-        background: 'var(--surface-raised, rgba(35, 35, 42, 0.95))',
+        borderRadius: 'var(--radius-md, 8px)',
+        background: 'var(--surface-overlay, rgba(35, 35, 42, 0.95))',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.12))',
-        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        border: '1px solid var(--border-default, rgba(255, 255, 255, 0.12))',
+        boxShadow: 'var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.35))',
         maxWidth: '420px',
         minWidth: '240px',
         cursor: 'grabbing',
@@ -46,36 +48,21 @@ export function TaskRowDragOverlay({ task, subtaskCount }: TaskRowDragOverlayPro
         transform: 'translate3d(0, 0, 0) scale(1.02)',
       }}
     >
-      {/* Drag handle dots */}
-      <span
-        style={{
-          fontSize: '14px',
-          color: 'var(--text-tertiary, #888)',
-          lineHeight: 1,
-          flexShrink: 0,
-        }}
-        aria-hidden="true"
-      >
-        ⠿
-      </span>
-
-      {/* Priority colored checkbox circle */}
-      <span
-        style={{
-          width: '16px',
-          height: '16px',
-          borderRadius: '50%',
-          border: `2px solid ${priorityColor}`,
-          flexShrink: 0,
-        }}
-        aria-hidden="true"
+      {/* Circle Checkbox */}
+      <Checkbox
+        checked={Boolean(task.is_completed)}
+        onChange={() => {}}
+        shape="circle"
+        size={18}
+        projectColor={priorityColor}
+        disabled
       />
 
       {/* Task title */}
       <span
         style={{
           fontSize: '14px',
-          fontWeight: 500,
+          fontWeight: 400,
           color: 'var(--text-primary, #fff)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -90,15 +77,21 @@ export function TaskRowDragOverlay({ task, subtaskCount }: TaskRowDragOverlayPro
       {subtaskCount && subtaskCount.total > 0 && (
         <span
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
             fontSize: '12px',
             color: 'var(--text-tertiary, #aaa)',
             background: 'var(--surface-sunken, rgba(0, 0, 0, 0.25))',
             padding: '2px 6px',
-            borderRadius: 'var(--radius-sm, 6px)',
+            borderRadius: 'var(--radius-sm, 4px)',
             flexShrink: 0,
           }}
         >
-          ⑂ {subtaskCount.completed}/{subtaskCount.total}
+          <CardGlyph name="subtasks" style={{ width: '12px', height: '12px' }} />
+          <span>
+            {subtaskCount.completed}/{subtaskCount.total}
+          </span>
         </span>
       )}
 
@@ -110,7 +103,7 @@ export function TaskRowDragOverlay({ task, subtaskCount }: TaskRowDragOverlayPro
             color: 'var(--accent, #6366f1)',
             background: 'rgba(99, 102, 241, 0.12)',
             padding: '2px 6px',
-            borderRadius: 'var(--radius-sm, 6px)',
+            borderRadius: 'var(--radius-sm, 4px)',
             flexShrink: 0,
           }}
         >
