@@ -60,12 +60,12 @@ export interface FlattenedTaskItem {
 // --- Drag-and-drop geometry ---------------------------------------------------
 // Pixels of horizontal drag that equal one indent level. Matches the 28px per-depth indent
 // TaskCard already uses, so the drop line lines up with where a card at that depth would sit.
-const INDENT_PX = 28;
+export const INDENT_PX = 28;
 // How far in from the list's left edge a depth-0 drop line starts (past chevron + checkbox).
 // Nudge this one number if the line looks offset from your cards.
-const INDENT_LINE_BASE_PADDING = 40;
+export const INDENT_LINE_BASE_PADDING = 40;
 // Keep in sync with the virtualizer gap in createTaskListVirtualizerOptions.
-const ROW_GAP_PX = 8;
+export const ROW_GAP_PX = 4;
 
 export interface DropPlan {
   parentId: string | null;
@@ -212,8 +212,8 @@ export function computeTaskItemEstimate(item?: {
   task?: { notes?: string | null };
   hasSubtasks?: boolean;
 }): number {
-  if (!item) return 44;
-  let height = 44; // base single-line title comfortable height
+  if (!item) return 32;
+  let height = 32; // base single-line title compact height
   if (item.task?.notes) {
     height += 20; // notes row
   }

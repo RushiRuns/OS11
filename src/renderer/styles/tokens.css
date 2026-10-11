@@ -265,7 +265,7 @@
 
   /* Task item heights (three density modes) */
   --task-height-comfortable: 44px;
-  --task-height-compact: 34px;
+  --task-height-compact: 32px;
   --task-height-cozy: 56px;
   --task-height: var(--task-height-comfortable); /* Default */
 

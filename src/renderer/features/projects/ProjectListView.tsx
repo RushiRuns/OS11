@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   useDndMonitor,
   useDroppable,
+  type DragStartEvent,
+  type DragMoveEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -18,7 +20,15 @@ import { useTaskStore } from '../../stores/taskStore.js';
 import { useViewGroupStore } from '../../stores/viewGroupStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useGroupedTasks, resolveGroupDropMutation } from '../../hooks/useGroupedTasks.js';
-import type { FlattenedTaskItem } from '../tasks/TaskList.js';
+import {
+  type FlattenedTaskItem,
+  planDrop,
+  isExternalDropTarget,
+  INDENT_PX,
+  INDENT_LINE_BASE_PADDING,
+  ROW_GAP_PX,
+  type DropPlan,
+} from '../tasks/TaskList.js';
 import styles from './ProjectListView.module.css';
 
 interface DroppableGroupHeaderProps {
@@ -62,12 +72,6 @@ interface ProjectListViewProps {
   selectedTaskId?: string | null;
 }
 
-function arrayMove<T>(array: T[], from: number, to: number): T[] {
-  const newArray = array.slice();
-  const [removed] = newArray.splice(from, 1);
-  newArray.splice(to, 0, removed);
-  return newArray;
-}
 
 export function ProjectListView({
   project,
@@ -76,6 +80,7 @@ export function ProjectListView({
   selectedTaskId,
 }: ProjectListViewProps): React.ReactElement {
   const {
+    tasksById,
     updateTask,
     toggleComplete,
     toggleStar,
@@ -83,7 +88,27 @@ export function ProjectListView({
     duplicateTask,
     makeSubtask,
     reorderTask,
+    moveTask,
   } = useTaskStore();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    depth: number;
+  } | null>(null);
+
+  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(() => new Set());
+  const toggleParentExpand = useCallback((id: string) => {
+    setCollapsedParentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
@@ -111,14 +136,63 @@ export function ProjectListView({
   }, [tasks]);
 
   const flattenedActiveItems: FlattenedTaskItem[] = useMemo(() => {
-    return activeTasks.map((t) => ({
-      task: t,
-      depth: 0,
-      hasSubtasks: false,
-      isExpanded: false,
-      subtaskCount: { completed: 0, total: 0 },
-    }));
-  }, [activeTasks]);
+    const activeTasksMap = new Map<string, Task>();
+    for (const t of activeTasks) {
+      activeTasksMap.set(t.id, t);
+    }
+
+    const childrenByParentId = new Map<string, Task[]>();
+    for (const t of activeTasks) {
+      if (t.parent_task_id) {
+        const list = childrenByParentId.get(t.parent_task_id) || [];
+        list.push(t);
+        childrenByParentId.set(t.parent_task_id, list);
+      }
+    }
+
+    const subtaskStats = new Map<string, { completed: number; total: number }>();
+    for (const t of Object.values(tasksById)) {
+      if (t.is_trashed === 0 && t.parent_task_id) {
+        const stats = subtaskStats.get(t.parent_task_id) || { completed: 0, total: 0 };
+        stats.total += 1;
+        if (t.is_completed === 1) stats.completed += 1;
+        subtaskStats.set(t.parent_task_id, stats);
+      }
+    }
+
+    const rootTasks = activeTasks.filter(
+      (t) => !t.parent_task_id || !activeTasksMap.has(t.parent_task_id)
+    );
+
+    const result: FlattenedTaskItem[] = [];
+
+    const appendTree = (task: Task, depth: number) => {
+      const stats = subtaskStats.get(task.id) || { completed: 0, total: 0 };
+      const hasSubtasks = stats.total > 0;
+      const isExpanded = !collapsedParentIds.has(task.id);
+
+      result.push({
+        task,
+        depth,
+        hasSubtasks,
+        isExpanded,
+        subtaskCount: stats,
+      });
+
+      if (hasSubtasks && isExpanded) {
+        const children = childrenByParentId.get(task.id) || [];
+        for (const child of children) {
+          appendTree(child, depth + 1);
+        }
+      }
+    };
+
+    for (const root of rootTasks) {
+      appendTree(root, 0);
+    }
+
+    return result;
+  }, [activeTasks, tasksById, collapsedParentIds]);
 
   const groupedTasks = useGroupedTasks({
     items: flattenedActiveItems,
@@ -128,7 +202,7 @@ export function ProjectListView({
     includeEmpty: false,
   });
 
-  const allActiveTaskIds = useMemo(() => activeTasks.map((t) => t.id), [activeTasks]);
+  const allActiveTaskIds = useMemo(() => flattenedActiveItems.map((item) => item.task.id), [flattenedActiveItems]);
   const allCompletedTaskIds = useMemo(() => completedTasks.map((t) => t.id), [completedTasks]);
 
   const sortableTaskIds = useMemo(
@@ -136,18 +210,94 @@ export function ProjectListView({
     [groupBy, allActiveTaskIds, groupedTasks]
   );
 
+  const computeDropPlan = useCallback(
+    (
+      activeId: string,
+      overId: string,
+      deltaX: number,
+      activeRect: { top: number; height: number } | null,
+      overRect: { top: number; height: number }
+    ): DropPlan | null =>
+      planDrop({
+        items: flattenedActiveItems,
+        activeId,
+        overId,
+        deltaX,
+        activeRect,
+        overRect,
+        indentPx: INDENT_PX,
+        rowGapPx: ROW_GAP_PX,
+      }),
+    [flattenedActiveItems]
+  );
+
+  const clearDragState = () => {
+    setDraggingTaskId(null);
+    setDropIndicator(null);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggingTaskId(String(event.active.id));
+  };
+
+  const handleDragMove = (event: DragMoveEvent) => {
+    const { active, over, delta } = event;
+    if (
+      !over ||
+      groupBy !== 'none' ||
+      isExternalDropTarget(String(over.id)) ||
+      String(over.id).startsWith('group-header:')
+    ) {
+      setDropIndicator(null);
+      return;
+    }
+
+    const plan = computeDropPlan(
+      String(active.id),
+      String(over.id),
+      delta.x,
+      active.rect.current.translated ?? active.rect.current.initial ?? null,
+      over.rect
+    );
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!plan || plan.isNoop || !containerRect) {
+      setDropIndicator(null);
+      return;
+    }
+
+    const left = containerRect.left + INDENT_LINE_BASE_PADDING + plan.depth * INDENT_PX;
+    const nextIndicator = {
+      top: plan.lineTop,
+      left,
+      width: Math.max(40, containerRect.right - left - 16),
+      depth: plan.depth,
+    };
+    setDropIndicator((prev) =>
+      prev &&
+      prev.top === nextIndicator.top &&
+      prev.left === nextIndicator.left &&
+      prev.width === nextIndicator.width
+        ? prev
+        : nextIndicator
+    );
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    const { active, over, delta } = event;
+    clearDragState();
+    if (!over) return;
 
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
+    if (isExternalDropTarget(overIdStr)) return;
+
     const activeTask = tasks.find((t) => t.id === activeIdStr);
     if (!activeTask) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
 
     if (groupBy !== 'none') {
+      if (active.id === over.id) return;
       const { addTagToTask, removeTagFromTask } = useTagStore.getState();
 
       // 1. Dropped directly onto a group header
@@ -251,24 +401,49 @@ export function ProjectListView({
       }
     }
 
-    const oldIndex = activeTasks.findIndex((t) => t.id === active.id);
-    const newIndex = activeTasks.findIndex((t) => t.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
+    // Flat view tree-aware drop
+    const activeId = activeIdStr;
+    const activeTaskObj = tasksById[activeId] ?? activeTask;
+    const prevParentId = activeTaskObj.parent_task_id ?? null;
+    const displayedParentId =
+      prevParentId && allActiveTaskIds.includes(prevParentId) ? prevParentId : null;
 
-    const reordered = arrayMove(activeTasks, oldIndex, newIndex);
-    const prevSibling = newIndex > 0 ? reordered[newIndex - 1] : null;
-    const nextSibling = newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
+    const plan = computeDropPlan(
+      activeId,
+      overIdStr,
+      delta.x,
+      active.rect.current.translated ?? active.rect.current.initial ?? null,
+      over.rect
+    );
 
+    if (!plan || plan.isNoop) return;
+
+    const parentChanged = plan.parentId !== displayedParentId;
+    const prevSibling = plan.prevSiblingId
+      ? tasksById[plan.prevSiblingId] ?? tasks.find((t) => t.id === plan.prevSiblingId) ?? null
+      : null;
+    const nextSibling = plan.nextSiblingId
+      ? tasksById[plan.nextSiblingId] ?? tasks.find((t) => t.id === plan.nextSiblingId) ?? null
+      : null;
     const newSortOrder = between(prevSibling?.sort_order ?? null, nextSibling?.sort_order ?? null);
-    await reorderTask(String(active.id), newSortOrder);
+    const nextParentId = parentChanged ? plan.parentId : undefined;
+
+    await moveTask(activeId, { parentId: nextParentId, sortOrder: newSortOrder });
   };
 
   useDndMonitor({
+    onDragStart: handleDragStart,
+    onDragMove: handleDragMove,
     onDragEnd: handleDragEnd,
+    onDragCancel: clearDragState,
   });
 
   return (
-    <div className={styles.listContainer}>
+    <div
+      ref={containerRef}
+      className={styles.listContainer}
+      data-dragging={Boolean(draggingTaskId)}
+    >
       {/* Inline Task Creator */}
       <InlineTaskCreator defaultProjectId={project.id} />
 
@@ -277,11 +452,16 @@ export function ProjectListView({
         groupBy === 'none' ? (
           <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
             <div className={styles.tasksList} role="list" aria-label="Active tasks">
-              {activeTasks.map((task) => (
+              {flattenedActiveItems.map((item) => (
                 <TaskCard
-                  key={task.id}
-                  task={task}
-                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                  key={item.task.id}
+                  task={item.task}
+                  depth={item.depth}
+                  hasSubtasks={item.hasSubtasks}
+                  isExpanded={item.isExpanded}
+                  subtaskCount={item.subtaskCount}
+                  onToggleExpand={toggleParentExpand}
+                  isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
                   allTaskIds={allActiveTaskIds}
                   onSelect={(t) => {
                     setFocusedTaskId(t.id);
@@ -327,6 +507,7 @@ export function ProjectListView({
                           hasSubtasks={item.hasSubtasks}
                           isExpanded={item.isExpanded}
                           subtaskCount={item.subtaskCount}
+                          onToggleExpand={toggleParentExpand}
                           isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
                           allTaskIds={sortableTaskIds}
                           onSelect={(t) => {
@@ -451,6 +632,41 @@ export function ProjectListView({
         onOpenDetail={(t) => onSelectTask(t)}
         onDelete={(id) => deleteTask(id)}
       />
+
+      {dropIndicator && (
+        <>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              top: `${dropIndicator.top}px`,
+              left: `${dropIndicator.left}px`,
+              width: `${dropIndicator.width}px`,
+              height: '2px',
+              background: 'var(--accent)',
+              zIndex: 60,
+              pointerEvents: 'none',
+              transform: 'translateY(-1px)',
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              top: `${dropIndicator.top}px`,
+              left: `${dropIndicator.left - 4}px`,
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              border: '2px solid var(--accent)',
+              background: 'var(--surface-base)',
+              zIndex: 61,
+              pointerEvents: 'none',
+              transform: 'translate(0, -50%)',
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

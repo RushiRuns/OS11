@@ -5,6 +5,11 @@
   width: 100%;
 }
 
+.listContainer[data-dragging="true"] :global([data-sortable-id]) {
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Quick Add Bar */
 .quickAddRow {
   display: flex;
@@ -47,7 +52,7 @@
 .tasksList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 4px;
 }
 
 /* Collapsible Completed Section */
@@ -84,7 +89,7 @@
 .completedList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 4px;
   padding-top: var(--space-2);
 }
 
@@ -143,5 +148,5 @@
 .groupedTaskList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 4px;
 }

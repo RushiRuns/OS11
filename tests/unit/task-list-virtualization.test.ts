@@ -3,10 +3,13 @@ import { Virtualizer } from '@tanstack/virtual-core';
 import {
   createTaskListVirtualizerOptions,
   computeTaskItemEstimate,
+  planDrop,
   type FlattenedTaskItem,
 } from '../../src/renderer/features/tasks/TaskList.js';
 
 describe('TaskList Virtualization Regression Test', () => {
+  const ROW_GAP = 4; // Compact row gap
+
   const createMockAdapter = () => ({
     scrollToFn: () => {},
     observeElementRect: (_instance: any, cb: (rect: any) => void) => {
@@ -18,38 +21,38 @@ describe('TaskList Virtualization Regression Test', () => {
     initialRect: { width: 500, height: 800 },
   });
 
-  it('computes dynamic size estimates based on task contents', () => {
-    // 1. Title only
+  it('computes dynamic size estimates based on task contents (compact 32px base)', () => {
+    // 1. Title only (compact base)
     expect(
       computeTaskItemEstimate({
         task: { notes: null } as any,
         hasSubtasks: false,
       })
-    ).toBe(44);
+    ).toBe(32);
 
-    // 2. Title + notes
+    // 2. Title + notes (32 + 20)
     expect(
       computeTaskItemEstimate({
         task: { notes: 'Some notes' } as any,
         hasSubtasks: false,
       })
-    ).toBe(64);
+    ).toBe(52);
 
-    // 3. Title + subtasks
+    // 3. Title + subtasks (32 + 18)
     expect(
       computeTaskItemEstimate({
         task: { notes: null } as any,
         hasSubtasks: true,
       })
-    ).toBe(62);
+    ).toBe(50);
 
-    // 4. Title + notes + subtasks
+    // 4. Title + notes + subtasks (32 + 20 + 18)
     expect(
       computeTaskItemEstimate({
         task: { notes: 'Some notes' } as any,
         hasSubtasks: true,
       })
-    ).toBe(82);
+    ).toBe(70);
   });
 
   it('preserves item heights and prevents ghost gaps/overlaps when tasks are reordered', () => {
@@ -83,6 +86,7 @@ describe('TaskList Virtualization Regression Test', () => {
 
     const scrollElement = {} as any;
     const options = createTaskListVirtualizerOptions(items, () => scrollElement);
+    expect(options.gap).toBe(ROW_GAP);
 
     const virtualizer = new Virtualizer({
       ...createMockAdapter(),
@@ -103,7 +107,7 @@ describe('TaskList Virtualization Regression Test', () => {
     expect(virtualItems[0].key).toBe('task-1');
     expect(virtualItems[0].size).toBe(85);
     expect(virtualItems[1].key).toBe('task-2');
-    expect(virtualItems[1].start).toBe(85 + 8); // 93
+    expect(virtualItems[1].start).toBe(85 + ROW_GAP); // 89
 
     // Drag & Drop action: User moves task-2 to index 0: [task-2, task-1, task-3]
     items = [items[1], items[0], items[2]];
@@ -122,13 +126,100 @@ describe('TaskList Virtualization Regression Test', () => {
     expect(virtualItems[0].key).toBe('task-2');
     expect(virtualItems[0].size).toBe(40);
 
-    // 2. Index 1 is task-1 and start must be 40 + 8 = 48px (NO 45px ghost gap!)
+    // 2. Index 1 is task-1 and start must be 40 + 4 = 44px (NO ghost gap!)
     expect(virtualItems[1].key).toBe('task-1');
-    expect(virtualItems[1].start).toBe(48);
+    expect(virtualItems[1].start).toBe(44);
     expect(virtualItems[1].size).toBe(85);
 
-    // 3. Index 2 is task-3 and start must be 48 + 85 + 8 = 141px (NO overlap!)
+    // 3. Index 2 is task-3 and start must be 44 + 85 + 4 = 133px (NO overlap!)
     expect(virtualItems[2].key).toBe('task-3');
-    expect(virtualItems[2].start).toBe(141);
+    expect(virtualItems[2].start).toBe(133);
+  });
+
+  it('TC-03: prevents overlap when adjacent tasks have different dynamic heights (multi-line notes/tags)', () => {
+    const items: FlattenedTaskItem[] = [
+      {
+        task: { id: 'task-1', title: 'Task with notes and tags', notes: 'Some note' } as any,
+        depth: 0,
+        hasSubtasks: false,
+        isExpanded: false,
+        subtaskCount: { completed: 0, total: 0 },
+      },
+      {
+        task: { id: 'task-2', title: 'Compact task', notes: null } as any,
+        depth: 0,
+        hasSubtasks: false,
+        isExpanded: false,
+        subtaskCount: { completed: 0, total: 0 },
+      },
+    ];
+
+    const options = createTaskListVirtualizerOptions(items, () => ({} as any));
+    expect(options.gap).toBe(ROW_GAP);
+
+    const virtualizer = new Virtualizer({
+      ...createMockAdapter(),
+      ...options,
+    });
+    virtualizer._didMount();
+
+    // Populate initial measurements
+    virtualizer.getVirtualItems();
+
+    // Simulate task-1 having a rendered height of 68px (multi-line) and task-2 32px
+    virtualizer.resizeItem(0, 68);
+    virtualizer.resizeItem(1, 32);
+
+    const virtualItems = virtualizer.getVirtualItems();
+    expect(virtualItems[0].size).toBe(68);
+    // Task 2 must start precisely at 68 + gap (no overlap!)
+    expect(virtualItems[1].start).toBe(68 + ROW_GAP);
+  });
+
+  it('TC-04: preserves drag-and-drop insertion lineTop calculation with compact gap', () => {
+    const items: FlattenedTaskItem[] = [
+      {
+        task: { id: 'task-1', title: 'Task 1' } as any,
+        depth: 0,
+        hasSubtasks: false,
+        isExpanded: false,
+        subtaskCount: { completed: 0, total: 0 },
+      },
+      {
+        task: { id: 'task-2', title: 'Task 2' } as any,
+        depth: 0,
+        hasSubtasks: false,
+        isExpanded: false,
+        subtaskCount: { completed: 0, total: 0 },
+      },
+    ];
+
+    // Case 1: Dragging from above (activeCenterY < overCenterY) -> insert before task-2
+    const dropBefore = planDrop({
+      items,
+      activeId: 'task-1',
+      overId: 'task-2',
+      deltaX: 0,
+      activeRect: { top: 0, height: 32 },
+      overRect: { top: 34, height: 32 },
+      indentPx: 28,
+      rowGapPx: ROW_GAP,
+    });
+    expect(dropBefore).not.toBeNull();
+    expect(dropBefore!.lineTop).toBe(34 - ROW_GAP / 2); // 32
+
+    // Case 2: Dragging from below (activeCenterY > overCenterY) -> insert after task-2
+    const dropAfter = planDrop({
+      items,
+      activeId: 'task-1',
+      overId: 'task-2',
+      deltaX: 0,
+      activeRect: { top: 68, height: 32 },
+      overRect: { top: 34, height: 32 },
+      indentPx: 28,
+      rowGapPx: ROW_GAP,
+    });
+    expect(dropAfter).not.toBeNull();
+    expect(dropAfter!.lineTop).toBe(34 + 32 + ROW_GAP / 2); // 68
   });
 });
