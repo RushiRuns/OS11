@@ -582,16 +582,18 @@ body {
 }
 
 /* Global focus-visible ring — active on keyboard navigation only for non-text-input elements */
-:focus-visible:not(input:not([type="checkbox"]):not([type="radio"])):not(textarea):not(select):not([contenteditable="true"]) {
+:focus-visible:not(input):not(textarea):not(select):not([contenteditable='true']),
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
 
-/* Text inputs, textareas, and editable fields: remove outline and blue glow when focused or typing */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]),
+/* Text inputs, textareas, selects, and editable fields: completely eliminate outline, focus ring, and box-shadow */
+input:not([type='checkbox']):not([type='radio']),
 textarea,
 select,
-[contenteditable="true"] {
+[contenteditable='true'] {
   outline: none !important;
   outline-color: transparent !important;
   outline-style: none !important;
@@ -600,14 +602,14 @@ select,
   -webkit-focus-ring-color: transparent !important;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):focus,
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):focus-visible,
+input:not([type='checkbox']):not([type='radio']):focus,
+input:not([type='checkbox']):not([type='radio']):focus-visible,
 textarea:focus,
 textarea:focus-visible,
 select:focus,
 select:focus-visible,
-[contenteditable="true"]:focus,
-[contenteditable="true"]:focus-visible {
+[contenteditable='true']:focus,
+[contenteditable='true']:focus-visible {
   outline: none !important;
   outline-color: transparent !important;
   outline-style: none !important;
