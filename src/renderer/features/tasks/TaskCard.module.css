@@ -95,12 +95,11 @@
   }
 }
 
-/* Subtask Chevron Toggle: Positioned in left gutter (yellow line), reveals on hover without pushing card */
+/* Subtask Chevron Toggle: Positioned in left gutter, reveals on hover without pushing card */
 .subtaskChevronBtn {
   position: absolute;
   left: 6px;
-  top: 16px;
-  transform: translateY(-50%);
+  top: 12px;
   background: transparent;
   border: none;
   padding: 0;
@@ -116,11 +115,19 @@
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 0.15s ease,
-    color 0.15s ease,
-    background-color 0.15s ease;
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-fast);
   flex-shrink: 0;
   z-index: 2;
+}
+
+.subtaskRow .subtaskChevronBtn {
+  top: 9px;
+}
+
+.taskCard[data-multiselect='active'] .subtaskChevronBtn {
+  display: none;
 }
 
 .taskCard:hover .subtaskChevronBtn,
@@ -434,12 +441,21 @@
   color: var(--color-warning);
 }
 
-/* Multi-Select Checkbox (only when multi-select active, never on simple card hover) */
+/* Multi-Select Checkbox: Positioned in left gutter (zero horizontal shift) */
 .multiSelectCheckboxWrap {
   display: none;
+  position: absolute;
+  left: 6px;
+  top: 13px;
+  width: 16px;
+  height: 16px;
   align-items: center;
   justify-content: center;
-  margin-right: -4px;
+  z-index: 3;
+}
+
+.subtaskRow .multiSelectCheckboxWrap {
+  top: 10px;
 }
 
 .taskCard[data-multiselect='active'] .multiSelectCheckboxWrap {
@@ -451,6 +467,7 @@
   accent-color: var(--accent);
   width: 14px;
   height: 14px;
+  margin: 0;
 }
 
 /* Drag States */
