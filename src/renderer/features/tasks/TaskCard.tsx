@@ -17,6 +17,8 @@ import { useListStore } from '../../stores/listStore.js';
 import { useToday } from '../../hooks/useToday.js';
 import { resolveContainerBadge, resolveSmartBadges } from './task-badges.js';
 import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
+import { CardGlyph } from './card-glyphs.js';
+import { formatDueLabel } from './due-label.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './TaskCard.module.css';
 
@@ -130,9 +132,13 @@ export const TaskCard = memo(function TaskCard({
   const attachmentCount = useAttachmentStore(state => state.countsByTaskId[task.id] ?? 0);
   const linkedGoal = useGoalStore(state => state.getGoalForTask(task.id));
 
-  const formattedDueDate = useMemo(() => {
-    return formatDateTime(task.due_date, task.due_time, task.all_day);
-  }, [task.due_date, task.due_time, task.all_day]);
+  const dueInfo = useMemo(() => {
+    if (task.is_completed === 1) {
+      const result = formatDueLabel(task.due_date, task.due_time, task.all_day);
+      return result ? { ...result, isOverdue: false } : null;
+    }
+    return formatDueLabel(task.due_date, task.due_time, task.all_day);
+  }, [task.due_date, task.due_time, task.all_day, task.is_completed]);
 
   const hookActiveListId = useAppStore(state => state.activeListId);
   const activeListId = typeof window === 'undefined' ? (useAppStore.getState().activeListId || hookActiveListId) : hookActiveListId;
@@ -298,26 +304,48 @@ export const TaskCard = memo(function TaskCard({
     }
   };
 
-  // Check if overdue
-  const isOverdue = useMemo(() => {
-    if (!task.due_date || task.is_completed === 1) return false;
-    if (task.due_time && task.all_day !== 1) {
-      const timePart = task.due_time.length === 5 ? `${task.due_time}:00` : task.due_time;
-      const datePart = task.due_date.split('T')[0];
-      const dueTimestamp = new Date(`${datePart}T${timePart}`).getTime();
-      if (!isNaN(dueTimestamp)) {
-        return dueTimestamp < Date.now();
-      }
-    }
-    const d = new Date(task.due_date.split('T')[0] + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return d.getTime() < today.getTime();
-  }, [task.due_date, task.due_time, task.all_day, task.is_completed]);
-
   const metadataSegments = useMemo(() => {
     const segments: React.ReactNode[] = [];
 
+    // 1. Scheduled Time
+    if (hasScheduledTime && scheduledTimeRange) {
+      segments.push(
+        <span
+          key="scheduled-time"
+          className={styles.scheduledTimeSegment}
+          onClick={handleTimeChipClick}
+          onMouseEnter={() => useSchedulerUiStore.getState().setHoveredBlockId(task.id)}
+          onMouseLeave={() => useSchedulerUiStore.getState().setHoveredBlockId(null)}
+          title="Click to view block in scheduler"
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleTimeChipClick(e as any);
+            }
+          }}
+        >
+          <CardGlyph name="clock" className={styles.timeGlyph} />
+          <span>{scheduledTimeRange}</span>
+        </span>
+      );
+    }
+
+    // 2. Due Date
+    if (dueInfo) {
+      segments.push(
+        <span
+          key="due-date"
+          className={`${styles.metaDate} ${dueInfo.isOverdue ? styles.metaDateOverdue : ''}`}
+          title={`Due: ${dueInfo.label}`}
+        >
+          {dueInfo.label}
+        </span>
+      );
+    }
+
+    // 3. Container Badge (plain text label, no emoji, max 180px with ellipsis)
     if (containerBadge) {
       segments.push(
         <span
@@ -340,13 +368,18 @@ export const TaskCard = memo(function TaskCard({
             }
           }}
         >
-          <span aria-hidden="true">{containerBadge.icon}</span>
           <span className={styles.inlineContainerBadgeLabel}>{containerBadge.label}</span>
         </span>
       );
     }
 
+    // 4. Smart Status Badges (tinted status glyph + label)
     for (const smartBadge of smartBadges) {
+      let glyphName: 'sun' | 'bolt' | 'box' | 'hourglass' = 'sun';
+      if (smartBadge.badgeType === 'anytime') glyphName = 'bolt';
+      else if (smartBadge.badgeType === 'someday') glyphName = 'box';
+      else if (smartBadge.badgeType === 'waiting') glyphName = 'hourglass';
+
       segments.push(
         <span
           key={`smart-badge-${smartBadge.id}`}
@@ -369,51 +402,20 @@ export const TaskCard = memo(function TaskCard({
             }
           }}
         >
-          <span aria-hidden="true">{smartBadge.icon}</span>
+          <CardGlyph name={glyphName} className={styles.smartBadgeGlyph} />
           <span className={styles.inlineSmartBadgeLabel}>{smartBadge.label}</span>
         </span>
       );
     }
 
-    if (hasScheduledTime && scheduledTimeRange) {
-      segments.push(
-        <span
-          key="scheduled-time"
-          className={styles.timeChip}
-          onClick={handleTimeChipClick}
-          onMouseEnter={() => useSchedulerUiStore.getState().setHoveredBlockId(task.id)}
-          onMouseLeave={() => useSchedulerUiStore.getState().setHoveredBlockId(null)}
-          title="Click to view block in scheduler"
-          role="button"
-          tabIndex={0}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleTimeChipClick(e as any);
-            }
-          }}
-        >
-          ⏱️ {scheduledTimeRange}
-        </span>
-      );
-    }
-
-    if (formattedDueDate) {
-      segments.push(
-        <span
-          key="due-date"
-          className={`${styles.metaDate} ${isOverdue ? styles.metaDateOverdue : ''}`}
-          title={`Due: ${formattedDueDate}`}
-        >
-          {formattedDueDate}
-        </span>
-      );
-    }
-
+    // 5. Tags (first 2, then +N)
     if (taskTags.length > 0) {
+      const visibleTags = taskTags.slice(0, 2);
+      const remainingCount = taskTags.length - 2;
+
       segments.push(
-        <div key="tags" className={styles.tagsGroup}>
-          {taskTags.map(tag => (
+        <span key="tags" className={styles.tagsGroup}>
+          {visibleTags.map(tag => (
             <span
               key={tag.id}
               className={styles.inlineTagPill}
@@ -436,46 +438,25 @@ export const TaskCard = memo(function TaskCard({
               #{tag.name}
             </span>
           ))}
-        </div>
-      );
-    }
-
-    if (hasSubtaskBadge && subtaskCount) {
-      segments.push(
-        <div
-          key="subtasks"
-          className={styles.subtaskCountBadge}
-          title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
-        >
-          <span className={styles.subtaskCountIcon}>
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          {remainingCount > 0 && (
+            <span
+              className={styles.inlineTagMore}
+              title={taskTags.slice(2).map(t => `#${t.name}`).join(', ')}
             >
-              <rect x="2" y="2" width="12" height="4" rx="2" />
-              <path d="M4 6v3.5a2 2 0 0 0 2 2h1" />
-              <rect x="7" y="9.5" width="7" height="4" rx="2" />
-            </svg>
-          </span>
-          <span>
-            {subtaskCount.completed}/{subtaskCount.total}
-          </span>
-        </div>
+              +{remainingCount}
+            </span>
+          )}
+        </span>
       );
     }
 
+    // 6. Glyphs Group: Goal, Repeat, Clip
+    const trailingGlyphs: React.ReactNode[] = [];
     if (linkedGoal) {
-      segments.push(
+      trailingGlyphs.push(
         <span
-          key="goal"
-          className={styles.inlineGoalPill}
+          key="goal-glyph"
+          className={styles.metaGlyphBtn}
           role="button"
           tabIndex={0}
           onPointerDown={e => e.stopPropagation()}
@@ -491,26 +472,60 @@ export const TaskCard = memo(function TaskCard({
             }
           }}
           title={`Goal: ${linkedGoal.title}`}
+          aria-label={`Goal: ${linkedGoal.title}`}
         >
-          🎯 {linkedGoal.title}
+          <CardGlyph name="goal" />
+        </span>
+      );
+    }
+
+    if (task.recurrence_rule) {
+      trailingGlyphs.push(
+        <span
+          key="repeat-glyph"
+          className={styles.metaGlyph}
+          title={`Repeats: ${task.recurrence_rule}`}
+          aria-label={`Repeats: ${task.recurrence_rule}`}
+        >
+          <CardGlyph name="repeat" />
+        </span>
+      );
+    }
+
+    if (attachmentCount > 0) {
+      trailingGlyphs.push(
+        <span
+          key="clip-glyph"
+          className={styles.metaGlyph}
+          title={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}
+          aria-label={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}
+        >
+          <CardGlyph name="clip" />
+        </span>
+      );
+    }
+
+    if (trailingGlyphs.length > 0) {
+      segments.push(
+        <span key="trailing-glyphs" className={styles.metaGlyphsGroup}>
+          {trailingGlyphs}
         </span>
       );
     }
 
     return segments;
   }, [
-    task.id,
-    containerBadge,
-    smartBadges,
     hasScheduledTime,
     scheduledTimeRange,
     handleTimeChipClick,
-    formattedDueDate,
-    isOverdue,
+    task.id,
+    task.recurrence_rule,
+    dueInfo,
+    containerBadge,
+    smartBadges,
     taskTags,
-    hasSubtaskBadge,
-    subtaskCount,
     linkedGoal,
+    attachmentCount,
   ]);
 
   return (
@@ -719,30 +734,6 @@ export const TaskCard = memo(function TaskCard({
               </React.Fragment>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Layer 2: Metadata Badges (Hover/Focus progressive disclosure) */}
-      <div className={styles.metadataWrap}>
-        {task.pomodoro_count > 0 && (
-          <span className={styles.badgePill} title="Completed Pomodoro Sessions">
-            🍅 ×{task.pomodoro_count}
-          </span>
-        )}
-
-        {task.recurrence_rule && (
-          <span className={styles.badgePill} title="Recurring Task">
-            🔄
-          </span>
-        )}
-
-        {attachmentCount > 0 && (
-          <span
-            className={styles.badgePill}
-            title={`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}
-          >
-            📎 ×{attachmentCount}
-          </span>
         )}
       </div>
 

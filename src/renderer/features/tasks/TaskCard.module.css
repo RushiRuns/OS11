@@ -204,9 +204,8 @@
 
 .metaDot {
   color: var(--text-tertiary);
-  font-size: 16px;
-  font-weight: var(--weight-bold);
-  line-height: 1;
+  font-size: 12px;
+  line-height: 16px;
   user-select: none;
   display: inline-flex;
   align-items: center;
@@ -217,46 +216,28 @@
   display: inline-flex;
   align-items: center;
   color: var(--text-secondary);
-  font-size: var(--text-md);
-  font-weight: var(--weight-bold);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   cursor: default;
+  line-height: 16px;
 }
 
 .metaDateOverdue {
-  color: var(--color-danger) !important;
-  font-weight: var(--weight-bold);
+  color: var(--card-overdue) !important;
+  font-weight: var(--weight-medium);
 }
 
 .tagsGroup {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.subtaskCountBadge {
-  display: inline-flex;
-  align-items: center;
   gap: 4px;
-  font-size: var(--text-md);
-  font-weight: var(--weight-bold);
-  color: var(--text-secondary);
-  line-height: 1;
-}
-
-.subtaskCountIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
 }
 
 .inlineTagPill {
   color: var(--text-secondary);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
+  font-size: 12px;
   cursor: pointer;
+  line-height: 16px;
   transition: color var(--transition-fast);
 }
 
@@ -265,20 +246,38 @@
   text-decoration: underline;
 }
 
-.inlineGoalPill {
-  color: var(--accent);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
+.inlineTagMore {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: default;
+  line-height: 16px;
+}
+
+.metaGlyphsGroup {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
+  color: var(--text-tertiary);
+  margin-left: 2px;
+}
+
+.metaGlyph {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
+.metaGlyphBtn {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  cursor: pointer;
   transition: color var(--transition-fast);
 }
 
-.inlineGoalPill:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
+.metaGlyphBtn:hover {
+  color: var(--accent);
 }
 
 .titleArea {
@@ -367,22 +366,6 @@
   color: var(--text-primary);
 }
 
-/* Layer 2: Metadata & Badges (Visible on hover/focus or when active) */
-.metadataWrap {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.badgePill {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
 .starButtonActive {
   color: var(--color-star);
 }
@@ -451,46 +434,45 @@
   white-space: nowrap;
 }
 
-/* Scheduler Time Chip */
-.timeChip {
+/* Scheduler Time Segment */
+.scheduledTimeSegment {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 1px 6px;
-  border-radius: var(--radius-xs, 4px);
-  background: var(--accent-subtle, rgba(59, 130, 246, 0.12));
-  color: var(--accent-primary, #3b82f6);
-  font-size: var(--text-xs, 12px);
-  font-weight: 500;
-  font-family: var(--font-mono, monospace);
+  gap: 3px;
+  color: var(--card-time);
+  font-size: 12px;
+  font-weight: var(--weight-medium);
   cursor: pointer;
-  border: 1px solid var(--accent-muted, rgba(59, 130, 246, 0.25));
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-  line-height: 1.4;
+  line-height: 16px;
+  transition: opacity var(--transition-fast);
 }
 
-.timeChip:hover {
-  background: var(--accent-muted, rgba(59, 130, 246, 0.2));
-  border-color: var(--accent-primary, #3b82f6);
+.scheduledTimeSegment:hover {
+  opacity: 0.85;
+}
+
+.timeGlyph {
+  color: var(--card-time);
+  display: inline-flex;
+  align-items: center;
 }
 
 .rowHighlightedFromBlock {
-  box-shadow: 0 0 0 1px var(--accent-primary, #3b82f6) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
   background-color: var(--surface-hover) !important;
 }
 
-/* Reciprocal Cross-View Membership Badges (Subtle text-with-icon style) */
+/* Reciprocal Cross-View Membership Badges (Subtle text style) */
 .inlineContainerBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   color: var(--text-secondary);
-  font-size: var(--text-md, 13px);
-  font-weight: var(--weight-medium, 500);
+  font-size: 12px;
   cursor: pointer;
-  transition: color var(--transition-fast, 0.15s ease);
+  transition: color var(--transition-fast);
   user-select: none;
   max-width: 180px;
+  line-height: 16px;
 }
 
 .inlineContainerBadge:hover {
@@ -507,34 +489,22 @@
 .inlineSmartBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: var(--color-accent, #3b82f6);
-  font-size: var(--text-md, 13px);
-  font-weight: var(--weight-medium, 500);
+  gap: 3px;
+  font-size: 12px;
   cursor: pointer;
-  transition: color var(--transition-fast, 0.15s ease);
+  transition: color var(--transition-fast);
   user-select: none;
   max-width: 220px;
-}
-
-.inlineSmartBadge_my_day {
-  color: var(--color-warning, #f59e0b);
-}
-
-.inlineSmartBadge_anytime {
-  color: #0ea5e9;
-}
-
-.inlineSmartBadge_someday {
-  color: #a855f7;
-}
-
-.inlineSmartBadge_waiting {
-  color: #f97316;
+  line-height: 16px;
 }
 
 .inlineSmartBadge:hover {
   text-decoration: underline;
+}
+
+.smartBadgeGlyph {
+  display: inline-flex;
+  align-items: center;
 }
 
 .inlineSmartBadgeLabel {
@@ -543,8 +513,24 @@
   white-space: nowrap;
 }
 
+.inlineSmartBadge_my_day {
+  color: var(--color-warning);
+}
+
+.inlineSmartBadge_anytime {
+  color: var(--card-time);
+}
+
+.inlineSmartBadge_someday {
+  color: var(--tag-purple);
+}
+
+.inlineSmartBadge_waiting {
+  color: var(--tag-orange);
+}
+
 .inlineSmartBadgeOverdue {
-  color: var(--color-danger, #ef4444) !important;
-  font-weight: var(--weight-bold, 600);
+  color: var(--card-overdue) !important;
+  font-weight: var(--weight-medium);
 }
 

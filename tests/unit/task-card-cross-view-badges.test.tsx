@@ -85,11 +85,10 @@ describe('TaskCard Cross-View Membership Badges & Deduplication Regression Tests
     expect(matches?.length).toBe(1);
 
     // Verify it is located inside metadataRow, and NOT duplicated in metadataWrap
-    expect(html).toContain('☀️');
     expect(html).toContain('My Day');
   });
 
-  it('regression 2: renders real project name and custom icon (proj.name & proj.icon), never blank name', () => {
+  it('regression 2: renders real project name (proj.name), plain subtle text without emoji', () => {
     useAppStore.setState({ activeListId: 'smart_my_day' });
     const task = {
       ...dummyTask,
@@ -103,9 +102,8 @@ describe('TaskCard Cross-View Membership Badges & Deduplication Regression Tests
     );
 
     expect(html).toContain('data-testid="container-badge"');
-    // Must display "OS11" (from proj.name) and "✅" (from proj.icon)
+    // Must display "OS11" (from proj.name), plain text without emoji
     expect(html).toContain('OS11');
-    expect(html).toContain('✅');
     // Must only have one container-badge instance
     const containerMatches = html.match(/data-testid="container-badge"/g);
     expect(containerMatches?.length).toBe(1);
@@ -216,7 +214,6 @@ describe('TaskCard Cross-View Membership Badges & Deduplication Regression Tests
 
     expect(html).toContain('data-testid="container-badge"');
     expect(html).toContain('OS11');
-    expect(html).toContain('✅');
   });
 
   it('regression 8: renders no dangling dot when smart badge is suppressed in its own view', () => {

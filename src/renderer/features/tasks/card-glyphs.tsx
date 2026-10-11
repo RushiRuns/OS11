@@ -129,6 +129,87 @@ export const CARD_GLYPHS = {
       <path d="M15 3v18" />
     </svg>
   ),
+  clock: () => (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="7" />
+      <polyline points="8 4 8 8 11 9.5" />
+    </svg>
+  ),
+  sun: () => (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="3.5" />
+      <line x1="8" y1="1" x2="8" y2="2.5" />
+      <line x1="8" y1="13.5" x2="8" y2="15" />
+      <line x1="1" y1="8" x2="2.5" y2="8" />
+      <line x1="13.5" y1="8" x2="15" y2="8" />
+    </svg>
+  ),
+  bolt: () => (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polygon points="9 1 3 9 8 9 7 15 13 7 8 7 9 1" fill="currentColor" />
+    </svg>
+  ),
+  box: () => (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 4l6-2.5L14 4v8l-6 2.5L2 12V4z" />
+      <line x1="8" y1="1.5" x2="8" y2="14.5" />
+    </svg>
+  ),
+  hourglass: () => (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 2h8M4 14h8M5 2v3a3 3 0 0 0 3 3 3 3 0 0 0 3-3V2M5 14v-3a3 3 0 0 1 3-3 3 3 0 0 1 3 3v3" />
+    </svg>
+  ),
 } as const;
 
 export type CardGlyphName = keyof typeof CARD_GLYPHS;
