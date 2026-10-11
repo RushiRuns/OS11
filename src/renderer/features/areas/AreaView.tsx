@@ -8,6 +8,7 @@ import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskCont
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { CreateProjectModal } from '../projects/CreateProjectModal.js';
 import { Button } from '../../components/Button/Button.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import type { Task } from '@shared/types/index.js';
 import styles from './AreaView.module.css';
 
@@ -24,6 +25,7 @@ export function AreaView({
 }: AreaViewProps): React.ReactElement {
   const area = useArea(areaId);
   const looseTasks = useTasksByArea(areaId);
+  const { isExiting } = useCompletionLinger(looseTasks);
   const setActiveListId = useAppStore((state) => state.setActiveListId);
 
   const {
@@ -122,6 +124,7 @@ export function AreaView({
                   setContextMenuTask(t);
                   setContextMenuPos({ x: e.clientX, y: e.clientY });
                 }}
+                exiting={isExiting(task.id)}
               />
             ))}
           </div>

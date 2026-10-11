@@ -651,6 +651,20 @@
   }
 }
 
+/* Completion Transitions (0ms -> 420ms -> 720ms timeline) */
+.taskCard[data-completed='true'] .notesRow,
+.taskCard[data-completed='true'] .metadataRow {
+  opacity: 0.55;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.taskCard[data-exiting='true'] {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+  pointer-events: none;
+}
+
 /* Reduced Motion Override */
 @media (prefers-reduced-motion: reduce) {
   .taskCard,
@@ -661,5 +675,11 @@
   .subtaskCountBadge {
     transition: none !important;
   }
+
+  .taskCard[data-exiting='true'] {
+    transform: none !important;
+    transition: none !important;
+  }
 }
+
 

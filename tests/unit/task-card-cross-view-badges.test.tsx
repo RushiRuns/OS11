@@ -66,7 +66,7 @@ describe('TaskCard Cross-View Membership Badges & Deduplication Regression Tests
 
   it('regression 1: renders exactly ONE instance of container and smart badges (below notes, none on far right)', () => {
     useAppStore.setState({ activeListId: 'project:proj-workos' });
-    const today = new Date().toISOString().split('T')[0];
+    const today = toISODateOnly(new Date());
     const task = {
       ...dummyTask,
       project_id: 'proj-workos',

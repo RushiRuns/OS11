@@ -33,6 +33,7 @@ import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { Toast } from '../../components/Toast/Toast.js';
 import { useFilteredTasks, DEFAULT_FILTER_CONFIG } from '../../hooks/useFilteredTasks.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { useVimMode } from '../../hooks/useVimMode.js';
 import type { Task } from '@shared/types/task.js';
@@ -461,15 +462,21 @@ export function TaskList({
     )
   );
 
+  const { isLingering, isExiting } = useCompletionLinger(activeTasks);
+
   const completedTasks = useCompletedTasks(activeListId);
+  const visibleCompletedTasks = useMemo(
+    () => completedTasks.filter((t) => !isLingering(t.id)),
+    [completedTasks, isLingering]
+  );
 
   // Filter & Sort (deferred value avoids blocking user inputs)
   const deferredConfig = useDeferredValue(filterConfig);
   // Memoised: an inline .filter() hands useFilteredTasks a new array every render, which
   // re-flattens the tree and re-keys the virtualizer on every drag-indicator update.
   const incompleteActive = useMemo(
-    () => activeTasks.filter((t) => t.is_completed === 0),
-    [activeTasks]
+    () => activeTasks.filter((t) => t.is_completed === 0 || isLingering(t.id)),
+    [activeTasks, isLingering]
   );
   const filteredIncomplete = useFilteredTasks(incompleteActive, deferredConfig);
 
@@ -1064,6 +1071,7 @@ export function TaskList({
                         setContextMenuTask(t);
                         setContextMenuPos({ x: e.clientX, y: e.clientY });
                       }}
+                      exiting={isExiting(task.id)}
                     />
                   </div>
                 );
@@ -1107,6 +1115,7 @@ export function TaskList({
                             setContextMenuTask(t);
                             setContextMenuPos({ x: e.clientX, y: e.clientY });
                           }}
+                          exiting={isExiting(item.task.id)}
                         />
                       ))}
                     </div>
@@ -1117,14 +1126,14 @@ export function TaskList({
           )}
 
           {/* Collapsible Completed Section */}
-          {completedTasks.length > 0 && (
+          {visibleCompletedTasks.length > 0 && (
             <div className={styles.completedSection}>
               <div
                 className={styles.completedHeader}
                 role="button"
                 tabIndex={0}
                 aria-expanded={isCompletedOpen}
-                aria-label={`Completed tasks (${completedTasks.length})`}
+                aria-label={`Completed tasks (${visibleCompletedTasks.length})`}
                 onClick={() => setIsCompletedOpen(!isCompletedOpen)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -1139,14 +1148,25 @@ export function TaskList({
                   }`}
                   aria-hidden="true"
                 >
-                  ▶
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
                 </span>
-                <span>Completed ({completedTasks.length})</span>
+                <span>Completed ({visibleCompletedTasks.length})</span>
               </div>
 
               {isCompletedOpen && (
                 <div className={styles.completedList} role="list" aria-label="Completed tasks">
-                  {completedTasks.map((task) => (
+                  {visibleCompletedTasks.map((task) => (
                     <div key={task.id} role="listitem">
                       <TaskCard
                         task={task}

@@ -1,4 +1,4 @@
-import React, { memo, useState, useRef, useEffect, useMemo } from 'react';
+import React, { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useSelectionStore } from '../../stores/selectionStore.js';
@@ -42,6 +42,7 @@ export interface TaskCardProps {
   onFileDrop?: (taskId: string, files: FileList) => void;
   parentTitle?: string;
   disableDrag?: boolean;
+  exiting?: boolean;
 }
 
 export function formatDateTime(
@@ -118,12 +119,59 @@ export const TaskCard = memo(function TaskCard({
   onFileDrop,
   parentTitle,
   disableDrag = false,
+  exiting = false,
 }: TaskCardProps): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [fileOver, setFileOver] = useState(false);
   const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const prevCompletedRef = useRef(task.is_completed);
+  const [justDone, setJustDone] = useState(false);
+
+  useEffect(() => {
+    if (prevCompletedRef.current === 0 && task.is_completed === 1) {
+      setJustDone(true);
+      const timer = setTimeout(() => setJustDone(false), 220);
+      return () => clearTimeout(timer);
+    }
+    prevCompletedRef.current = task.is_completed;
+  }, [task.is_completed]);
+
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [collapseStyle, setCollapseStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    if (exiting && cardRef.current) {
+      const timer = setTimeout(() => {
+        if (!cardRef.current) return;
+        const currentHeight = cardRef.current.offsetHeight;
+        setCollapseStyle({
+          height: `${currentHeight}px`,
+          overflow: 'hidden',
+          transition: 'none',
+        });
+        // Force reflow
+        void cardRef.current.offsetHeight;
+        requestAnimationFrame(() => {
+          setCollapseStyle({
+            height: '0px',
+            paddingTop: '0px',
+            paddingBottom: '0px',
+            marginTop: '0px',
+            marginBottom: '0px',
+            overflow: 'hidden',
+            transition:
+              'height 200ms cubic-bezier(0, 0, 0.2, 1), padding 200ms cubic-bezier(0, 0, 0.2, 1), margin 200ms cubic-bezier(0, 0, 0.2, 1)',
+          });
+        });
+      }, 80);
+      return () => clearTimeout(timer);
+    } else {
+      setCollapseStyle(null);
+    }
+  }, [exiting]);
 
   const { selectedIds, isMultiSelectActive, toggleSelect, selectRange } = useSelectionStore();
   const isMultiSelected = selectedIds.has(task.id);
@@ -235,6 +283,14 @@ export const TaskCard = memo(function TaskCard({
     marginLeft: depth > 0 ? `${depth * 28 - 12}px` : undefined,
     width: depth > 0 ? `calc(100% - ${depth * 28 - 12}px)` : undefined,
   };
+
+  const setCombinedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      cardRef.current = node;
+      setNodeRef(node);
+    },
+    [setNodeRef]
+  );
 
   useEffect(() => {
     setEditTitle(task.title);
@@ -532,8 +588,8 @@ export const TaskCard = memo(function TaskCard({
 
   return (
     <div
-      ref={setNodeRef}
-      style={sortableStyle}
+      ref={setCombinedRef}
+      style={{ ...sortableStyle, ...collapseStyle }}
       {...attributes}
       {...listeners}
       // NOTE: Task reordering + "drop onto a card to nest as a subtask" is handled
@@ -551,6 +607,9 @@ export const TaskCard = memo(function TaskCard({
       data-multiselect={isMultiSelectActive || isMultiSelected ? 'active' : 'inactive'}
       data-dragging={isDragging ? 'true' : 'false'}
       data-filedrop={fileOver ? 'true' : 'false'}
+      data-completed={task.is_completed === 1 ? 'true' : undefined}
+      data-just-done={justDone ? 'true' : undefined}
+      data-exiting={exiting ? 'true' : undefined}
       onClick={handleClick}
       onMouseEnter={() => {
         if (hasScheduledTime) useSchedulerUiStore.getState().setHoveredBlockId(task.id);

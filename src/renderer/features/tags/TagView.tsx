@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { ipc } from '../../services/ipc.js';
@@ -23,6 +24,8 @@ export function TagView({
   const { tagsById, loadTags } = useTagStore();
   const { toggleComplete, toggleStar, updateTask, deleteTask, duplicateTask } = useTaskStore();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const { isExiting, withLingering, markCompleted } = useCompletionLinger();
+  const visibleTasks = withLingering(tasks);
   const [isLoading, setIsLoading] = useState(true);
 
   // Context menu state
@@ -55,6 +58,10 @@ export function TagView({
   };
 
   const handleToggleComplete = async (taskId: string) => {
+    const t = tasks.find((item) => item.id === taskId);
+    if (t && t.is_completed === 0) {
+      markCompleted(taskId, { ...t, is_completed: 1 });
+    }
     await toggleComplete(taskId);
     fetchTasksForTag();
   };
@@ -110,12 +117,12 @@ export function TagView({
             </span>
           </div>
         ) : (
-          tasks.map((task) => (
+          visibleTasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
               isSelected={task.id === selectedTaskId}
-              allTaskIds={tasks.map((t) => t.id)}
+              allTaskIds={visibleTasks.map((t) => t.id)}
               onSelect={onSelectTask}
               onToggleComplete={handleToggleComplete}
               onToggleStar={handleToggleStar}
@@ -123,6 +130,7 @@ export function TagView({
               onDelete={handleDelete}
               onDuplicate={handleDuplicate}
               onContextMenu={handleContextMenu}
+              exiting={isExiting(task.id)}
             />
           ))
         )}

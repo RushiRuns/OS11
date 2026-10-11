@@ -20,6 +20,7 @@ import { useTaskStore } from '../../stores/taskStore.js';
 import { useViewGroupStore } from '../../stores/viewGroupStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useGroupedTasks, resolveGroupDropMutation } from '../../hooks/useGroupedTasks.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import {
   type FlattenedTaskItem,
   planDrop,
@@ -123,17 +124,19 @@ export function ProjectListView({
   const taskTagsByTaskId = useTagStore((state) => state.taskTagsByTaskId);
 
   // Filter tasks into active and completed
+  const { isLingering, isExiting } = useCompletionLinger(tasks);
+
   const activeTasks = useMemo(() => {
     return tasks
-      .filter((t) => t.is_completed === 0 && t.is_trashed === 0)
+      .filter((t) => (t.is_completed === 0 || isLingering(t.id)) && t.is_trashed === 0)
       .sort((a, b) => a.sort_order - b.sort_order);
-  }, [tasks]);
+  }, [tasks, isLingering]);
 
   const completedTasks = useMemo(() => {
     return tasks
-      .filter((t) => t.is_completed === 1 && t.is_trashed === 0)
+      .filter((t) => t.is_completed === 1 && !isLingering(t.id) && t.is_trashed === 0)
       .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || '') || a.sort_order - b.sort_order);
-  }, [tasks]);
+  }, [tasks, isLingering]);
 
   const flattenedActiveItems: FlattenedTaskItem[] = useMemo(() => {
     const activeTasksMap = new Map<string, Task>();
@@ -478,6 +481,7 @@ export function ProjectListView({
                     setContextMenuTask(t);
                     setContextMenuPos({ x: e.clientX, y: e.clientY });
                   }}
+                  exiting={isExiting(item.task.id)}
                 />
               ))}
             </div>
@@ -525,6 +529,7 @@ export function ProjectListView({
                             setContextMenuTask(t);
                             setContextMenuPos({ x: e.clientX, y: e.clientY });
                           }}
+                          exiting={isExiting(item.task.id)}
                         />
                       ))}
                     </div>
@@ -566,7 +571,18 @@ export function ProjectListView({
               }`}
               aria-hidden="true"
             >
-              ▶
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </span>
             <span>Completed ({completedTasks.length})</span>
           </div>

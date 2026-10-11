@@ -8,6 +8,7 @@ import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import { Button } from '../../components/Button/Button.js';
 import styles from './SomedayView.module.css';
 
@@ -20,7 +21,9 @@ export function SomedayView({
   onSelectTask,
   selectedTaskId,
 }: SomedayViewProps): React.ReactElement {
-  const tasks = useSomedayTasks();
+  const rawTasks = useSomedayTasks();
+  const { isExiting, withLingering, markCompleted } = useCompletionLinger();
+  const tasks = withLingering(rawTasks);
   const projectsById = useProjectStore((s) => s.projectsById);
   const updateProject = useProjectStore((s) => s.updateProject);
   const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
@@ -106,12 +109,16 @@ export function SomedayView({
                     isSelected={task.id === selectedTaskId}
                     onSelect={() => onSelectTask?.(task)}
                     onOpenDetail={() => onSelectTask?.(task)}
-                    onToggleComplete={() => toggleComplete(task.id)}
+                    onToggleComplete={() => {
+                      markCompleted(task.id, task);
+                      toggleComplete(task.id);
+                    }}
                     onToggleStar={() => toggleStar(task.id)}
                     onDelete={() => deleteTask(task.id)}
                     onDuplicate={() => duplicateTask(task.id)}
                     onContextMenu={(e) => handleContextMenu(e, task)}
                     disableDrag={false}
+                    exiting={isExiting(task.id)}
                   />
                 ))}
               </div>

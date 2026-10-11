@@ -4,6 +4,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { Task } from '@shared/types/task.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { computeTaskItemEstimate } from '../tasks/TaskList.js';
 import { PlannedDateGroup } from './PlannedDateGroup.js';
@@ -39,6 +40,7 @@ interface TaskRowDroppableProps {
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, task: Task) => void;
+  exiting?: boolean;
 }
 
 const PlannedTaskRow = React.memo(function PlannedTaskRow({
@@ -55,6 +57,7 @@ const PlannedTaskRow = React.memo(function PlannedTaskRow({
   onDelete,
   onDuplicate,
   onContextMenu,
+  exiting,
 }: TaskRowDroppableProps) {
   const isOverdue = group.kind === 'overdue';
 
@@ -112,6 +115,7 @@ const PlannedTaskRow = React.memo(function PlannedTaskRow({
         onDelete={onDelete}
         onDuplicate={onDuplicate}
         onContextMenu={onContextMenu}
+        exiting={exiting}
       />
     </div>
   );
@@ -132,6 +136,9 @@ export function PlannedTimeline({
 
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
+
+  const allTasksArray = useMemo(() => Object.values(tasksById), [tasksById]);
+  const { isLingering, isExiting } = useCompletionLinger(allTasksArray);
 
   // Flatten groups into a single list of headers + tasks
   const { flattenedItems, dateIndexMap, allTaskIds } = useMemo(() => {
@@ -156,7 +163,7 @@ export function PlannedTimeline({
 
       for (const taskId of group.taskIds) {
         const task = tasksById[taskId];
-        if (task && task.is_trashed === 0 && task.is_completed === 0) {
+        if (task && task.is_trashed === 0 && (task.is_completed === 0 || isLingering(task.id))) {
           taskIds.push(task.id);
           items.push({
             type: 'task',
@@ -169,7 +176,7 @@ export function PlannedTimeline({
     }
 
     return { flattenedItems: items, dateIndexMap: indexMap, allTaskIds: taskIds };
-  }, [groups, tasksById]);
+  }, [groups, tasksById, isLingering]);
 
   // Virtualizer for the flat timeline
   const virtualizer = useVirtualizer({
@@ -315,6 +322,7 @@ export function PlannedTimeline({
                     setContextMenuTask(t);
                     setContextMenuPos({ x: e.clientX, y: e.clientY });
                   }}
+                  exiting={isExiting(item.task.id)}
                 />
               )}
             </div>

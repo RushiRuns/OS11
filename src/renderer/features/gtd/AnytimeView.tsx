@@ -9,6 +9,7 @@ import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskCont
 import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import styles from './AnytimeView.module.css';
 
 interface AnytimeViewProps {
@@ -36,7 +37,9 @@ export function AnytimeView({
   onSelectTask,
   selectedTaskId,
 }: AnytimeViewProps): React.ReactElement {
-  const tasks = useAnytimeTasks();
+  const rawTasks = useAnytimeTasks();
+  const { isExiting, withLingering, markCompleted } = useCompletionLinger();
+  const tasks = withLingering(rawTasks);
   const projectsById = useProjectStore((s) => s.projectsById);
   const areasById = useAreaStore((s) => s.areasById);
   const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
@@ -211,12 +214,16 @@ export function AnytimeView({
                       isSelected={task.id === selectedTaskId}
                       onSelect={() => onSelectTask?.(task)}
                       onOpenDetail={() => onSelectTask?.(task)}
-                      onToggleComplete={() => toggleComplete(task.id)}
+                      onToggleComplete={() => {
+                        markCompleted(task.id, task);
+                        toggleComplete(task.id);
+                      }}
                       onToggleStar={() => toggleStar(task.id)}
                       onDelete={() => deleteTask(task.id)}
                       onDuplicate={() => duplicateTask(task.id)}
                       onContextMenu={(e) => handleContextMenu(e, task)}
                       disableDrag={false}
+                      exiting={isExiting(task.id)}
                     />
                   ))}
                 </div>
