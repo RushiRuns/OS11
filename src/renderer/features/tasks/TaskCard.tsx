@@ -528,7 +528,7 @@ export const TaskCard = memo(function TaskCard({
       // why nesting felt broken/inconsistent. The native onDragOver/onDrop below
       // are kept ONLY for dropping real OS files (e.g. from Finder/Explorer) onto
       // a card to attach them - that is a different feature and still needs them.
-      className={`${styles.taskCard} ${getPriorityClass(task.priority)} ${
+      className={`${styles.taskCard} ${depth > 0 ? styles.subtaskRow : ''} ${getPriorityClass(task.priority)} ${
         isSelected ? styles.taskCardSelected : ''
       } ${isHoveredFromBlock ? styles.rowHighlightedFromBlock : ''}`}
       data-multiselect={isMultiSelectActive || isMultiSelected ? 'active' : 'inactive'}
