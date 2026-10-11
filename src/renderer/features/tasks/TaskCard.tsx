@@ -112,6 +112,7 @@ export const TaskCard = memo(function TaskCard({
   onOpenDetail,
   onSelect,
   onToggleComplete,
+  onToggleStar,
   onUpdateTitle,
   onContextMenu,
   onFileDrop,
@@ -737,32 +738,60 @@ export const TaskCard = memo(function TaskCard({
         )}
       </div>
 
-      {/* Dedicated Hover Sidebar Trigger Icon */}
-      <button
-        type="button"
-        className={styles.sidebarTriggerBtn}
+      {/* Right Edge Controls: Subtask Count, Star Button, Details Button */}
+      <div
+        className={styles.rightControls}
         onPointerDown={e => e.stopPropagation()}
-        onClick={e => {
-          e.stopPropagation();
-          onOpenDetail?.(task);
-        }}
-        title="Open task details"
-        aria-label="Open task details"
+        onClick={e => e.stopPropagation()}
       >
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        {hasSubtasks && subtaskCount && subtaskCount.total > 0 && (
+          <div
+            className={`${styles.subtaskCountBadge} ${
+              !isExpanded ? styles.subtaskCountCollapsed : ''
+            }`}
+            title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
+            onClick={e => {
+              e.stopPropagation();
+              onToggleExpand?.(task.id);
+            }}
+          >
+            <CardGlyph name="subtasks" className={styles.subtaskCountIcon} />
+            <span>
+              {subtaskCount.completed}/{subtaskCount.total}
+            </span>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className={`${styles.rightControlBtn} ${
+            task.is_starred === 1 ? styles.starBtnActive : styles.starBtnInactive
+          }`}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation();
+            onToggleStar?.(task.id);
+          }}
+          title={task.is_starred === 1 ? 'Unstar task' : 'Star task'}
+          aria-label={task.is_starred === 1 ? 'Unstar task' : 'Star task'}
         >
-          <rect width="18" height="18" x="3" y="3" rx="2" />
-          <path d="M15 3v18" />
-        </svg>
-      </button>
+          <CardGlyph name={task.is_starred === 1 ? 'star' : 'starOutline'} />
+        </button>
+
+        <button
+          type="button"
+          className={styles.rightControlBtn}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation();
+            onOpenDetail?.(task);
+          }}
+          title="Open task details"
+          aria-label="Open task details"
+        >
+          <CardGlyph name="details" />
+        </button>
+      </div>
 
       {isTagPickerOpen && (
         <TagPicker

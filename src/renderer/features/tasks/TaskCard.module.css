@@ -334,9 +334,57 @@
   box-shadow: none;
 }
 
-/* Dedicated Hover-activated Sidebar Trigger Icon */
-.sidebarTriggerBtn {
+/* Right Edge Controls */
+.rightControls {
   display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.subtaskCountBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.subtaskCountBadge:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.subtaskCountIcon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.subtaskCountCollapsed {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.taskCard:hover .subtaskCountBadge,
+.taskCard:focus-within .subtaskCountBadge {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.rightControlBtn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 24px;
@@ -346,31 +394,43 @@
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
+  padding: 0;
   opacity: 0;
   pointer-events: none;
   transition:
     opacity var(--transition-fast),
-    background var(--transition-fast),
+    background-color var(--transition-fast),
     color var(--transition-fast);
-  margin-left: var(--space-1);
   flex-shrink: 0;
 }
 
-.taskCard:hover .sidebarTriggerBtn {
+.taskCard:hover .rightControlBtn,
+.taskCard:focus-within .rightControlBtn {
   opacity: 1;
   pointer-events: auto;
 }
 
-.sidebarTriggerBtn:hover {
+.rightControlBtn:hover {
   background: var(--surface-hover);
   color: var(--text-primary);
 }
 
-.starButtonActive {
+.rightControlBtn:active {
+  background: var(--surface-active);
+}
+
+.starBtnInactive {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.starBtnActive {
+  opacity: 1;
+  pointer-events: auto;
   color: var(--color-star);
 }
 
-.starButtonActive:hover {
+.starBtnActive:hover {
   color: var(--color-warning);
 }
 
