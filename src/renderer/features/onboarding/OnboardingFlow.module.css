@@ -226,8 +226,8 @@
 }
 
 .input:focus-visible {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
+  border-color: var(--border-strong);
+  box-shadow: none;
 }
 
 .emojiPickerRow {

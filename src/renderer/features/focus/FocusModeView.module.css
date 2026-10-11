@@ -167,7 +167,7 @@
 }
 
 .titleInput:focus-visible {
-  border-bottom: 2px solid var(--accent);
+  border-bottom: 2px solid var(--border-strong);
 }
 
 .notesArea {
@@ -200,8 +200,8 @@
 }
 
 .notesTextarea:focus-visible {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
+  border-color: var(--border-strong);
+  box-shadow: none;
 }
 
 .taskMetaRow {

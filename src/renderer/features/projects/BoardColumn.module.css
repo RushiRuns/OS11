@@ -72,12 +72,19 @@
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   background-color: var(--surface-base);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-xs);
   padding: 1px 4px;
   outline: none;
+  box-shadow: none;
   width: 100%;
   font-family: inherit;
+}
+
+.columnTitleInput:focus {
+  border-color: var(--border-strong);
+  outline: none;
+  box-shadow: none;
 }
 
 .columnCountBadge {

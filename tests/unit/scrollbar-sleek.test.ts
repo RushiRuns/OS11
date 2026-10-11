@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { useActiveScrollbars } from '../../src/renderer/hooks/useActiveScrollbars.js';
 import { ScrollArea } from '../../src/renderer/components/primitives/ScrollArea/ScrollArea.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,6 +20,7 @@ class MockHTMLElement {
 }
 
 let registeredScrollListener: ((e: any) => void) | null = null;
+void registeredScrollListener;
 
 (globalThis as any).HTMLElement = MockHTMLElement;
 (globalThis as any).window = {
@@ -48,12 +48,6 @@ describe('Global Sleek Scrollbar System', () => {
 
   describe('1. Active Scroll Detection Hook (useActiveScrollbars)', () => {
     it('TC-01: registers capture scroll listener on mount and cleans up on unmount', () => {
-      // Run hook logic
-      let effectCleanup: (() => void) | undefined;
-      const fakeReactEffect = (fn: () => (() => void) | void) => {
-        effectCleanup = fn() || undefined;
-      };
-
       // Direct simulation of the hook's effect logic
       const target = new MockHTMLElement();
 
@@ -156,8 +150,7 @@ describe('Global Sleek Scrollbar System', () => {
       const html = renderToStaticMarkup(
         React.createElement(
           ScrollArea,
-          { orientation: 'vertical' },
-          React.createElement('div', null, 'Content')
+          { orientation: 'vertical', children: React.createElement('div', null, 'Content') }
         )
       );
 

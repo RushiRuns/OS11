@@ -67,11 +67,27 @@
 .input {
   flex: 1;
   background: transparent;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
+  outline-color: transparent !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: none !important;
   font-family: var(--font-body);
   font-size: var(--text-md, 16px);
   color: var(--text-primary);
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none !important;
+  outline-color: transparent !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .input::placeholder {

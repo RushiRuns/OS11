@@ -79,7 +79,7 @@
 
 .tabBtnActive {
   background: var(--surface-raised, rgba(59, 130, 246, 0.15));
-  border-color: var(--accent, #3b82f6);
+  border-color: var(--border-strong, #ffffff);
   color: var(--text-primary, #ffffff);
   font-weight: 600;
 }
@@ -110,12 +110,28 @@
 .omnibarInput {
   flex: 1;
   background: transparent;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
+  outline-color: transparent !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: none !important;
   font-family: var(--font-body, inherit);
   font-size: var(--text-md, 15px);
   color: var(--text-primary, #f8fafc);
   caret-color: var(--accent, #3b82f6);
+}
+
+.omnibarInput:focus,
+.omnibarInput:focus-visible {
+  outline: none !important;
+  outline-color: transparent !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .omnibarInput::placeholder {

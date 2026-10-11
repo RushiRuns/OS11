@@ -5,7 +5,7 @@ import type { Project, Task } from '../../src/shared/types/index.js';
 import { ProjectHeader } from '../../src/renderer/features/projects/ProjectHeader.js';
 import { ProjectListView } from '../../src/renderer/features/projects/ProjectListView.js';
 import { useViewGroupStore, type GroupByOption } from '../../src/renderer/stores/viewGroupStore.js';
-import { resolveGroupDropMutation, groupTasks } from '../../src/renderer/hooks/useGroupedTasks.js';
+import { resolveGroupDropMutation } from '../../src/renderer/hooks/useGroupedTasks.js';
 
 // Setup mock window & localStorage
 const store: Record<string, string> = {};

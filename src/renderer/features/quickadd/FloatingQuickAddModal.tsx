@@ -135,6 +135,7 @@ export function FloatingQuickAddModal(): React.ReactElement {
                   ref={titleInputRef}
                   type="text"
                   className={styles.titleInput}
+                  style={{ outline: 'none' }}
                   placeholder="Task title..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -145,6 +146,7 @@ export function FloatingQuickAddModal(): React.ReactElement {
 
               <textarea
                 className={styles.notesInput}
+                style={{ outline: 'none' }}
                 placeholder="Notes..."
                 rows={2}
                 value={notes}

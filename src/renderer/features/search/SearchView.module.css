@@ -3,7 +3,7 @@
   flex-direction: column;
   width: 100%;
   background: var(--surface-raised);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-medium);
   margin-bottom: var(--space-4);

@@ -9,6 +9,35 @@
     />
     <title>OS11</title>
     <link rel="icon" type="image/png" href="/icon.png" />
+    <style>
+      /* Universal reset for text inputs and textareas to eliminate Chromium focus ring and outline */
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]),
+      textarea,
+      select,
+      [contenteditable="true"] {
+        outline: none !important;
+        outline-color: transparent !important;
+        outline-style: none !important;
+        outline-width: 0 !important;
+        -webkit-focus-ring-color: transparent !important;
+        box-shadow: none !important;
+      }
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):focus,
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):focus-visible,
+      textarea:focus,
+      textarea:focus-visible,
+      select:focus,
+      select:focus-visible,
+      [contenteditable="true"]:focus,
+      [contenteditable="true"]:focus-visible {
+        outline: none !important;
+        outline-color: transparent !important;
+        outline-style: none !important;
+        outline-width: 0 !important;
+        -webkit-focus-ring-color: transparent !important;
+        box-shadow: none !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

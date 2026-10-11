@@ -29,9 +29,15 @@
   border-color: var(--border-strong);
 }
 
-.input:focus {
-  border-color: var(--accent-border);
-  box-shadow: var(--shadow-focus);
+.input:focus,
+.input:focus-visible {
+  outline: none !important;
+  outline-color: transparent !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  -webkit-focus-ring-color: transparent !important;
+  border-color: var(--border-strong);
+  box-shadow: none !important;
 }
 
 .inputError {

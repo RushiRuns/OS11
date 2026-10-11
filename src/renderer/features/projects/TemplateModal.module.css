@@ -76,6 +76,13 @@
   background-color: var(--surface-base);
   color: var(--text-primary);
   resize: vertical;
+  outline: none;
+}
+
+.jsonArea:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: none;
 }
 
 .btnRow {

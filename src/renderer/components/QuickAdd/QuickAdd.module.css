@@ -17,8 +17,8 @@
 }
 
 .quickAddBar:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
+  border-color: var(--border-strong);
+  box-shadow: none;
 }
 
 .plusIcon {

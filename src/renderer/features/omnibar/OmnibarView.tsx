@@ -299,6 +299,7 @@ export function OmnibarView(): React.ReactElement {
             ref={inputRef}
             type="text"
             className={styles.omnibarInput}
+            style={{ outline: 'none' }}
             placeholder={currentModeConfig.placeholder}
             value={input}
             onChange={handleInputChange}

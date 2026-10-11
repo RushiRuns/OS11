@@ -63,8 +63,8 @@
 }
 
 .searchInput:focus {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
+  border-color: var(--border-strong);
+  box-shadow: none;
 }
 
 .clearButton {

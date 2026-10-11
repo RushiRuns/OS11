@@ -124,7 +124,7 @@
 
 .numberInput:focus {
   outline: none;
-  border-color: var(--border-focus, var(--accent-primary));
+  border-color: var(--border-strong);
 }
 
 .selectInput {
@@ -139,7 +139,7 @@
 
 .selectInput:focus {
   outline: none;
-  border-color: var(--border-focus, var(--accent-primary));
+  border-color: var(--border-strong);
 }
 
 .dayButtonGroup {

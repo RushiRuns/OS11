@@ -150,7 +150,7 @@
 }
 
 .textInput:focus {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 /* Theme selector cards */

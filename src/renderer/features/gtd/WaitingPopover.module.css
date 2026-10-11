@@ -48,7 +48,7 @@
 }
 
 .input:focus {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 .presetsRow {

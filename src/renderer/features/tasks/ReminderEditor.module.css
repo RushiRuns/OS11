@@ -110,7 +110,7 @@
 .dateInput:focus,
 .timeInput:focus {
   outline: none;
-  border-color: var(--border-focus, var(--accent-primary));
+  border-color: var(--border-strong);
 }
 
 .addBtn {
