@@ -6,8 +6,6 @@
   height: calc(100vh - 220px);
   min-height: 480px;
   align-items: flex-start;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
 }
 
 .addColumnColumn {

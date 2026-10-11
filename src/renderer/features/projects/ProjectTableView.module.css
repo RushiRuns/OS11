@@ -124,8 +124,6 @@
 .scrollWrap {
   flex: 1;
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
 }
 
 .table {

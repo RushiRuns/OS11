@@ -13,6 +13,7 @@ import { PlannedView } from './features/lists/PlannedView.js';
 import { useUndoRedoStore } from './hooks/useUndoRedo.js';
 import { formatForDisplay, toISODateOnly } from '@shared/utils/date.js';
 import { resolvePlannedDrop, type PlannedDropData } from './hooks/usePlannedGroups.js';
+import { useActiveScrollbars } from './hooks/useActiveScrollbars.js';
 import { SuggestionsSidebar } from './features/lists/SuggestionsSidebar.js';
 import { RolloverPrompt } from './features/lists/RolloverPrompt.js';
 import { PromptDialog, showPrompt } from './components/PromptDialog/PromptDialog.js';
@@ -170,6 +171,8 @@ function resolveGridPlacement(
 }
 
 export function App(): React.ReactElement {
+  useActiveScrollbars();
+
   const isOmnibar = typeof window !== 'undefined' && window.location.hash.includes('omnibar');
   const isMiniTimer = typeof window !== 'undefined' && window.location.hash.includes('mini-timer');
   const isQuickAddModal =

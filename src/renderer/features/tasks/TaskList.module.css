@@ -23,15 +23,6 @@
   position: relative;
 }
 
-.virtualScrollArea::-webkit-scrollbar {
-  width: 6px;
-}
-
-.virtualScrollArea::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: var(--radius-xs);
-}
-
 .virtualInner {
   width: 100%;
   position: relative;

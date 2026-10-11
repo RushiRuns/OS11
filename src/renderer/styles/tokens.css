@@ -141,6 +141,15 @@
   --border-danger: var(--color-danger);
 
   /* ----------------------------------------------------------
+     SCROLLBAR
+     Sleek, auto-hiding overlay scrollbars across the app
+     ---------------------------------------------------------- */
+  --scrollbar-size: 6px;
+  --scrollbar-thumb-min-length: 48px;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.16);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.28);
+
+  /* ----------------------------------------------------------
      SHADOWS
      Things barely uses shadows. Use the smallest one that works.
      ---------------------------------------------------------- */
@@ -398,6 +407,9 @@
     --border-strong: rgba(255, 255, 255, 0.14);
     --checkbox-border: rgba(255, 255, 255, 0.32);
 
+    --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.32);
+
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -494,6 +506,9 @@
   --border-default: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
   --checkbox-border: rgba(255, 255, 255, 0.32);
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.32);
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
@@ -636,4 +651,48 @@ body {
 body.dnd-cursor-not-allowed,
 body.dnd-cursor-not-allowed * {
   cursor: not-allowed !important;
+}
+
+/* ============================================================
+   GLOBAL SLEEK AUTO-HIDING SCROLLBARS
+   ============================================================ */
+/* Firefox / standard CSS scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*[data-scrolling='true'] {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* WebKit / Chromium sleek overlay scrollbars */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size, 6px);
+  height: var(--scrollbar-size, 6px);
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: var(--radius-full);
+  min-height: var(--scrollbar-thumb-min-length, 48px);
+  min-width: var(--scrollbar-thumb-min-length, 48px);
+  transition: background-color var(--duration-normal, 250ms) ease;
+}
+
+*[data-scrolling='true']::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-hover) !important;
 }

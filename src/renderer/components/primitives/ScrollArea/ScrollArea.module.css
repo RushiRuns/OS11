@@ -15,34 +15,41 @@
   display: flex;
   user-select: none;
   touch-action: none;
-  padding: 2px;
+  padding: 0;
   background: transparent;
-  transition: background var(--transition-fast);
+  transition: opacity var(--duration-normal, 250ms) ease;
 }
 
-.scrollbar:hover {
-  background: var(--surface-hover);
+.scrollbar[data-state='hidden'] {
+  opacity: 0;
+}
+
+.scrollbar[data-state='visible'] {
+  opacity: 1;
 }
 
 .scrollbar[data-orientation="vertical"] {
-  width: 8px;
+  width: var(--scrollbar-size, 6px);
 }
 
 .scrollbar[data-orientation="horizontal"] {
   flex-direction: column;
-  height: 8px;
+  height: var(--scrollbar-size, 6px);
 }
 
 .thumb {
   flex: 1;
-  background: var(--border-default);
+  background: var(--scrollbar-thumb);
   border-radius: var(--radius-full);
   position: relative;
-  transition: background var(--transition-fast);
+  min-height: var(--scrollbar-thumb-min-length, 48px);
+  min-width: var(--scrollbar-thumb-min-length, 48px);
+  transition: background-color var(--duration-fast, 150ms) ease;
 }
 
-.thumb:hover {
-  background: var(--text-tertiary);
+.thumb:hover,
+.thumb:active {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .corner {

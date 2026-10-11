@@ -6,15 +6,23 @@ interface ScrollAreaProps {
   children: React.ReactNode;
   className?: string;
   orientation?: 'vertical' | 'horizontal' | 'both';
+  type?: 'auto' | 'always' | 'scroll' | 'hover';
+  scrollHideDelay?: number;
 }
 
 export function ScrollArea({
   children,
   className,
   orientation = 'vertical',
+  type = 'scroll',
+  scrollHideDelay = 1000,
 }: ScrollAreaProps): React.ReactElement {
   return (
-    <RadixScrollArea.Root className={`${styles.root} ${className ?? ''}`}>
+    <RadixScrollArea.Root
+      className={`${styles.root} ${className ?? ''}`}
+      type={type}
+      scrollHideDelay={scrollHideDelay}
+    >
       <RadixScrollArea.Viewport className={styles.viewport}>
         {children}
       </RadixScrollArea.Viewport>

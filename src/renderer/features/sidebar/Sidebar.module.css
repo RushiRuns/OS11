@@ -14,37 +14,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-3) var(--space-2);
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color var(--transition-fast);
-}
-
-.scrollWrap::-webkit-scrollbar {
-  width: 4px;
-}
-
-.scrollWrap::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollWrap::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 4px;
-  transition: background-color var(--transition-fast);
-}
-
-.scrollWrap:hover,
-.scrollWrapScrolling {
-  scrollbar-color: var(--border-strong) transparent;
-}
-
-.scrollWrap:hover::-webkit-scrollbar-thumb,
-.scrollWrapScrolling::-webkit-scrollbar-thumb {
-  background: var(--border-strong, rgba(255, 255, 255, 0.2));
-}
-
-.scrollWrap::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary, rgba(255, 255, 255, 0.4));
 }
 
 .smartListSection {

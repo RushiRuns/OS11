@@ -53,8 +53,6 @@
 /* Collapsible Completed Section */
 .completedSection {
   margin-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--space-3);
 }
 
 .completedHeader {

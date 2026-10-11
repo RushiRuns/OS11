@@ -34,6 +34,7 @@
 | `useMonthGrid` | `src/renderer/hooks/useMonthGrid.ts` | Shared 42-cell Monday–Sunday month grid builder with keyboard navigation (Debt: DatePicker and ProjectCalendarView currently use Sunday-first; planned migration to unify on useMonthGrid) | Component scope |
 | `usePlannedGroups` | `src/renderer/hooks/usePlannedGroups.ts` | Memoized partitioning of dated incomplete tasks into chronological buckets with resolvePlannedDrop helper | Component scope |
 | `useCalendarDots` | `src/renderer/hooks/useCalendarDots.ts` | Computes incomplete dated task density map per visible calendar date cell | Component scope |
+| `useActiveScrollbars` | `src/renderer/hooks/useActiveScrollbars.ts` | Global active scrollbar listener tracking active scroll events to conditionally reveal sleek scrollbars | Renderer global |
 
 ---
 

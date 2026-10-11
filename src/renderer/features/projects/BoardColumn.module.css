@@ -127,8 +127,6 @@
   flex: 1;
   min-height: 120px;
   transition: outline 0.15s ease, background-color 0.15s ease;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-subtle) transparent;
 }
 
 .columnBody[data-dragover='true'] {

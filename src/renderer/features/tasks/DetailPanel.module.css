@@ -88,15 +88,6 @@
   gap: var(--space-4);
 }
 
-.content::-webkit-scrollbar {
-  width: 5px;
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: var(--radius-xs);
-}
-
 /* Hero Section (Title + Complete checkbox) */
 .heroSection {
   display: flex;

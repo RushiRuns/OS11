@@ -125,23 +125,6 @@
   padding: var(--space-2) var(--space-3);
 }
 
-.scrollBody::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scrollBody::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollBody::-webkit-scrollbar-thumb {
-  background: var(--border-subtle);
-  border-radius: var(--radius-full);
-}
-
-.scrollBody::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
-}
-
 .categorySection {
   margin-bottom: var(--space-3);
 }
