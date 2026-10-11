@@ -13,6 +13,9 @@ export const SMART_LISTS = {
   ALL: 'smart_all',
   COMPLETED: 'smart_completed',
   TRASH: 'smart_trash',
+  ANYTIME: 'smart_anytime',
+  SOMEDAY: 'smart_someday',
+  WAITING_FOR: 'smart_waiting_for',
 } as const;
 
 export const APP_DEFAULTS = {

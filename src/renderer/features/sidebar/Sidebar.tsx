@@ -26,6 +26,9 @@ import { useCountsStore } from '../../stores/countsStore.js';
 import { isStalled } from '@shared/utils/project-health.js';
 import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
 import { Popover } from '../../components/Popover/Popover.js';
+import { toISODateOnly } from '@shared/utils/date.js';
+import { SMART_LISTS } from '@shared/constants/index.js';
+import { useUndoRedoStore } from '../../hooks/useUndoRedo.js';
 import styles from './Sidebar.module.css';
 
 const KNOWN_ICON_MAP: Record<string, string> = {
@@ -633,29 +636,66 @@ export function Sidebar(): React.ReactElement {
     const taskId = e.dataTransfer.getData('text/plain');
 
     if (taskId && !draggingTopItemId && !draggingListId && !draggingProjectId) {
-      if (targetItem.id === 'smart_my_day') {
-        const today = new Date().toISOString().split('T')[0];
-        await useTaskStore.getState().updateTask({ id: taskId, my_day_date: today });
-      } else if (targetItem.id === 'smart_anytime') {
-        await useTaskStore.getState().setBucket(taskId, 'anytime');
-      } else if (targetItem.id === 'smart_someday') {
-        await useTaskStore.getState().setBucket(taskId, 'someday');
-      } else if (targetItem.id === 'smart_waiting_for') {
-        const person = await showPrompt({
-          title: 'Waiting For',
-          message: 'Waiting on whom or what?',
-          placeholder: 'e.g. Sarah for approval',
-        });
-        if (person && person.trim()) {
-          await useTaskStore.getState().setWaiting({ taskId, waitingOn: person.trim() });
+      const originalTask = tasksById[taskId] ? { ...tasksById[taskId] } : null;
+      try {
+        let destinationLabel = targetItem.listModel?.name || targetItem.id;
+        if (targetItem.id === SMART_LISTS.MY_DAY) {
+          const today = toISODateOnly(new Date());
+          await useTaskStore.getState().updateTask({ id: taskId, my_day_date: today, bucket: null });
+          destinationLabel = 'My Day';
+        } else if (targetItem.id === SMART_LISTS.ANYTIME) {
+          await useTaskStore.getState().setBucket(taskId, 'anytime');
+          destinationLabel = 'Anytime';
+        } else if (targetItem.id === SMART_LISTS.SOMEDAY) {
+          await useTaskStore.getState().setBucket(taskId, 'someday');
+          destinationLabel = 'Someday';
+        } else if (targetItem.id === SMART_LISTS.WAITING_FOR) {
+          const person = await showPrompt({
+            title: 'Waiting For',
+            message: 'Waiting on whom or what?',
+            placeholder: 'e.g. Sarah for approval',
+          });
+          if (person && person.trim()) {
+            await useTaskStore.getState().setWaiting({ taskId, waitingOn: person.trim() });
+            destinationLabel = `Waiting For (${person.trim()})`;
+          } else {
+            return;
+          }
+        } else if (targetItem.id === 'list_inbox') {
+          await useTaskStore.getState().updateTask({ id: taskId, list_id: 'list_inbox', project_id: null, area_id: null, bucket: null });
+          destinationLabel = 'Inbox';
+        } else if (targetItem.type === 'project') {
+          const proj = projectsById[targetItem.rawId];
+          await useTaskStore.getState().updateTask({ id: taskId, project_id: targetItem.rawId, area_id: proj?.area_id ?? null });
+          destinationLabel = proj?.name || 'Project';
+        } else if (targetItem.type === 'list') {
+          await useTaskStore.getState().updateTask({ id: taskId, list_id: targetItem.rawId });
+          const listObj = listsById[targetItem.rawId];
+          destinationLabel = listObj?.name || 'List';
         }
-      } else if (targetItem.id === 'list_inbox') {
-        await useTaskStore.getState().updateTask({ id: taskId, list_id: 'list_inbox', project_id: null, area_id: null });
-      } else if (targetItem.type === 'project') {
-        const proj = projectsById[targetItem.rawId];
-        await useTaskStore.getState().updateTask({ id: taskId, project_id: targetItem.rawId, area_id: proj?.area_id ?? null });
-      } else if (targetItem.type === 'list') {
-        await useTaskStore.getState().updateTask({ id: taskId, list_id: targetItem.rawId });
+
+        if (originalTask) {
+          useUndoRedoStore.getState().pushAction({
+            description: `Moved "${originalTask.title}" to ${destinationLabel}`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTask({
+                id: taskId,
+                bucket: originalTask.bucket ?? null,
+                my_day_date: originalTask.my_day_date ?? null,
+                project_id: originalTask.project_id ?? null,
+                area_id: originalTask.area_id ?? null,
+                list_id: originalTask.list_id ?? null,
+                due_date: originalTask.due_date ?? null,
+                due_time: originalTask.due_time ?? null,
+                waiting_on: originalTask.waiting_on ?? null,
+                waiting_since: originalTask.waiting_since ?? null,
+                follow_up_date: originalTask.follow_up_date ?? null,
+              });
+            },
+          });
+        }
+      } catch (err) {
+        console.error('[Sidebar] Failed to update task on drop:', err);
       }
       return;
     }
@@ -745,12 +785,29 @@ export function Sidebar(): React.ReactElement {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
     if (taskId && !draggingProjectId && !draggingListId) {
+      const originalTask = tasksById[taskId] ? { ...tasksById[taskId] } : null;
       const targetProject = projectsById[targetProjectId];
-      await useTaskStore.getState().updateTask({
-        id: taskId,
-        project_id: targetProjectId,
-        area_id: targetProject?.area_id ?? null,
-      });
+      try {
+        await useTaskStore.getState().updateTask({
+          id: taskId,
+          project_id: targetProjectId,
+          area_id: targetProject?.area_id ?? null,
+        });
+        if (originalTask) {
+          useUndoRedoStore.getState().pushAction({
+            description: `Moved "${originalTask.title}" to ${targetProject?.name || 'Project'}`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTask({
+                id: taskId,
+                project_id: originalTask.project_id ?? null,
+                area_id: originalTask.area_id ?? null,
+              });
+            },
+          });
+        }
+      } catch (err) {
+        console.error('[Sidebar] Failed to move task to project:', err);
+      }
       return;
     }
     handleProjectDrop(targetProjectId);
@@ -1210,11 +1267,28 @@ export function Sidebar(): React.ReactElement {
                     }
                     const taskId = e.dataTransfer.getData('text/plain') || (window as any).__draggingTaskId;
                     if (taskId) {
-                      await useTaskStore.getState().updateTask({
-                        id: taskId,
-                        area_id: area.id,
-                        project_id: null,
-                      });
+                      const originalTask = tasksById[taskId] ? { ...tasksById[taskId] } : null;
+                      try {
+                        await useTaskStore.getState().updateTask({
+                          id: taskId,
+                          area_id: area.id,
+                          project_id: null,
+                        });
+                        if (originalTask) {
+                          useUndoRedoStore.getState().pushAction({
+                            description: `Moved "${originalTask.title}" to ${area.name || 'Area'}`,
+                            undoFn: async () => {
+                              await useTaskStore.getState().updateTask({
+                                id: taskId,
+                                area_id: originalTask.area_id ?? null,
+                                project_id: originalTask.project_id ?? null,
+                              });
+                            },
+                          });
+                        }
+                      } catch (err) {
+                        console.error('[Sidebar] Failed to move task to area:', err);
+                      }
                     }
                   }}
                 >

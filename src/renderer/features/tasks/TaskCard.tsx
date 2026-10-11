@@ -11,6 +11,11 @@ import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useGoalStore } from '../../stores/goalStore.js';
 import { useSchedulerUiStore } from '../../stores/schedulerUiStore.js';
+import { useProjectStore } from '../../stores/projectStore.js';
+import { useAreaStore } from '../../stores/areaStore.js';
+import { useListStore } from '../../stores/listStore.js';
+import { useToday } from '../../hooks/useToday.js';
+import { resolveContainerBadge, resolveSmartBadges } from './task-badges.js';
 import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
 import type { Task } from '@shared/types/task.js';
 import { getTagShapeClass } from '@shared/utils/tag-shape.js';
@@ -135,7 +140,45 @@ export const TaskCard = memo(function TaskCard({
     return formatDateTime(task.due_date, task.due_time, task.all_day);
   }, [task.due_date, task.due_time, task.all_day]);
 
-  const isMyDayView = useAppStore(state => state.activeListId === 'smart_my_day');
+  const hookActiveListId = useAppStore(state => state.activeListId);
+  const activeListId = typeof window === 'undefined' ? (useAppStore.getState().activeListId || hookActiveListId) : hookActiveListId;
+  const isMyDayView = activeListId === 'smart_my_day';
+  const today = useToday();
+
+  const hookProject = useProjectStore(state => (task.project_id ? state.projectsById[task.project_id] : undefined));
+  const project = typeof window === 'undefined'
+    ? (task.project_id ? (useProjectStore.getState().projectsById[task.project_id] || hookProject) : undefined)
+    : hookProject;
+
+  const hookArea = useAreaStore(state => (task.area_id ? state.areasById[task.area_id] : undefined));
+  const area = typeof window === 'undefined'
+    ? (task.area_id ? (useAreaStore.getState().areasById[task.area_id] || hookArea) : undefined)
+    : hookArea;
+
+  const hookList = useListStore(state => (task.list_id ? state.listsById[task.list_id] : undefined));
+  const list = typeof window === 'undefined'
+    ? (task.list_id ? (useListStore.getState().listsById[task.list_id] || hookList) : undefined)
+    : hookList;
+
+  const containerBadge = useMemo(() => {
+    return resolveContainerBadge({
+      task,
+      activeListId,
+      project,
+      area,
+      list,
+      depth,
+    });
+  }, [task, activeListId, project, area, list, depth]);
+
+  const smartBadges = useMemo(() => {
+    return resolveSmartBadges({
+      task,
+      activeListId,
+      today,
+    });
+  }, [task, activeListId, today]);
+
   const hasScheduledTime =
     isMyDayView &&
     typeof task.scheduled_start_min === 'number' &&
@@ -167,7 +210,6 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
-  const hasMetadataRow = Boolean(hasScheduledTime || formattedDueDate || task.bucket || task.waiting_on || taskTags.length > 0 || hasSubtaskBadge || linkedGoal);
 
   useEffect(() => {
     loadTagsForTask(task.id);
@@ -280,6 +322,204 @@ export const TaskCard = memo(function TaskCard({
   }, [task.due_date, task.due_time, task.all_day, task.is_completed]);
 
   const isOverdueAndCritical = isOverdue && task.priority >= 3;
+
+  const metadataSegments = useMemo(() => {
+    const segments: React.ReactNode[] = [];
+
+    if (containerBadge) {
+      segments.push(
+        <span
+          key="container-badge"
+          className={styles.inlineContainerBadge}
+          role="button"
+          tabIndex={0}
+          data-testid="container-badge"
+          title={containerBadge.title}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation();
+            useAppStore.getState().setActiveListId(containerBadge.targetListId);
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              useAppStore.getState().setActiveListId(containerBadge.targetListId);
+            }
+          }}
+        >
+          <span aria-hidden="true">{containerBadge.icon}</span>
+          <span className={styles.inlineContainerBadgeLabel}>{containerBadge.label}</span>
+        </span>
+      );
+    }
+
+    for (const smartBadge of smartBadges) {
+      segments.push(
+        <span
+          key={`smart-badge-${smartBadge.id}`}
+          className={`${styles.inlineSmartBadge} ${styles[`inlineSmartBadge_${smartBadge.badgeType}`] || ''} ${smartBadge.isOverdue ? styles.inlineSmartBadgeOverdue : ''}`}
+          role="button"
+          tabIndex={0}
+          data-testid="smart-status-badge"
+          data-badge-id={smartBadge.id}
+          title={smartBadge.title}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation();
+            useAppStore.getState().setActiveListId(smartBadge.targetListId);
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              useAppStore.getState().setActiveListId(smartBadge.targetListId);
+            }
+          }}
+        >
+          <span aria-hidden="true">{smartBadge.icon}</span>
+          <span className={styles.inlineSmartBadgeLabel}>{smartBadge.label}</span>
+        </span>
+      );
+    }
+
+    if (hasScheduledTime && scheduledTimeRange) {
+      segments.push(
+        <span
+          key="scheduled-time"
+          className={styles.timeChip}
+          onClick={handleTimeChipClick}
+          onMouseEnter={() => useSchedulerUiStore.getState().setHoveredBlockId(task.id)}
+          onMouseLeave={() => useSchedulerUiStore.getState().setHoveredBlockId(null)}
+          title="Click to view block in scheduler"
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleTimeChipClick(e as any);
+            }
+          }}
+        >
+          ⏱️ {scheduledTimeRange}
+        </span>
+      );
+    }
+
+    if (formattedDueDate) {
+      segments.push(
+        <span
+          key="due-date"
+          className={`${styles.metaDate} ${isOverdue ? styles.metaDateOverdue : ''}`}
+          title={`Due: ${formattedDueDate}`}
+        >
+          {formattedDueDate}
+        </span>
+      );
+    }
+
+    if (taskTags.length > 0) {
+      segments.push(
+        <div key="tags" className={styles.tagsGroup}>
+          {taskTags.map(tag => (
+            <span
+              key={tag.id}
+              className={styles.inlineTagPill}
+              role="button"
+              tabIndex={0}
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => {
+                e.stopPropagation();
+                useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  useAppStore.getState().setActiveListId(`tag:${tag.id}`);
+                }
+              }}
+              title={`Tag: #${tag.name}`}
+            >
+              #{tag.name}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    if (hasSubtaskBadge && subtaskCount) {
+      segments.push(
+        <div
+          key="subtasks"
+          className={styles.subtaskCountBadge}
+          title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
+        >
+          <span className={styles.subtaskCountIcon}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="2" y="2" width="12" height="4" rx="2" />
+              <path d="M4 6v3.5a2 2 0 0 0 2 2h1" />
+              <rect x="7" y="9.5" width="7" height="4" rx="2" />
+            </svg>
+          </span>
+          <span>
+            {subtaskCount.completed}/{subtaskCount.total}
+          </span>
+        </div>
+      );
+    }
+
+    if (linkedGoal) {
+      segments.push(
+        <span
+          key="goal"
+          className={styles.inlineGoalPill}
+          role="button"
+          tabIndex={0}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation();
+            useAppStore.getState().setActiveListId('view_goals');
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              useAppStore.getState().setActiveListId('view_goals');
+            }
+          }}
+          title={`Goal: ${linkedGoal.title}`}
+        >
+          🎯 {linkedGoal.title}
+        </span>
+      );
+    }
+
+    return segments;
+  }, [
+    task.id,
+    containerBadge,
+    smartBadges,
+    hasScheduledTime,
+    scheduledTimeRange,
+    handleTimeChipClick,
+    formattedDueDate,
+    isOverdue,
+    taskTags,
+    hasSubtaskBadge,
+    subtaskCount,
+    linkedGoal,
+  ]);
 
   return (
     <div
@@ -472,171 +712,19 @@ export const TaskCard = memo(function TaskCard({
             </div>
           )}
 
-          {/* Row 3: Unified Metadata Row: [Scheduled Time] · [Due Date] · [Tags] · [Subtask Progress] */}
-          {hasMetadataRow && (
+          {/* Row 3: Unified Metadata Row: [Container] · [Smart Status] · [Scheduled Time] · [Due Date] · [Tags] · [Subtask Progress] */}
+          {metadataSegments.length > 0 && (
             <div className={styles.metadataRow}>
-              {hasScheduledTime && scheduledTimeRange && (
-                <>
-                  <span
-                    className={styles.timeChip}
-                    onClick={handleTimeChipClick}
-                    onMouseEnter={() => useSchedulerUiStore.getState().setHoveredBlockId(task.id)}
-                    onMouseLeave={() => useSchedulerUiStore.getState().setHoveredBlockId(null)}
-                    title="Click to view block in scheduler"
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleTimeChipClick(e as any);
-                      }
-                    }}
-                  >
-                    ⏱️ {scheduledTimeRange}
-                  </span>
-                  {(formattedDueDate || taskTags.length > 0 || hasSubtaskBadge) && (
+              {metadataSegments.map((segment, idx) => (
+                <React.Fragment key={idx}>
+                  {idx > 0 && (
                     <span className={styles.metaDot} aria-hidden="true">
                       ·
                     </span>
                   )}
-                </>
-              )}
-
-              {task.bucket === 'anytime' && (
-                <span className={styles.metaAnytimeChip} title="Bucket: Anytime">
-                  ⚡ Anytime
-                </span>
-              )}
-
-              {task.bucket === 'someday' && (
-                <span className={styles.metaSomedayChip} title="Bucket: Someday">
-                  💡 Someday
-                </span>
-              )}
-
-              {task.waiting_on && (
-                <span
-                  className={`${styles.metaWaitingChip} ${
-                    task.follow_up_date && task.follow_up_date < new Date().toISOString().split('T')[0]
-                      ? styles.metaWaitingOverdue
-                      : ''
-                  }`}
-                  title={`Waiting on: ${task.waiting_on}${task.follow_up_date ? ` (follow up: ${task.follow_up_date})` : ''}`}
-                >
-                  ⏳ {task.waiting_on}
-                </span>
-              )}
-
-              {(task.bucket || task.waiting_on) && (formattedDueDate || taskTags.length > 0 || hasSubtaskBadge) && (
-                <span className={styles.metaDot} aria-hidden="true">
-                  ·
-                </span>
-              )}
-
-              {formattedDueDate && (
-                <span
-                  className={`${styles.metaDate} ${isOverdue ? styles.metaDateOverdue : ''}`}
-                  title={`Due: ${formattedDueDate}`}
-                >
-                  {formattedDueDate}
-                </span>
-              )}
-
-              {formattedDueDate && (taskTags.length > 0 || hasSubtaskBadge) && (
-                <span className={styles.metaDot} aria-hidden="true">
-                  ·
-                </span>
-              )}
-
-              {taskTags.length > 0 && (
-                <div className={styles.tagsGroup}>
-                  {taskTags.map(tag => (
-                    <span
-                      key={tag.id}
-                      className={styles.inlineTagPill}
-                      role="button"
-                      tabIndex={0}
-                      onPointerDown={e => e.stopPropagation()}
-                      onClick={e => {
-                        e.stopPropagation();
-                        useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.stopPropagation();
-                          useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-                        }
-                      }}
-                      title={`Tag: #${tag.name}`}
-                    >
-                      #{tag.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {taskTags.length > 0 && hasSubtaskBadge && (
-                <span className={styles.metaDot} aria-hidden="true">
-                  ·
-                </span>
-              )}
-
-              {hasSubtaskBadge && subtaskCount && (
-                <div
-                  className={styles.subtaskCountBadge}
-                  title={`${subtaskCount.completed} of ${subtaskCount.total} subtasks completed`}
-                >
-                  <span className={styles.subtaskCountIcon}>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <rect x="2" y="2" width="12" height="4" rx="2" />
-                      <path d="M4 6v3.5a2 2 0 0 0 2 2h1" />
-                      <rect x="7" y="9.5" width="7" height="4" rx="2" />
-                    </svg>
-                  </span>
-                  <span>
-                    {subtaskCount.completed}/{subtaskCount.total}
-                  </span>
-                </div>
-              )}
-
-              {linkedGoal && (
-                <>
-                  {(hasScheduledTime || task.bucket || task.waiting_on || formattedDueDate || taskTags.length > 0 || hasSubtaskBadge) && (
-                    <span className={styles.metaDot} aria-hidden="true">
-                      ·
-                    </span>
-                  )}
-                  <span
-                    className={styles.inlineGoalPill}
-                    role="button"
-                    tabIndex={0}
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={e => {
-                      e.stopPropagation();
-                      useAppStore.getState().setActiveListId('view_goals');
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.stopPropagation();
-                        useAppStore.getState().setActiveListId('view_goals');
-                      }
-                    }}
-                    title={`Goal: ${linkedGoal.title}`}
-                  >
-                    🎯 {linkedGoal.title}
-                  </span>
-                </>
-              )}
+                  {segment}
+                </React.Fragment>
+              ))}
             </div>
           )}
         </div>

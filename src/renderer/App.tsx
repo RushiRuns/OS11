@@ -378,6 +378,31 @@ export function App(): React.ReactElement {
     useSensor(KeyboardSensor, KEYBOARD_SENSOR_OPTIONS)
   );
 
+  const isRightSlotVisible =
+    !activeListId.startsWith('view_') &&
+    !activeListId.startsWith('project:') &&
+    ((activeListId === 'smart_my_day' &&
+      (rightSlotActive === 'scheduler' || rightSlotActive === 'suggestions')) ||
+      (rightSlotActive === 'detail' && Boolean(liveSelectedTask)));
+
+  const rightSlotWidth = React.useMemo(() => {
+    if (activeListId === 'smart_my_day') {
+      if (rightSlotActive === 'scheduler') return `${schedulerPanelWidth}px`;
+      if (rightSlotActive === 'suggestions') return 'var(--detail-panel-width, 360px)';
+    }
+    if (rightSlotActive === 'detail' && liveSelectedTask) {
+      return 'var(--detail-panel-width, 360px)';
+    }
+    return '0px';
+  }, [activeListId, rightSlotActive, schedulerPanelWidth, liveSelectedTask]);
+
+  const [activeDragItem, setActiveDragItem] = useState<{
+    type: 'time-block' | 'task-row';
+    task?: Task;
+    subtaskCount?: { completed: number; total: number };
+  } | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+
   if (isOmnibar) {
     return <OmnibarView />;
   }
@@ -536,30 +561,6 @@ export function App(): React.ReactElement {
     }
   };
 
-  const isRightSlotVisible =
-    !activeListId.startsWith('view_') &&
-    !activeListId.startsWith('project:') &&
-    ((activeListId === 'smart_my_day' &&
-      (rightSlotActive === 'scheduler' || rightSlotActive === 'suggestions')) ||
-      (rightSlotActive === 'detail' && Boolean(liveSelectedTask)));
-
-  const rightSlotWidth = React.useMemo(() => {
-    if (activeListId === 'smart_my_day') {
-      if (rightSlotActive === 'scheduler') return `${schedulerPanelWidth}px`;
-      if (rightSlotActive === 'suggestions') return 'var(--detail-panel-width, 360px)';
-    }
-    if (rightSlotActive === 'detail' && liveSelectedTask) {
-      return 'var(--detail-panel-width, 360px)';
-    }
-    return '0px';
-  }, [activeListId, rightSlotActive, schedulerPanelWidth, liveSelectedTask]);
-
-  const [activeDragItem, setActiveDragItem] = useState<{
-    type: 'time-block' | 'task-row';
-    task?: Task;
-    subtaskCount?: { completed: number; total: number };
-  } | null>(null);
-  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
 
   const handleAppDragStart = (event: DragStartEvent) => {
     useSchedulerUiStore.getState().setIsDragging(true);
@@ -729,15 +730,40 @@ export function App(): React.ReactElement {
       return;
     }
 
+    const originalTask = { ...task };
+    const pushMoveUndo = (destinationLabel: string) => {
+      useUndoRedoStore.getState().pushAction({
+        description: `Moved "${originalTask.title}" to ${destinationLabel}`,
+        undoFn: async () => {
+          await useTaskStore.getState().updateTask({
+            id: activeTaskId,
+            bucket: originalTask.bucket ?? null,
+            my_day_date: originalTask.my_day_date ?? null,
+            project_id: originalTask.project_id ?? null,
+            area_id: originalTask.area_id ?? null,
+            list_id: originalTask.list_id ?? null,
+            due_date: originalTask.due_date ?? null,
+            due_time: originalTask.due_time ?? null,
+            waiting_on: originalTask.waiting_on ?? null,
+            waiting_since: originalTask.waiting_since ?? null,
+            follow_up_date: originalTask.follow_up_date ?? null,
+          });
+        },
+      });
+    };
+
     if (overIdStr.startsWith('list:')) {
       const targetListId = overIdStr.slice(5);
       if (targetListId === 'smart_my_day') {
         const today = toISODateOnly(new Date());
         await useTaskStore.getState().updateTask({ id: activeTaskId, my_day_date: today, bucket: null });
+        pushMoveUndo('My Day');
       } else if (targetListId === 'smart_anytime') {
         await useTaskStore.getState().setBucket(activeTaskId, 'anytime');
+        pushMoveUndo('Anytime');
       } else if (targetListId === 'smart_someday') {
         await useTaskStore.getState().setBucket(activeTaskId, 'someday');
+        pushMoveUndo('Someday');
       } else if (targetListId === 'smart_waiting_for') {
         const person = await showPrompt({
           title: 'Waiting For',
@@ -746,6 +772,7 @@ export function App(): React.ReactElement {
         });
         if (person && person.trim()) {
           await useTaskStore.getState().setWaiting({ taskId: activeTaskId, waitingOn: person.trim() });
+          pushMoveUndo(`Waiting For (${person.trim()})`);
         }
       } else if (targetListId === 'list_inbox') {
         await useTaskStore.getState().updateTask({
@@ -755,13 +782,17 @@ export function App(): React.ReactElement {
           area_id: null,
           bucket: null,
         });
+        pushMoveUndo('Inbox');
       } else if (targetListId === 'smart_important') {
         await useTaskStore.getState().toggleStar(activeTaskId);
       } else if (targetListId === 'smart_planned') {
         const today = toISODateOnly(new Date());
         await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: today, bucket: null });
+        pushMoveUndo('Planned');
       } else {
         await useTaskStore.getState().updateTask({ id: activeTaskId, list_id: targetListId, bucket: null });
+        const listName = useListStore.getState().listsById[targetListId]?.name || 'List';
+        pushMoveUndo(listName);
       }
       return;
     }
@@ -774,6 +805,8 @@ export function App(): React.ReactElement {
         project_id: null,
         list_id: null,
       });
+      const areaName = useAreaStore.getState().areasById[targetAreaId]?.name || 'Area';
+      pushMoveUndo(areaName);
       return;
     }
 
@@ -786,6 +819,7 @@ export function App(): React.ReactElement {
         area_id: proj?.area_id ?? null,
         bucket: null,
       });
+      pushMoveUndo(proj?.name || 'Project');
       return;
     }
 
@@ -870,7 +904,7 @@ export function App(): React.ReactElement {
             data-sidebar={effectiveFocusMode || !isSidebarVisible ? 'hidden' : 'visible'}
             data-detail={effectiveFocusMode || !isRightSlotVisible ? 'hidden' : 'visible'}
             data-focus={effectiveFocusMode ? 'active' : 'inactive'}
-            data-dragging={Boolean(activeDragItem) ? 'true' : 'false'}
+            data-dragging={activeDragItem ? 'true' : 'false'}
           >
             {/* Column 1: Sidebar (Critical path) */}
             <div className={layoutStyles.sidebarCol}>
