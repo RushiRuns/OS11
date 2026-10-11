@@ -18,7 +18,6 @@ import { useToday } from '../../hooks/useToday.js';
 import { resolveContainerBadge, resolveSmartBadges } from './task-badges.js';
 import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
 import type { Task } from '@shared/types/task.js';
-import { getTagShapeClass } from '@shared/utils/tag-shape.js';
 import styles from './TaskCard.module.css';
 
 export interface TaskCardProps {
@@ -30,7 +29,6 @@ export interface TaskCardProps {
   onToggleExpand?: (taskId: string) => void;
   isSelected?: boolean;
   allTaskIds?: string[];
-  variant?: 'standard' | 'project';
   onOpenDetail?: (task: Task) => void;
   onSelect?: (task: Task) => void;
   onToggleComplete?: (id: string) => void;
@@ -109,14 +107,10 @@ export const TaskCard = memo(function TaskCard({
   onToggleExpand,
   isSelected = false,
   allTaskIds,
-  variant = 'standard',
   onOpenDetail,
   onSelect,
   onToggleComplete,
-  onToggleStar,
   onUpdateTitle,
-  onDelete,
-  onDuplicate,
   onContextMenu,
   onFileDrop,
   parentTitle,
@@ -320,8 +314,6 @@ export const TaskCard = memo(function TaskCard({
     today.setHours(0, 0, 0, 0);
     return d.getTime() < today.getTime();
   }, [task.due_date, task.due_time, task.all_day, task.is_completed]);
-
-  const isOverdueAndCritical = isOverdue && task.priority >= 3;
 
   const metadataSegments = useMemo(() => {
     const segments: React.ReactNode[] = [];
@@ -649,7 +641,7 @@ export const TaskCard = memo(function TaskCard({
 
       {/* Checkbox */}
       <div
-        className={`${styles.checkboxWrap} ${variant !== 'project' ? styles.circularCheckbox : ''}`}
+        className={styles.checkboxWrap}
         onPointerDown={e => e.stopPropagation()}
         onClick={e => {
           e.stopPropagation();
@@ -663,73 +655,17 @@ export const TaskCard = memo(function TaskCard({
         />
       </div>
 
-      {variant !== 'project' ? (
-        /* Standard View: Multi-Layer Apple Reminders Layout */
-        <div className={styles.contentColumn}>
-          {/* Optional parent task meta line for dated subtasks */}
-          {parentTitle && (
-            <div className={styles.parentMetaLine} title={`Subtask of ${parentTitle}`}>
-              <span className={styles.parentMetaIcon}>↳</span>
-              <span className={styles.parentMetaText}>{parentTitle}</span>
-            </div>
-          )}
-
-          {/* Row 1: Title */}
-          <div className={styles.titleArea}>
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                type="text"
-                className={styles.titleInput}
-                value={editTitle}
-                onChange={e => setEditTitle(e.target.value)}
-                onBlur={handleSaveTitle}
-                onKeyDown={handleKeyDown}
-                onPointerDown={e => e.stopPropagation()}
-                onClick={e => e.stopPropagation()}
-                aria-label={`Edit title for ${task.title}`}
-              />
-            ) : (
-              <span
-                className={`${styles.titleText} ${
-                  task.is_completed === 1 ? styles.completedTitle : ''
-                }`}
-                onDoubleClick={e => {
-                  e.stopPropagation();
-                  setIsEditing(true);
-                }}
-                title={task.title}
-              >
-                {task.title}
-              </span>
-            )}
+      {/* Standard View: Multi-Layer Apple Reminders Layout */}
+      <div className={styles.contentColumn}>
+        {/* Optional parent task meta line for dated subtasks */}
+        {parentTitle && (
+          <div className={styles.parentMetaLine} title={`Subtask of ${parentTitle}`}>
+            <span className={styles.parentMetaIcon}>↳</span>
+            <span className={styles.parentMetaText}>{parentTitle}</span>
           </div>
+        )}
 
-          {/* Row 2: Notes (if present) - lighter text */}
-          {task.notes && (
-            <div className={styles.notesRow} title={task.notes}>
-              <span className={styles.notesText}>{task.notes}</span>
-            </div>
-          )}
-
-          {/* Row 3: Unified Metadata Row: [Container] · [Smart Status] · [Scheduled Time] · [Due Date] · [Tags] · [Subtask Progress] */}
-          {metadataSegments.length > 0 && (
-            <div className={styles.metadataRow}>
-              {metadataSegments.map((segment, idx) => (
-                <React.Fragment key={idx}>
-                  {idx > 0 && (
-                    <span className={styles.metaDot} aria-hidden="true">
-                      ·
-                    </span>
-                  )}
-                  {segment}
-                </React.Fragment>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        /* Project View: Compact Single-Line Title */
+        {/* Row 1: Title */}
         <div className={styles.titleArea}>
           {isEditing ? (
             <input
@@ -759,54 +695,33 @@ export const TaskCard = memo(function TaskCard({
             </span>
           )}
         </div>
-      )}
+
+        {/* Row 2: Notes (if present) - lighter text */}
+        {task.notes && (
+          <div className={styles.notesRow} title={task.notes}>
+            <span className={styles.notesText}>{task.notes}</span>
+          </div>
+        )}
+
+        {/* Row 3: Unified Metadata Row: [Container] · [Smart Status] · [Scheduled Time] · [Due Date] · [Tags] · [Subtask Progress] */}
+        {metadataSegments.length > 0 && (
+          <div className={styles.metadataRow}>
+            {metadataSegments.map((segment, idx) => (
+              <React.Fragment key={idx}>
+                {idx > 0 && (
+                  <span className={styles.metaDot} aria-hidden="true">
+                    ·
+                  </span>
+                )}
+                {segment}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Layer 2: Metadata Badges (Hover/Focus progressive disclosure) */}
       <div className={styles.metadataWrap}>
-        {variant === 'project' && task.due_date && (
-          <span
-            className={`${styles.dueDateChip} ${
-              isOverdueAndCritical
-                ? styles.dueDateOverdueCritical
-                : isOverdue
-                  ? styles.dueDateOverdue
-                  : ''
-            }`}
-          >
-            {formattedDueDate || task.due_date}
-          </span>
-        )}
-
-        {variant === 'project' &&
-          taskTags.map(tag => (
-            <span
-              key={tag.id}
-              className={styles.tagDotPill}
-              role="button"
-              tabIndex={0}
-              aria-label={`Filter by tag ${tag.name}`}
-              onPointerDown={e => e.stopPropagation()}
-              onClick={e => {
-                e.stopPropagation();
-                useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.stopPropagation();
-                  useAppStore.getState().setActiveListId(`tag:${tag.id}`);
-                }
-              }}
-              title={`Tag: #${tag.name}`}
-            >
-              <span
-                className={`${styles.tagDot} ${getTagShapeClass(tag.id || tag.name)}`}
-                style={{ background: tag.color ?? 'var(--tag-gray)' }}
-                aria-hidden="true"
-              />
-              <span>#{tag.name}</span>
-            </span>
-          ))}
-
         {task.pomodoro_count > 0 && (
           <span className={styles.badgePill} title="Completed Pomodoro Sessions">
             🍅 ×{task.pomodoro_count}
@@ -827,114 +742,34 @@ export const TaskCard = memo(function TaskCard({
             📎 ×{attachmentCount}
           </span>
         )}
-
-        {variant === 'project' && linkedGoal && (
-          <span
-            className={styles.goalPill}
-            role="button"
-            tabIndex={0}
-            aria-label={`Linked to goal: ${linkedGoal.title}`}
-            onPointerDown={e => e.stopPropagation()}
-            onClick={e => {
-              e.stopPropagation();
-              useAppStore.getState().setActiveListId('view_goals');
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.stopPropagation();
-                useAppStore.getState().setActiveListId('view_goals');
-              }
-            }}
-            title={`Goal: ${linkedGoal.title}`}
-          >
-            <span aria-hidden="true">🎯</span>
-            <span className={styles.goalPillTitle}>{linkedGoal.title}</span>
-          </span>
-        )}
       </div>
 
-      {/* Layer 3: Action Buttons (only in project variant; standard views use sidebar icon) */}
-      {variant === 'project' && (
-        <div
-          className={styles.actionsRow}
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => e.stopPropagation()}
+      {/* Dedicated Hover Sidebar Trigger Icon */}
+      <button
+        type="button"
+        className={styles.sidebarTriggerBtn}
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => {
+          e.stopPropagation();
+          onOpenDetail?.(task);
+        }}
+        title="Open task details"
+        aria-label="Open task details"
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={e => {
-              e.stopPropagation();
-              setIsTagPickerOpen(true);
-            }}
-            title="Tags (Ctrl+T)"
-            aria-label="Manage Tags"
-          >
-            🏷️
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.iconButton} ${
-              task.is_starred === 1 ? styles.starButtonActive : ''
-            }`}
-            onClick={() => onToggleStar?.(task.id)}
-            title={task.is_starred === 1 ? 'Unstar' : 'Star'}
-            aria-label="Toggle Star"
-          >
-            ★
-          </button>
-
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={() => onDuplicate?.(task.id)}
-            title="Duplicate Task"
-            aria-label="Duplicate Task"
-          >
-            ⧉
-          </button>
-
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={() => onDelete?.(task.id)}
-            title="Move to Trash"
-            aria-label="Delete Task"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Dedicated Hover Sidebar Trigger Icon (standard views) */}
-      {variant !== 'project' && (
-        <button
-          type="button"
-          className={styles.sidebarTriggerBtn}
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => {
-            e.stopPropagation();
-            onOpenDetail?.(task);
-          }}
-          title="Open task details"
-          aria-label="Open task details"
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect width="18" height="18" x="3" y="3" rx="2" />
-            <path d="M15 3v18" />
-          </svg>
-        </button>
-      )}
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <path d="M15 3v18" />
+        </svg>
+      </button>
 
       {isTagPickerOpen && (
         <TagPicker

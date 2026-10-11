@@ -130,10 +130,6 @@
   margin-top: 1px;
 }
 
-.circularCheckbox :global(button) {
-  border-radius: var(--radius-full) !important;
-}
-
 .contentColumn {
   flex: 1;
   min-width: 0;
@@ -338,120 +334,12 @@
   flex-shrink: 0;
 }
 
-.dueDateChip {
-  font-size: var(--text-xs);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-hover);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-}
-
-.dueDateOverdue {
-  background: var(--color-danger-muted);
-  color: var(--color-danger);
-  border-color: var(--border-danger);
-}
-
-.dueDateOverdueCritical {
-  background: var(--color-danger-muted);
-  color: var(--color-danger) !important;
-  border-color: var(--color-danger);
-  font-weight: var(--weight-medium);
-}
-
-.tagDotPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.tagDotPill:hover {
-  background: var(--surface-active);
-  color: var(--text-primary);
-}
-
-.tagDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--tag-purple);
-  flex-shrink: 0;
-}
-
-.goalPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
-  cursor: pointer;
-  transition: all 0.12s ease;
-  max-width: 140px;
-}
-
-.goalPill:hover {
-  background: var(--surface-active);
-  color: var(--text-primary);
-  border-color: var(--accent);
-}
-
-.goalPillTitle {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .badgePill {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 3px;
-}
-
-/* Actions Row: hover reveal */
-.actionsRow {
-  display: none;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.taskCard:hover .actionsRow,
-.taskCard:focus-within .actionsRow {
-  display: flex;
-}
-
-.iconButton {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-.iconButton:hover {
-  color: var(--text-primary);
-  background: var(--surface-hover);
 }
 
 .starButtonActive {
