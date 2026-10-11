@@ -325,20 +325,30 @@
 
 .titleInput {
   width: 100%;
-  background: var(--surface-base);
+  background: var(--surface-raised);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   padding: 2px 6px;
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
+  line-height: 20px;
   color: var(--text-primary);
   outline: none;
   box-shadow: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .titleInput:focus {
-  border-color: var(--border-strong);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
   outline: none;
-  box-shadow: none;
+}
+
+.subtaskRow .titleInput {
+  font-size: 13px;
+  line-height: 18px;
 }
 
 /* Right Edge Controls */
@@ -477,17 +487,29 @@
 }
 
 .taskCard[data-droptarget='true'] {
-  border: 1.5px dashed var(--accent) !important;
-  background: var(--surface-hover) !important;
+  border: 1.5px solid var(--accent) !important;
+  background: var(--accent-muted) !important;
   border-radius: var(--radius-md);
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.taskCard[data-droptarget='true']::after {
+  content: 'Make subtask';
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .taskCard[data-filedrop='true'] {
-  border: 2px dashed var(--color-success, #10b981);
-  background: rgba(16, 185, 129, 0.08);
+  border: 1.5px dashed var(--color-success) !important;
+  background: var(--color-success-muted) !important;
 }
 
 .parentMetaLine {
@@ -535,8 +557,8 @@
 }
 
 .rowHighlightedFromBlock {
-  box-shadow: 0 0 0 1px var(--accent) !important;
-  background-color: var(--surface-hover) !important;
+  box-shadow: 0 0 0 1.5px var(--accent-border) !important;
+  background-color: var(--surface-active) !important;
 }
 
 /* Reciprocal Cross-View Membership Badges (Subtle text style) */
@@ -609,5 +631,35 @@
 .inlineSmartBadgeOverdue {
   color: var(--card-overdue) !important;
   font-weight: var(--weight-medium);
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: more) {
+  .taskCard {
+    border: 1px solid var(--border-strong) !important;
+  }
+
+  .priority1::before,
+  .priority2::before,
+  .priority3::before,
+  .priority4::before {
+    width: 3px;
+  }
+
+  .titleInput:focus {
+    outline: 2px solid var(--accent) !important;
+  }
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .taskCard,
+  .titleText,
+  .titleInput,
+  .rightControlBtn,
+  .subtaskChevronBtn,
+  .subtaskCountBadge {
+    transition: none !important;
+  }
 }
 
