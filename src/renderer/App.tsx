@@ -20,11 +20,8 @@ import { PromptDialog, showPrompt } from './components/PromptDialog/PromptDialog
 import { OmnibarView } from './features/omnibar/OmnibarView.js';
 import { MiniTimerView } from './features/pomodoro/MiniTimerView.js';
 import { FloatingQuickAddModal } from './features/quickadd/FloatingQuickAddModal.js';
-import { CommandPalette } from './features/command-palette/CommandPalette.js';
 import { TagView } from './features/tags/TagView.js';
-import { NotificationCenter } from './features/notifications/NotificationCenter.js';
 import { Toast } from './components/Toast/Toast.js';
-import { OnboardingFlow } from './features/onboarding/OnboardingFlow.js';
 import { FocusModeView } from './features/focus/FocusModeView.js';
 import { ReviewManager } from './features/review/ReviewManager.js';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -79,6 +76,18 @@ const AnytimeView = lazy(() => import('./features/gtd/AnytimeView.js'));
 const SomedayView = lazy(() => import('./features/gtd/SomedayView.js'));
 const WaitingForView = lazy(() => import('./features/gtd/WaitingForView.js'));
 const WeeklyReviewFlow = lazy(() => import('./features/review/WeeklyReviewFlow.js'));
+const OnboardingFlow = lazy(() =>
+  import('./features/onboarding/OnboardingFlow.js').then((m) => ({ default: m.OnboardingFlow }))
+);
+const AppLockScreen = lazy(() =>
+  import('./features/settings/AppLockScreen.js').then((m) => ({ default: m.AppLockScreen }))
+);
+const CommandPalette = lazy(() =>
+  import('./features/command-palette/CommandPalette.js').then((m) => ({ default: m.CommandPalette }))
+);
+const NotificationCenter = lazy(() =>
+  import('./features/notifications/NotificationCenter.js').then((m) => ({ default: m.NotificationCenter }))
+);
 
 import {
   applyTheme,
@@ -87,7 +96,6 @@ import {
   applyFontSize,
   applyFontFamily,
 } from './utils/theme.js';
-import { AppLockScreen } from './features/settings/AppLockScreen.js';
 
 import layoutStyles from './styles/layout.module.css';
 
@@ -870,10 +878,18 @@ export function App(): React.ReactElement {
   return (
     <div className={layoutStyles.container}>
       {/* App Lock Protection Overlay */}
-      {isLocked && <AppLockScreen onUnlock={() => setIsLocked(false)} />}
+      {isLocked && (
+        <Suspense fallback={null}>
+          <AppLockScreen onUnlock={() => setIsLocked(false)} />
+        </Suspense>
+      )}
 
       {/* Onboarding Flow for First Launch or Replay */}
-      {isOnboardingOpen && <OnboardingFlow onComplete={() => setIsOnboardingOpen(false)} />}
+      {isOnboardingOpen && (
+        <Suspense fallback={null}>
+          <OnboardingFlow onComplete={() => setIsOnboardingOpen(false)} />
+        </Suspense>
+      )}
 
       {/* Recurring Review Manager */}
       <ReviewManager />
@@ -1025,17 +1041,21 @@ export function App(): React.ReactElement {
       <PromptDialog />
 
       {/* Command Palette Spotlight modal (Ctrl+K) */}
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onToggleFocusMode={() => {
-          setIsFocusMode(prev => !prev);
-          togglePomodoroFocus();
-        }}
-      />
+      <Suspense fallback={null}>
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onToggleFocusMode={() => {
+            setIsFocusMode(prev => !prev);
+            togglePomodoroFocus();
+          }}
+        />
+      </Suspense>
 
       {/* Slide-In In-App Notification Center Drawer */}
-      <NotificationCenter onFocusTask={handleFocusTask} />
+      <Suspense fallback={null}>
+        <NotificationCenter onFocusTask={handleFocusTask} />
+      </Suspense>
 
       {/* Global In-App Notification Toast */}
       {lastToastAction && (

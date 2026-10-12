@@ -45,7 +45,7 @@ export class CompletionLingerTracker {
     return this.exitingIds.has(id);
   };
 
-  cancelLinger = (id: string) => {
+  cancelLinger = (id: string, notify = true) => {
     const existing = this.timers.get(id);
     if (existing) {
       if (existing.exitTimer) clearTimeout(existing.exitTimer);
@@ -55,20 +55,22 @@ export class CompletionLingerTracker {
     this.lingeringMap.delete(id);
 
     const changed = this.lingeringIds.delete(id) || this.exitingIds.delete(id);
-    if (changed) {
+    if (changed && notify) {
       this.onChange?.();
     }
   };
 
-  markCompleted = (id: string, task?: Task) => {
-    this.cancelLinger(id);
+  markCompleted = (id: string, task?: Task, notify = true) => {
+    this.cancelLinger(id, false);
 
     if (task) {
       this.lingeringMap.set(id, task);
     }
 
     this.lingeringIds.add(id);
-    this.onChange?.();
+    if (notify) {
+      this.onChange?.();
+    }
 
     if (this.isReducedMotion) {
       // Reduced motion: removes at 420ms without exiting state
@@ -155,6 +157,21 @@ export function useCompletionLinger(
   }, [isReducedMotion]);
 
   const prevCompletedStateRef = useRef<Map<string, number>>(new Map());
+
+  // Synchronous pass: register newly-completed tasks during render so isLingering(t.id)
+  // is immediately TRUE in the very same render pass. This eliminates the 1-frame blink
+  // where the task briefly unmounted before useEffect ran.
+  if (tasks && trackerRef.current) {
+    for (const t of tasks) {
+      const prevStatus = prevCompletedStateRef.current.get(t.id);
+      if (prevStatus === 0 && t.is_completed === 1) {
+        trackerRef.current.markCompleted(t.id, t, false);
+      } else if (prevStatus === 1 && t.is_completed === 0) {
+        trackerRef.current.cancelLinger(t.id, false);
+      }
+      prevCompletedStateRef.current.set(t.id, t.is_completed);
+    }
+  }
 
   useEffect(() => {
     if (!tasks || !trackerRef.current) return;

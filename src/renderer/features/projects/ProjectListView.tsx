@@ -147,7 +147,18 @@ export function ProjectListView({
   const taskTagsByTaskId = useTagStore((state) => state.taskTagsByTaskId);
 
   // Filter tasks into active and completed
-  const { isLingering, isExiting, lingerVersion } = useCompletionLinger(tasks);
+  const { isLingering, isExiting, lingerVersion, markCompleted } = useCompletionLinger(tasks);
+
+  const handleToggleComplete = useCallback(
+    async (id: string) => {
+      const target = tasks.find((t) => t.id === id);
+      if (target && target.is_completed === 0) {
+        markCompleted(id, target);
+      }
+      await toggleComplete(id);
+    },
+    [tasks, markCompleted, toggleComplete]
+  );
 
   const activeTasks = useMemo(() => {
     return tasks
@@ -497,7 +508,7 @@ export function ProjectListView({
                     onSelectTask(t);
                   }}
                   onOpenDetail={(t) => onSelectTask(t)}
-                  onToggleComplete={toggleComplete}
+                  onToggleComplete={handleToggleComplete}
                   onToggleStar={toggleStar}
                   onUpdateTitle={(id, title) => updateTask({ id, title })}
                   onDelete={(id) => deleteTask(id)}
@@ -554,7 +565,7 @@ export function ProjectListView({
                                   onSelectTask(t);
                                 }}
                                 onOpenDetail={(t) => onSelectTask(t)}
-                                onToggleComplete={toggleComplete}
+                                onToggleComplete={handleToggleComplete}
                                 onToggleStar={toggleStar}
                                 onUpdateTitle={(id, title) => updateTask({ id, title })}
                                 onDelete={(id) => deleteTask(id)}
@@ -628,27 +639,28 @@ export function ProjectListView({
           {isCompletedOpen && (
             <div className={styles.completedList} role="list" aria-label="Completed tasks">
               {completedTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                  allTaskIds={allCompletedTaskIds}
-                  onSelect={(t) => {
-                    setFocusedTaskId(t.id);
-                    onSelectTask(t);
-                  }}
-                  onOpenDetail={(t) => onSelectTask(t)}
-                  onToggleComplete={toggleComplete}
-                  onToggleStar={toggleStar}
-                  onUpdateTitle={(id, title) => updateTask({ id, title })}
-                  onDelete={(id) => deleteTask(id)}
-                  onDuplicate={duplicateTask}
-                  onContextMenu={(e, t) => {
-                    e.preventDefault();
-                    setContextMenuTask(t);
-                    setContextMenuPos({ x: e.clientX, y: e.clientY });
-                  }}
-                />
+                <div key={task.id} className={styles.completedTaskItem}>
+                  <TaskCard
+                    task={task}
+                    isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                    allTaskIds={allCompletedTaskIds}
+                    onSelect={(t) => {
+                      setFocusedTaskId(t.id);
+                      onSelectTask(t);
+                    }}
+                    onOpenDetail={(t) => onSelectTask(t)}
+                    onToggleComplete={handleToggleComplete}
+                    onToggleStar={toggleStar}
+                    onUpdateTitle={(id, title) => updateTask({ id, title })}
+                    onDelete={(id) => deleteTask(id)}
+                    onDuplicate={duplicateTask}
+                    onContextMenu={(e, t) => {
+                      e.preventDefault();
+                      setContextMenuTask(t);
+                      setContextMenuPos({ x: e.clientX, y: e.clientY });
+                    }}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -663,7 +675,7 @@ export function ProjectListView({
           setContextMenuTask(null);
           setContextMenuPos(null);
         }}
-        onToggleComplete={toggleComplete}
+        onToggleComplete={handleToggleComplete}
         onToggleStar={toggleStar}
         onSetPriority={(id, priority) => updateTask({ id, priority })}
         onSetDueDate={(id, date, time, allDay) =>

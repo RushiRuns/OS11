@@ -483,7 +483,18 @@ export function TaskList({
     )
   );
 
-  const { isLingering, isExiting, lingerVersion } = useCompletionLinger(activeTasks);
+  const { isLingering, isExiting, lingerVersion, markCompleted } = useCompletionLinger(activeTasks);
+
+  const handleToggleComplete = useCallback(
+    async (id: string) => {
+      const target = activeTasks.find((t) => t.id === id) || tasksById[id];
+      if (target && target.is_completed === 0) {
+        markCompleted(id, target);
+      }
+      await toggleComplete(id);
+    },
+    [activeTasks, tasksById, markCompleted, toggleComplete]
+  );
 
   const completedTasks = useCompletedTasks(activeListId);
   const visibleCompletedTasks = useMemo(
@@ -1089,7 +1100,7 @@ export function TaskList({
                       allTaskIds={sortableTaskIds}
                       onSelect={(t) => setFocusedTaskId(t.id)}
                       onOpenDetail={(t) => onSelectTask?.(t)}
-                      onToggleComplete={toggleComplete}
+                      onToggleComplete={handleToggleComplete}
                       onToggleStar={toggleStar}
                       onUpdateTitle={(id, title) => updateTask({ id, title })}
                       onDelete={handleDeleteTask}
@@ -1142,7 +1153,7 @@ export function TaskList({
                                 allTaskIds={sortableTaskIds}
                                 onSelect={(t) => setFocusedTaskId(t.id)}
                                 onOpenDetail={(t) => onSelectTask?.(t)}
-                                onToggleComplete={toggleComplete}
+                                onToggleComplete={handleToggleComplete}
                                 onToggleStar={toggleStar}
                                 onUpdateTitle={(id, title) => updateTask({ id, title })}
                                 onDelete={handleDeleteTask}
@@ -1206,7 +1217,7 @@ export function TaskList({
               {isCompletedOpen && (
                 <div className={styles.completedList} role="list" aria-label="Completed tasks">
                   {visibleCompletedTasks.map((task) => (
-                    <div key={task.id} role="listitem">
+                    <div key={task.id} role="listitem" className={styles.completedTaskItem}>
                       <TaskCard
                         task={task}
                         depth={task.parent_task_id ? 1 : 0}
@@ -1214,7 +1225,7 @@ export function TaskList({
                         allTaskIds={allTaskIds}
                         onSelect={(t) => setFocusedTaskId(t.id)}
                         onOpenDetail={(t) => onSelectTask?.(t)}
-                        onToggleComplete={toggleComplete}
+                        onToggleComplete={handleToggleComplete}
                         onToggleStar={toggleStar}
                         onUpdateTitle={(id, title) => updateTask({ id, title })}
                         onDelete={handleDeleteTask}
@@ -1285,7 +1296,7 @@ export function TaskList({
           setContextMenuTask(null);
           setContextMenuPos(null);
         }}
-        onToggleComplete={toggleComplete}
+        onToggleComplete={handleToggleComplete}
         onToggleStar={toggleStar}
         onSetPriority={(id, priority) => updateTask({ id, priority })}
         onSetDueDate={(id, date, time, allDay) =>

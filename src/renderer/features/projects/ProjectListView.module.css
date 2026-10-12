@@ -60,6 +60,7 @@
 /* Collapsible Completed Section */
 .completedSection {
   margin-top: 14px;
+  animation: slideFadeIn 200ms var(--ease-out);
 }
 
 .completedHeader {
@@ -98,6 +99,28 @@
   padding-top: var(--space-2);
   padding-left: 12px;
   box-sizing: border-box;
+}
+
+.completedTaskItem {
+  animation: slideFadeIn 200ms var(--ease-out);
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .completedSection,
+  .completedTaskItem {
+    animation: none !important;
+  }
 }
 
 /* Empty State */

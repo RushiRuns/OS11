@@ -161,30 +161,31 @@ export const TaskCard = memo(function TaskCard({
 
   useEffect(() => {
     if (exiting && cardRef.current) {
-      const timer = setTimeout(() => {
-        if (!cardRef.current) return;
-        const currentHeight = cardRef.current.offsetHeight;
+      const currentHeight = cardRef.current.offsetHeight;
+      setCollapseStyle({
+        height: `${currentHeight}px`,
+        minHeight: '0px',
+        overflow: 'hidden',
+        transition: 'none',
+      });
+      // Force reflow so initial height is committed before transition begins
+      void cardRef.current.offsetHeight;
+      const rafId = requestAnimationFrame(() => {
         setCollapseStyle({
-          height: `${currentHeight}px`,
+          height: '0px',
+          minHeight: '0px',
+          paddingTop: '0px',
+          paddingBottom: '0px',
+          marginTop: '0px',
+          marginBottom: '-4px',
           overflow: 'hidden',
-          transition: 'none',
+          opacity: 0,
+          pointerEvents: 'none',
+          transition:
+            'height 280ms cubic-bezier(0.4, 0, 0.2, 1), min-height 280ms cubic-bezier(0.4, 0, 0.2, 1), padding 280ms cubic-bezier(0.4, 0, 0.2, 1), margin 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms cubic-bezier(0.4, 0, 0.2, 1), transform 200ms cubic-bezier(0.4, 0, 0.2, 1)',
         });
-        // Force reflow
-        void cardRef.current.offsetHeight;
-        requestAnimationFrame(() => {
-          setCollapseStyle({
-            height: '0px',
-            paddingTop: '0px',
-            paddingBottom: '0px',
-            marginTop: '0px',
-            marginBottom: '0px',
-            overflow: 'hidden',
-            transition:
-              'height 200ms cubic-bezier(0, 0, 0.2, 1), padding 200ms cubic-bezier(0, 0, 0.2, 1), margin 200ms cubic-bezier(0, 0, 0.2, 1)',
-          });
-        });
-      }, 80);
-      return () => clearTimeout(timer);
+      });
+      return () => cancelAnimationFrame(rafId);
     } else {
       setCollapseStyle(null);
     }

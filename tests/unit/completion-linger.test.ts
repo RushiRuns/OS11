@@ -124,4 +124,50 @@ describe('Completion Linger Motion Timeline', () => {
 
     tracker.destroy();
   });
+
+  it('supports synchronous registration with notify=false without triggering unnecessary callbacks', () => {
+    let callCount = 0;
+    const tracker = new CompletionLingerTracker({
+      prefersReducedMotion: false,
+      onChange: () => {
+        callCount++;
+      },
+    });
+
+    // Synchronous registration during render (notify = false)
+    tracker.markCompleted('sync-task-1', undefined, false);
+    expect(tracker.isLingering('sync-task-1')).toBe(true);
+    expect(tracker.isExiting('sync-task-1')).toBe(false);
+    expect(callCount).toBe(0);
+
+    // Timers still trigger onChange at 420ms and 720ms
+    vi.advanceTimersByTime(420);
+    expect(tracker.isExiting('sync-task-1')).toBe(true);
+    expect(callCount).toBe(1);
+
+    vi.advanceTimersByTime(300);
+    expect(tracker.isLingering('sync-task-1')).toBe(false);
+    expect(callCount).toBe(2);
+
+    tracker.destroy();
+  });
+
+  it('cancels synchronous linger with notify=false without triggering extra callbacks', () => {
+    let callCount = 0;
+    const tracker = new CompletionLingerTracker({
+      prefersReducedMotion: false,
+      onChange: () => {
+        callCount++;
+      },
+    });
+
+    tracker.markCompleted('task-undo', undefined, false);
+    expect(tracker.isLingering('task-undo')).toBe(true);
+
+    tracker.cancelLinger('task-undo', false);
+    expect(tracker.isLingering('task-undo')).toBe(false);
+    expect(callCount).toBe(0);
+
+    tracker.destroy();
+  });
 });
