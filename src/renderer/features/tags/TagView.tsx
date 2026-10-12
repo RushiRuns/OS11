@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';

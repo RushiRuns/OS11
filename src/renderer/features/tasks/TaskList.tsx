@@ -331,7 +331,7 @@ export function TaskList({
   } = useTaskStore();
 
   const { selectAll } = useSelectionStore();
-  const { pushAction, undo } = useUndoRedo();
+  const { pushAction } = useUndoRedo();
   const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
 

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { selectCompletedTasks } from '../../src/renderer/stores/taskStore.js';
 import { CompletionLingerTracker } from '../../src/renderer/hooks/useCompletionLinger.js';
@@ -209,6 +208,7 @@ describe('Completed Tasks & Real-time View Transitions', () => {
         priority: 0,
         is_starred: 0,
         sort_order: 1,
+        pomodoro_count: 0,
         created_by_device: 'test',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import React from 'react';
 import { Toast } from '../../src/renderer/components/Toast/Toast.js';
 
 describe('Toast Component Minimal Pill Styling & Markup', () => {

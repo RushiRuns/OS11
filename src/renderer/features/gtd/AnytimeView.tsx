@@ -10,6 +10,7 @@ import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/prim
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
+import { useViewGroupStore } from '../../stores/viewGroupStore.js';
 import styles from './AnytimeView.module.css';
 
 interface AnytimeViewProps {
@@ -18,6 +19,8 @@ interface AnytimeViewProps {
 }
 
 type GroupByOption = 'none' | 'project' | 'area';
+
+const ANYTIME_VIEW_ID = 'smart_anytime';
 
 interface AnytimeTaskGroup {
   key: string;
@@ -54,7 +57,13 @@ export function AnytimeView({
   const areasById = useAreaStore((s) => s.areasById);
   const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
 
-  const [groupBy, setGroupBy] = useState<GroupByOption>('area');
+  const storedGroupBy = useViewGroupStore((s) => s.groupByMap[ANYTIME_VIEW_ID]);
+  const groupBy: GroupByOption =
+    storedGroupBy === 'project' || storedGroupBy === 'area' || storedGroupBy === 'none'
+      ? storedGroupBy
+      : 'area';
+  const { setGroupBy } = useViewGroupStore.getState();
+
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
 
@@ -74,17 +83,17 @@ export function AnytimeView({
     {
       id: 'group-area',
       label: `Area${groupBy === 'area' ? ' ✓' : ''}`,
-      onClick: () => setGroupBy('area'),
+      onClick: () => setGroupBy(ANYTIME_VIEW_ID, 'area'),
     },
     {
       id: 'group-project',
       label: `Project${groupBy === 'project' ? ' ✓' : ''}`,
-      onClick: () => setGroupBy('project'),
+      onClick: () => setGroupBy(ANYTIME_VIEW_ID, 'project'),
     },
     {
       id: 'group-none',
       label: `None${groupBy === 'none' ? ' ✓' : ''}`,
-      onClick: () => setGroupBy('none'),
+      onClick: () => setGroupBy(ANYTIME_VIEW_ID, 'none'),
     },
   ];
 
