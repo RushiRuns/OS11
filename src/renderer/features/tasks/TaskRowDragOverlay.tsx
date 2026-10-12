@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Task } from '../../shared/types/task.js';
+import type { Task } from '@shared/types/task.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { CardGlyph } from './card-glyphs.js';
 

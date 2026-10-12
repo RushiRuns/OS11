@@ -5,7 +5,7 @@ export interface UndoAction {
   id: string;
   description: string;
   undoFn: () => Promise<void> | void;
-  redoFn: () => Promise<void> | void;
+  redoFn?: () => Promise<void> | void;
 }
 
 interface UndoRedoState {
@@ -67,7 +67,9 @@ export const useUndoRedoStore = create<UndoRedoState>((set, get) => ({
 
     const [current, ...remainingRedo] = redoStack;
     try {
-      await current.redoFn();
+      if (current.redoFn) {
+        await current.redoFn();
+      }
       set({
         undoStack: [current, ...undoStack],
         redoStack: remainingRedo,

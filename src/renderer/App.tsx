@@ -34,6 +34,7 @@ import { usePomodoroStore } from './stores/pomodoroStore.js';
 import { useAttachmentStore } from './stores/attachmentStore.js';
 import { useTagStore } from './stores/tagStore.js';
 import { useProjectStore } from './stores/projectStore.js';
+import { useAreaStore } from './stores/areaStore.js';
 import {
   DndContext,
   DragOverlay,

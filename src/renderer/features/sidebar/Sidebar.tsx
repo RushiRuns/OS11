@@ -142,7 +142,7 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(na
 
 export function Sidebar(): React.ReactElement {
   const { activeListId, setActiveListId, setSidebarVisible } = useAppStore();
-  const { loadLists } = useListStore();
+  const { listsById, loadLists } = useListStore();
   const smartLists = useSmartLists();
   const { isEnabled, loadModules } = useModuleStore();
   const { counts, loadCounts } = useCountsStore();

@@ -258,8 +258,6 @@ export const TaskCard = memo(function TaskCard({
     }, 150);
   };
 
-  const hasSubtaskBadge = Boolean(hasSubtasks && subtaskCount && subtaskCount.total > 0);
-
   useEffect(() => {
     loadTagsForTask(task.id);
   }, [task.id, loadTagsForTask]);
