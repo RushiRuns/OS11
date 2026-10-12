@@ -77,4 +77,25 @@ describe('Phase 5: Undo / Redo History Stack', () => {
 
     expect(useUndoRedoStore.getState().undoStack.length).toBe(100);
   });
+
+  it('silently pushes action onto undo stack without setting lastToastAction when showToast is false', async () => {
+    let reverted = false;
+
+    useUndoRedoStore.getState().pushAction({
+      description: 'Drag reordered task',
+      showToast: false,
+      undoFn: () => {
+        reverted = true;
+      },
+      redoFn: () => {},
+    });
+
+    const state = useUndoRedoStore.getState();
+    expect(state.undoStack.length).toBe(1);
+    expect(state.undoStack[0].description).toBe('Drag reordered task');
+    expect(state.lastToastAction).toBeNull();
+
+    await useUndoRedoStore.getState().undo();
+    expect(reverted).toBe(true);
+  });
 });

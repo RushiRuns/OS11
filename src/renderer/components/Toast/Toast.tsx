@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styles from './Toast.module.css';
 
 export type ToastVariant = 'default' | 'success' | 'error' | 'undo';
@@ -20,24 +20,49 @@ export function Toast({
   actionLabel = 'Undo',
   onAction,
   onDismiss,
-  duration = 5000,
+  duration = 4000,
 }: ToastProps): React.ReactElement {
   const [isDismissing, setIsDismissing] = useState(false);
+  const remainingTimeRef = useRef(duration);
+  const startTimeRef = useRef<number>(Date.now());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleDismiss = React.useCallback(() => {
+  const handleDismiss = useCallback(() => {
     setIsDismissing(true);
     setTimeout(() => {
       onDismiss(id);
-    }, 150);
+    }, 180);
   }, [id, onDismiss]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const startTimer = useCallback(() => {
+    if (remainingTimeRef.current <= 0) {
       handleDismiss();
-    }, duration);
+      return;
+    }
+    startTimeRef.current = Date.now();
+    timerRef.current = setTimeout(() => {
+      handleDismiss();
+    }, remainingTimeRef.current);
+  }, [handleDismiss]);
 
-    return () => clearTimeout(timer);
-  }, [duration, handleDismiss]);
+  const pauseTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      const elapsed = Date.now() - startTimeRef.current;
+      remainingTimeRef.current = Math.max(0, remainingTimeRef.current - elapsed);
+    }
+  }, []);
+
+  useEffect(() => {
+    remainingTimeRef.current = duration;
+    startTimer();
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [duration, startTimer]);
 
   const handleAction = () => {
     if (onAction) {
@@ -59,10 +84,17 @@ export function Toast({
     <div
       role="alert"
       className={`${styles.toast} ${variantClass} ${isDismissing ? styles.toastDismissing : ''}`}
+      onMouseEnter={pauseTimer}
+      onMouseLeave={startTimer}
     >
+      {variant === 'success' && (
+        <span className={styles.icon} aria-hidden="true">
+          ✓
+        </span>
+      )}
       <span className={styles.message}>{message}</span>
 
-      {variant === 'undo' && (
+      {actionLabel && (variant === 'undo' || Boolean(onAction)) && (
         <button type="button" className={styles.actionButton} onClick={handleAction}>
           {actionLabel}
         </button>

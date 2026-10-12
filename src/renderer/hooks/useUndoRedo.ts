@@ -6,6 +6,7 @@ export interface UndoAction {
   description: string;
   undoFn: () => Promise<void> | void;
   redoFn?: () => Promise<void> | void;
+  showToast?: boolean;
 }
 
 interface UndoRedoState {
@@ -30,6 +31,7 @@ export const useUndoRedoStore = create<UndoRedoState>((set, get) => ({
       ...action,
       id: `undo-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     };
+    const showToast = action.showToast !== false;
 
     set((state) => {
       const nextUndo = [item, ...state.undoStack];
@@ -39,7 +41,7 @@ export const useUndoRedoStore = create<UndoRedoState>((set, get) => ({
       return {
         undoStack: nextUndo,
         redoStack: [], // Clear redo stack on new action
-        lastToastAction: item,
+        lastToastAction: showToast ? item : state.lastToastAction,
       };
     });
   },

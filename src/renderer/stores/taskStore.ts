@@ -5,6 +5,7 @@ import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effec
 import { useAppStore } from './app-store.js';
 import { useCountsStore } from './countsStore.js';
 import { useGoalStore } from './goalStore.js';
+import { useUndoRedoStore } from '../hooks/useUndoRedo.js';
 
 function maybeCheckInLinkedGoal(taskId: string) {
   try {
@@ -302,6 +303,18 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       }
       if (nextCompleted === 1) {
         maybeCheckInLinkedGoal(id);
+        const titleStr = existing.title || 'Untitled task';
+        const truncatedTitle = titleStr.length > 36 ? titleStr.slice(0, 33) + '...' : titleStr;
+        useUndoRedoStore.getState().pushAction({
+          description: `Completed: ${truncatedTitle}`,
+          showToast: true,
+          undoFn: async () => {
+            await get().toggleComplete(id);
+          },
+          redoFn: async () => {
+            await get().toggleComplete(id);
+          },
+        });
       }
       return updated;
     } catch (err) {
@@ -338,6 +351,18 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
         get().loadTasks().catch(() => {});
       }
       maybeCheckInLinkedGoal(id);
+      const titleStr = existing.title || 'Untitled task';
+      const truncatedTitle = titleStr.length > 36 ? titleStr.slice(0, 33) + '...' : titleStr;
+      useUndoRedoStore.getState().pushAction({
+        description: `Completed: ${truncatedTitle}`,
+        showToast: true,
+        undoFn: async () => {
+          await get().toggleComplete(id);
+        },
+        redoFn: async () => {
+          await get().toggleComplete(id);
+        },
+      });
       return updated;
     } catch (err) {
       get().rollbackUpdate(id, previousSnapshot);

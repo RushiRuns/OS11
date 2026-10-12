@@ -789,6 +789,7 @@ export function TaskList({
 
       pushAction({
         description: mutation?.description ?? `Moved "${activeTask.title}"`,
+        showToast: false,
         undoFn: async () => {
           await moveTask(activeId, {
             parentId: prevParentId,
@@ -887,6 +888,7 @@ export function TaskList({
 
     pushAction({
       description: mutation?.description ?? `Moved "${activeTask.title}"`,
+      showToast: false,
       undoFn: async () => {
         await moveTask(activeId, {
           parentId: parentChanged ? prevParentId : undefined,
@@ -1283,7 +1285,7 @@ export function TaskList({
               clearToast();
             }}
             onDismiss={() => clearToast()}
-            duration={5000}
+            duration={4000}
           />
         </div>
       )}

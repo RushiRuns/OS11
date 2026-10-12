@@ -98,7 +98,7 @@
 .toastWrap {
   position: absolute;
   bottom: var(--space-6);
-  left: var(--space-6);
+  right: var(--space-6);
   z-index: 50;
 }
 

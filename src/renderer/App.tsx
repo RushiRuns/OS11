@@ -682,6 +682,7 @@ export function App(): React.ReactElement {
         if (typeof prevStart === 'number' && typeof prevDuration === 'number') {
           useUndoRedoStore.getState().pushAction({
             description: `Moved "${task.title}"`,
+            showToast: false,
             undoFn: async () => {
               await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
             },
@@ -696,6 +697,7 @@ export function App(): React.ReactElement {
       await useTaskStore.getState().scheduleTask(activeTaskId, placed.start, placed.duration);
       useUndoRedoStore.getState().pushAction({
         description: `Scheduled "${task.title}"`,
+        showToast: false,
         undoFn: async () => {
           await useTaskStore.getState().unscheduleTask(activeTaskId);
         },
@@ -714,6 +716,7 @@ export function App(): React.ReactElement {
         if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
           useUndoRedoStore.getState().pushAction({
             description: `Unscheduled "${task.title}"`,
+            showToast: false,
             undoFn: async () => {
               await useTaskStore.getState().updateTimeBlock(activeTaskId, prevStart, prevDuration);
             },
@@ -735,6 +738,7 @@ export function App(): React.ReactElement {
     const pushMoveUndo = (destinationLabel: string) => {
       useUndoRedoStore.getState().pushAction({
         description: `Moved "${originalTask.title}" to ${destinationLabel}`,
+        showToast: false,
         undoFn: async () => {
           await useTaskStore.getState().updateTask({
             id: activeTaskId,
@@ -848,6 +852,7 @@ export function App(): React.ReactElement {
       const displayDate = formatForDisplay(resolvedTargetDate);
       useUndoRedoStore.getState().pushAction({
         description: `Moved to ${displayDate}`,
+        showToast: false,
         undoFn: async () => {
           await useTaskStore.getState().updateTask({ id: activeTaskId, due_date: prevDueDate });
         },
