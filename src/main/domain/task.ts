@@ -29,7 +29,7 @@ export function buildNewTask(payload: CreateTaskPayload, sanitizedNotes?: string
     estimated_minutes: payload.estimated_minutes ?? null,
     assignee_device_id: null,
     created_by_device: 'local',
-    sort_order: Date.now(),
+    sort_order: payload.sort_order ?? Date.now(),
     my_day_date: null,
     pomodoro_count: 0,
     is_trashed: 0,

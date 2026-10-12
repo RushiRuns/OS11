@@ -400,6 +400,48 @@ export class TaskRepository extends BaseRepository {
       }
     }
 
+    let computedSortOrder = payload.sort_order;
+    if (computedSortOrder === undefined || computedSortOrder === null) {
+      try {
+        let minRow: { min_sort: number | null } | undefined;
+        if (payload.parent_task_id) {
+          minRow = this.db
+            .prepare<[string], { min_sort: number | null }>(
+              'SELECT MIN(sort_order) AS min_sort FROM tasks WHERE parent_task_id = ? AND is_trashed = 0'
+            )
+            .get(payload.parent_task_id);
+        } else if (payload.project_id) {
+          if (payload.section_id) {
+            minRow = this.db
+              .prepare<[string, string], { min_sort: number | null }>(
+                'SELECT MIN(sort_order) AS min_sort FROM tasks WHERE project_id = ? AND section_id = ? AND is_trashed = 0 AND parent_task_id IS NULL'
+              )
+              .get(payload.project_id, payload.section_id);
+          } else {
+            minRow = this.db
+              .prepare<[string], { min_sort: number | null }>(
+                'SELECT MIN(sort_order) AS min_sort FROM tasks WHERE project_id = ? AND is_trashed = 0 AND parent_task_id IS NULL'
+              )
+              .get(payload.project_id);
+          }
+        } else if (listId) {
+          minRow = this.db
+            .prepare<[string], { min_sort: number | null }>(
+              'SELECT MIN(sort_order) AS min_sort FROM tasks WHERE list_id = ? AND is_trashed = 0 AND parent_task_id IS NULL'
+            )
+            .get(listId);
+        }
+
+        if (minRow && typeof minRow.min_sort === 'number' && !isNaN(minRow.min_sort)) {
+          computedSortOrder = minRow.min_sort - 1000;
+        } else {
+          computedSortOrder = 1000;
+        }
+      } catch {
+        computedSortOrder = Date.now();
+      }
+    }
+
     const record: Task = {
       id,
       title: payload.title,
@@ -421,7 +463,7 @@ export class TaskRepository extends BaseRepository {
       estimated_minutes: payload.estimated_minutes ?? null,
       assignee_device_id: null,
       created_by_device: 'local',
-      sort_order: payload.sort_order ?? Date.now(),
+      sort_order: computedSortOrder,
       my_day_date: payload.my_day_date ?? null,
       pomodoro_count: 0,
       is_habit: typeof payload.is_habit === 'boolean' ? (payload.is_habit ? 1 : 0) : (payload.is_habit ?? 0),

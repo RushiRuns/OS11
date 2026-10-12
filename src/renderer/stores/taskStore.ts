@@ -190,8 +190,39 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
   },
 
   createTask: async (payload: CreateTaskPayload): Promise<Task> => {
-    // 1. Generate optimistic task
+    // 1. Generate optimistic task with sort_order placing it at the top of its scope
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const currentTasks = Object.values(get().tasksById);
+
+    let matchingTasks: Task[] = [];
+    if (payload.parent_task_id) {
+      matchingTasks = currentTasks.filter(
+        (t) => t.parent_task_id === payload.parent_task_id && t.is_trashed === 0
+      );
+    } else if (payload.project_id) {
+      matchingTasks = currentTasks.filter(
+        (t) =>
+          t.project_id === payload.project_id &&
+          t.is_trashed === 0 &&
+          !t.parent_task_id &&
+          (payload.section_id ? t.section_id === payload.section_id : true)
+      );
+    } else if (payload.list_id) {
+      matchingTasks = currentTasks.filter(
+        (t) => t.list_id === payload.list_id && t.is_trashed === 0 && !t.parent_task_id
+      );
+    } else {
+      matchingTasks = currentTasks.filter((t) => t.is_trashed === 0 && !t.parent_task_id);
+    }
+
+    let minSortOrder = Infinity;
+    for (const t of matchingTasks) {
+      if (typeof t.sort_order === 'number' && t.sort_order < minSortOrder) {
+        minSortOrder = t.sort_order;
+      }
+    }
+    const computedSortOrder = minSortOrder !== Infinity ? minSortOrder - 1000 : 1000;
+
     const optimisticTask: Task = {
       id: tempId,
       title: payload.title,
@@ -200,7 +231,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       project_id: payload.project_id ?? null,
       area_id: payload.area_id ?? null,
       section_id: payload.section_id ?? null,
-      parent_task_id: null,
+      parent_task_id: payload.parent_task_id ?? null,
       due_date: payload.due_date ?? null,
       due_time: payload.due_time ?? null,
       all_day: payload.all_day ? 1 : 0,
@@ -213,7 +244,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       estimated_minutes: payload.estimated_minutes ?? null,
       assignee_device_id: null,
       created_by_device: 'local',
-      sort_order: Date.now(),
+      sort_order: payload.sort_order ?? computedSortOrder,
       my_day_date: null,
       pomodoro_count: 0,
       is_trashed: 0,
