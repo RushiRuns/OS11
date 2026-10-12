@@ -968,27 +968,56 @@ export function useSubtasks(parentId: string): Task[] {
   });
 }
 
-export function useCompletedTasks(containerId?: string): Task[] {
-  return useTaskStore((state) => {
-    return Object.values(state.tasksById)
-      .filter((t) => {
-        if (t.is_trashed === 1 || t.is_completed === 0) return false;
-        if (containerId && containerId !== 'smart_all' && containerId !== 'smart_completed') {
-          if (containerId.startsWith('project:')) {
-            return t.project_id === containerId.slice(8);
-          }
-          if (containerId.startsWith('area:')) {
-            return t.area_id === containerId.slice(5) && !t.project_id;
-          }
-          if (containerId === 'list_inbox') {
-            return !t.area_id && !t.project_id;
-          }
-          return t.list_id === containerId || t.project_id === containerId;
+export function selectCompletedTasks(
+  state: { tasksById: Record<string, Task> },
+  containerId?: string
+): Task[] {
+  const today = new Date().toISOString().split('T')[0];
+  return Object.values(state.tasksById)
+    .filter((t) => {
+      if (t.is_trashed === 1 || t.is_completed === 0) return false;
+      if (
+        containerId &&
+        containerId !== 'smart_all' &&
+        containerId !== 'smart_all_tasks' &&
+        containerId !== 'smart_completed'
+      ) {
+        if (containerId === 'smart_my_day') {
+          return t.my_day_date === today;
         }
-        return true;
-      })
-      .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
-  });
+        if (containerId === 'smart_important') {
+          return t.is_starred === 1;
+        }
+        if (containerId === 'smart_planned') {
+          return t.due_date !== null;
+        }
+        if (containerId === 'smart_anytime') {
+          return t.bucket === 'anytime';
+        }
+        if (containerId === 'smart_someday') {
+          return t.bucket === 'someday';
+        }
+        if (containerId === 'smart_waiting_for') {
+          return t.waiting_since !== null || Boolean(t.waiting_on);
+        }
+        if (containerId.startsWith('project:')) {
+          return t.project_id === containerId.slice(8);
+        }
+        if (containerId.startsWith('area:')) {
+          return t.area_id === containerId.slice(5) && !t.project_id;
+        }
+        if (containerId === 'list_inbox') {
+          return !t.area_id && !t.project_id;
+        }
+        return t.list_id === containerId || t.project_id === containerId;
+      }
+      return true;
+    })
+    .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
+}
+
+export function useCompletedTasks(containerId?: string): Task[] {
+  return useTaskStore((state) => selectCompletedTasks(state, containerId));
 }
 
 export function useAllActiveTasks(): Task[] {

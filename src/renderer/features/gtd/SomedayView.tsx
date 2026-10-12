@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task } from '@shared/types/task.js';
 import type { Project } from '@shared/types/index.js';
-import { useSomedayTasks, useTaskStore } from '../../stores/taskStore.js';
+import { useSomedayTasks, useCompletedTasks, useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
@@ -22,8 +22,18 @@ export function SomedayView({
   selectedTaskId,
 }: SomedayViewProps): React.ReactElement {
   const rawTasks = useSomedayTasks();
-  const { isExiting, withLingering, markCompleted } = useCompletionLinger();
+  const { isExiting, withLingering, isLingering, markCompleted, lingerVersion } = useCompletionLinger();
   const tasks = withLingering(rawTasks);
+  const completedTasks = useCompletedTasks('smart_someday');
+  const visibleCompletedTasks = useMemo(
+    () => completedTasks.filter((t) => !isLingering(t.id)),
+    [completedTasks, isLingering, lingerVersion]
+  );
+  const allCompletedTaskIds = useMemo(
+    () => visibleCompletedTasks.map((t) => t.id),
+    [visibleCompletedTasks]
+  );
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const projectsById = useProjectStore((s) => s.projectsById);
   const updateProject = useProjectStore((s) => s.updateProject);
   const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
@@ -90,39 +100,105 @@ export function SomedayView({
 
       <div className={styles.scrollArea}>
         {activeTab === 'tasks' ? (
-          tasks.length === 0 ? (
+          tasks.length === 0 && visibleCompletedTasks.length === 0 ? (
             <EmptyState
               icon="📦"
               title="No Someday Tasks"
               description="Park ideas, aspirational goals, or deferred tasks here until you are ready to review them."
             />
           ) : (
-            <SortableContext
-              items={tasks.map((t) => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className={styles.taskList}>
-                {tasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isSelected={task.id === selectedTaskId}
-                    onSelect={() => onSelectTask?.(task)}
-                    onOpenDetail={() => onSelectTask?.(task)}
-                    onToggleComplete={() => {
-                      markCompleted(task.id, task);
-                      toggleComplete(task.id);
+            <>
+              {tasks.length > 0 && (
+                <SortableContext
+                  items={tasks.map((t) => t.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className={styles.taskList}>
+                    {tasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        isSelected={task.id === selectedTaskId}
+                        onSelect={() => onSelectTask?.(task)}
+                        onOpenDetail={() => onSelectTask?.(task)}
+                        onToggleComplete={() => {
+                          markCompleted(task.id, task);
+                          toggleComplete(task.id);
+                        }}
+                        onToggleStar={() => toggleStar(task.id)}
+                        onDelete={() => deleteTask(task.id)}
+                        onDuplicate={() => duplicateTask(task.id)}
+                        onContextMenu={(e) => handleContextMenu(e, task)}
+                        disableDrag={false}
+                        exiting={isExiting(task.id)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              )}
+
+              {/* Collapsible Completed Section */}
+              {visibleCompletedTasks.length > 0 && (
+                <div className={styles.completedSection}>
+                  <div
+                    className={styles.completedHeader}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isCompletedOpen}
+                    aria-label={`Completed tasks (${visibleCompletedTasks.length})`}
+                    onClick={() => setIsCompletedOpen((prev) => !prev)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setIsCompletedOpen((prev) => !prev);
+                      }
                     }}
-                    onToggleStar={() => toggleStar(task.id)}
-                    onDelete={() => deleteTask(task.id)}
-                    onDuplicate={() => duplicateTask(task.id)}
-                    onContextMenu={(e) => handleContextMenu(e, task)}
-                    disableDrag={false}
-                    exiting={isExiting(task.id)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
+                  >
+                    <span
+                      className={`${styles.completedCaret} ${
+                        isCompletedOpen ? styles.completedCaretOpen : ''
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </span>
+                    <span>Completed ({visibleCompletedTasks.length})</span>
+                  </div>
+
+                  {isCompletedOpen && (
+                    <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                      {visibleCompletedTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          isSelected={task.id === selectedTaskId}
+                          allTaskIds={allCompletedTaskIds}
+                          onSelect={() => onSelectTask?.(task)}
+                          onOpenDetail={() => onSelectTask?.(task)}
+                          onToggleComplete={() => toggleComplete(task.id)}
+                          onToggleStar={() => toggleStar(task.id)}
+                          onDelete={() => deleteTask(task.id)}
+                          onDuplicate={() => duplicateTask(task.id)}
+                          onContextMenu={(e) => handleContextMenu(e, task)}
+                          disableDrag={true}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )
         ) : somedayProjects.length === 0 ? (
           <EmptyState
@@ -165,7 +241,11 @@ export function SomedayView({
           task={contextMenuTask}
           position={contextMenuPos}
           onClose={handleCloseContextMenu}
-          onToggleComplete={(id) => toggleComplete(id)}
+          onToggleComplete={(id) => {
+            const t = tasks.find((x) => x.id === id);
+            if (t && t.is_completed === 0) markCompleted(id, t);
+            toggleComplete(id);
+          }}
           onToggleStar={(id) => toggleStar(id)}
           onDelete={(id) => deleteTask(id)}
           onDuplicate={(id) => duplicateTask(id)}

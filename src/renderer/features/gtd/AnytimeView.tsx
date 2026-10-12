@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task } from '@shared/types/task.js';
-import { useAnytimeTasks, useTaskStore } from '../../stores/taskStore.js';
+import { useAnytimeTasks, useCompletedTasks, useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { TaskCard } from '../tasks/TaskCard.js';
@@ -38,8 +38,18 @@ export function AnytimeView({
   selectedTaskId,
 }: AnytimeViewProps): React.ReactElement {
   const rawTasks = useAnytimeTasks();
-  const { isExiting, withLingering, markCompleted } = useCompletionLinger();
+  const { isExiting, withLingering, isLingering, markCompleted, lingerVersion } = useCompletionLinger();
   const tasks = withLingering(rawTasks);
+  const completedTasks = useCompletedTasks('smart_anytime');
+  const visibleCompletedTasks = useMemo(
+    () => completedTasks.filter((t) => !isLingering(t.id)),
+    [completedTasks, isLingering, lingerVersion]
+  );
+  const allCompletedTaskIds = useMemo(
+    () => visibleCompletedTasks.map((t) => t.id),
+    [visibleCompletedTasks]
+  );
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const projectsById = useProjectStore((s) => s.projectsById);
   const areasById = useAreaStore((s) => s.areasById);
   const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
@@ -231,6 +241,68 @@ export function AnytimeView({
             </section>
           ))
         )}
+
+        {/* Collapsible Completed Section */}
+        {visibleCompletedTasks.length > 0 && (
+          <div className={styles.completedSection}>
+            <div
+              className={styles.completedHeader}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isCompletedOpen}
+              aria-label={`Completed tasks (${visibleCompletedTasks.length})`}
+              onClick={() => setIsCompletedOpen((prev) => !prev)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsCompletedOpen((prev) => !prev);
+                }
+              }}
+            >
+              <span
+                className={`${styles.completedCaret} ${
+                  isCompletedOpen ? styles.completedCaretOpen : ''
+                }`}
+                aria-hidden="true"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </span>
+              <span>Completed ({visibleCompletedTasks.length})</span>
+            </div>
+
+            {isCompletedOpen && (
+              <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                {visibleCompletedTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isSelected={task.id === selectedTaskId}
+                    allTaskIds={allCompletedTaskIds}
+                    onSelect={() => onSelectTask?.(task)}
+                    onOpenDetail={() => onSelectTask?.(task)}
+                    onToggleComplete={() => toggleComplete(task.id)}
+                    onToggleStar={() => toggleStar(task.id)}
+                    onDelete={() => deleteTask(task.id)}
+                    onDuplicate={() => duplicateTask(task.id)}
+                    onContextMenu={(e) => handleContextMenu(e, task)}
+                    disableDrag={true}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {contextMenuPos && contextMenuTask && (
@@ -238,7 +310,11 @@ export function AnytimeView({
           task={contextMenuTask}
           position={contextMenuPos}
           onClose={handleCloseContextMenu}
-          onToggleComplete={(id) => toggleComplete(id)}
+          onToggleComplete={(id) => {
+            const t = tasks.find((x) => x.id === id);
+            if (t && t.is_completed === 0) markCompleted(id, t);
+            toggleComplete(id);
+          }}
           onToggleStar={(id) => toggleStar(id)}
           onDelete={(id) => deleteTask(id)}
           onDuplicate={(id) => duplicateTask(id)}

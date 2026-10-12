@@ -79,10 +79,10 @@
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--space-6) var(--space-6) var(--space-6);
+  padding: var(--space-4) var(--space-6) var(--space-6) var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 
 .groupSection {
@@ -115,3 +115,45 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* Collapsible Completed Section */
+.completedSection {
+  margin-top: 14px;
+}
+
+.completedHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.completedHeader:hover {
+  color: var(--text-primary);
+}
+
+.completedCaret {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 160ms var(--ease-out);
+}
+
+.completedCaretOpen {
+  transform: rotate(90deg);
+}
+
+.completedList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: var(--space-2);
+}
+

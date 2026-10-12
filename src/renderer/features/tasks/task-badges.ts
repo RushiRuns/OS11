@@ -128,10 +128,8 @@ export interface ResolveSmartBadgesArgs {
  *
  * Rules:
  * - Bucket chain precedence: My Day > Anytime > Someday (mutually exclusive).
- * - Suppressed inside the matching smart view (e.g. My Day badge hidden in smart_my_day).
- * - Inside container views (project:* and area:*), Anytime badge is suppressed to avoid
- *   "wallpaper" noise, since active tasks in a project are actionable by default.
- *   My Day, Someday, and Waiting remain visible as noteworthy exceptions.
+ * - Suppressed inside the matching smart view (e.g. My Day badge hidden in smart_my_day, Anytime in smart_anytime).
+ * - Displays Anytime badge across container views (projects, areas, lists) for cross-view feedback.
  * - Waiting status is evaluated independently alongside bucket status.
  * - Waiting badge marks isOverdue if follow_up_date < today.
  */
@@ -144,8 +142,6 @@ export function resolveSmartBadges({
 
   // 1. Bucket Status Chain
   const isTaskInMyDay = Boolean(task.my_day_date && task.my_day_date === today);
-  const isInsideContainerView =
-    activeListId.startsWith('project:') || activeListId.startsWith('area:');
 
   if (activeListId !== SMART_LISTS.MY_DAY && isTaskInMyDay) {
     badges.push({
@@ -158,8 +154,7 @@ export function resolveSmartBadges({
     });
   } else if (
     activeListId !== SMART_LISTS.ANYTIME &&
-    task.bucket === 'anytime' &&
-    !isInsideContainerView
+    task.bucket === 'anytime'
   ) {
     badges.push({
       id: 'anytime',

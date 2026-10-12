@@ -282,24 +282,32 @@ describe('task-badges pure resolution unit tests', () => {
       expect(badges.find(b => b.id === 'anytime')).toBeUndefined();
     });
 
-    it('suppresses Anytime badge in project container view to prevent wallpaper', () => {
+    it('renders Anytime badge on a task card inside project container view', () => {
       const badges = resolveSmartBadges({
-        task: { ...baseTask, bucket: 'anytime' },
+        task: { ...baseTask, project_id: 'proj-os11', bucket: 'anytime' },
         activeListId: 'project:proj-os11',
         today,
       });
 
-      expect(badges.find(b => b.id === 'anytime')).toBeUndefined();
+      const anytimeBadge = badges.find(b => b.id === 'anytime');
+      expect(anytimeBadge).toBeDefined();
+      expect(anytimeBadge?.label).toBe('Anytime');
+      expect(anytimeBadge?.icon).toBe('⚡');
+      expect(anytimeBadge?.targetListId).toBe(SMART_LISTS.ANYTIME);
     });
 
-    it('suppresses Anytime badge in area container view to prevent wallpaper', () => {
+    it('renders Anytime badge on a task card inside area container view', () => {
       const badges = resolveSmartBadges({
-        task: { ...baseTask, bucket: 'anytime' },
+        task: { ...baseTask, area_id: 'area-work', bucket: 'anytime' },
         activeListId: 'area:area-work',
         today,
       });
 
-      expect(badges.find(b => b.id === 'anytime')).toBeUndefined();
+      const anytimeBadge = badges.find(b => b.id === 'anytime');
+      expect(anytimeBadge).toBeDefined();
+      expect(anytimeBadge?.label).toBe('Anytime');
+      expect(anytimeBadge?.icon).toBe('⚡');
+      expect(anytimeBadge?.targetListId).toBe(SMART_LISTS.ANYTIME);
     });
 
     it('renders Anytime badge in aggregate views like smart_all or tag view', () => {

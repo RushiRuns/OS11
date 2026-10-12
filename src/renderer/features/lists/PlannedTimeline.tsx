@@ -138,7 +138,7 @@ export function PlannedTimeline({
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
 
   const allTasksArray = useMemo(() => Object.values(tasksById), [tasksById]);
-  const { isLingering, isExiting } = useCompletionLinger(allTasksArray);
+  const { isLingering, isExiting, lingerVersion } = useCompletionLinger(allTasksArray);
 
   // Flatten groups into a single list of headers + tasks
   const { flattenedItems, dateIndexMap, allTaskIds } = useMemo(() => {
@@ -176,7 +176,7 @@ export function PlannedTimeline({
     }
 
     return { flattenedItems: items, dateIndexMap: indexMap, allTaskIds: taskIds };
-  }, [groups, tasksById, isLingering]);
+  }, [groups, tasksById, isLingering, lingerVersion]);
 
   // Virtualizer for the flat timeline
   const virtualizer = useVirtualizer({

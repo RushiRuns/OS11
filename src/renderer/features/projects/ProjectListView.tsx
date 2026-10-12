@@ -124,19 +124,19 @@ export function ProjectListView({
   const taskTagsByTaskId = useTagStore((state) => state.taskTagsByTaskId);
 
   // Filter tasks into active and completed
-  const { isLingering, isExiting } = useCompletionLinger(tasks);
+  const { isLingering, isExiting, lingerVersion } = useCompletionLinger(tasks);
 
   const activeTasks = useMemo(() => {
     return tasks
       .filter((t) => (t.is_completed === 0 || isLingering(t.id)) && t.is_trashed === 0)
       .sort((a, b) => a.sort_order - b.sort_order);
-  }, [tasks, isLingering]);
+  }, [tasks, isLingering, lingerVersion]);
 
   const completedTasks = useMemo(() => {
     return tasks
       .filter((t) => t.is_completed === 1 && !isLingering(t.id) && t.is_trashed === 0)
       .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || '') || a.sort_order - b.sort_order);
-  }, [tasks, isLingering]);
+  }, [tasks, isLingering, lingerVersion]);
 
   const flattenedActiveItems: FlattenedTaskItem[] = useMemo(() => {
     const activeTasksMap = new Map<string, Task>();

@@ -462,12 +462,12 @@ export function TaskList({
     )
   );
 
-  const { isLingering, isExiting } = useCompletionLinger(activeTasks);
+  const { isLingering, isExiting, lingerVersion } = useCompletionLinger(activeTasks);
 
   const completedTasks = useCompletedTasks(activeListId);
   const visibleCompletedTasks = useMemo(
     () => completedTasks.filter((t) => !isLingering(t.id)),
-    [completedTasks, isLingering]
+    [completedTasks, isLingering, lingerVersion]
   );
 
   // Filter & Sort (deferred value avoids blocking user inputs)
@@ -476,7 +476,7 @@ export function TaskList({
   // re-flattens the tree and re-keys the virtualizer on every drag-indicator update.
   const incompleteActive = useMemo(
     () => activeTasks.filter((t) => t.is_completed === 0 || isLingering(t.id)),
-    [activeTasks, isLingering]
+    [activeTasks, isLingering, lingerVersion]
   );
   const filteredIncomplete = useFilteredTasks(incompleteActive, deferredConfig);
 

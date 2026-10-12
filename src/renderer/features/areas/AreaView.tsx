@@ -25,7 +25,7 @@ export function AreaView({
 }: AreaViewProps): React.ReactElement {
   const area = useArea(areaId);
   const looseTasks = useTasksByArea(areaId);
-  const { isExiting } = useCompletionLinger(looseTasks);
+  const { isLingering, isExiting, lingerVersion } = useCompletionLinger(looseTasks);
   const setActiveListId = useAppStore((state) => state.setActiveListId);
 
   const {
@@ -42,8 +42,22 @@ export function AreaView({
   );
 
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
+
+  const activeLooseTasks = useMemo(() => {
+    return looseTasks.filter((t) => (t.is_completed === 0 || isLingering(t.id)) && t.is_trashed === 0);
+  }, [looseTasks, isLingering, lingerVersion]);
+
+  const completedLooseTasks = useMemo(() => {
+    return looseTasks
+      .filter((t) => t.is_completed === 1 && !isLingering(t.id) && t.is_trashed === 0)
+      .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || '') || a.sort_order - b.sort_order);
+  }, [looseTasks, isLingering, lingerVersion]);
+
+  const allActiveLooseTaskIds = useMemo(() => activeLooseTasks.map((t) => t.id), [activeLooseTasks]);
+  const allCompletedLooseTaskIds = useMemo(() => completedLooseTasks.map((t) => t.id), [completedLooseTasks]);
 
   // Stats calculation for project cards
   const projectStats = useMemo(() => {
@@ -68,8 +82,6 @@ export function AreaView({
     );
   }
 
-  const allLooseTaskIds = looseTasks.map((t) => t.id);
-
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -79,7 +91,7 @@ export function AreaView({
           <h1 className={styles.title}>
             {area.name}
             <span className={styles.badge}>
-              {looseTasks.length} {looseTasks.length === 1 ? 'task' : 'tasks'} · {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+              {activeLooseTasks.length} {activeLooseTasks.length === 1 ? 'task' : 'tasks'} · {projects.length} {projects.length === 1 ? 'project' : 'projects'}
             </span>
           </h1>
         </div>
@@ -100,34 +112,104 @@ export function AreaView({
         {/* Inline task creator for loose tasks inside this Area */}
         <InlineTaskCreator defaultAreaId={area.id} />
 
-        {looseTasks.length === 0 ? (
+        {activeLooseTasks.length === 0 && completedLooseTasks.length === 0 ? (
           <div className={styles.emptyNotice}>
             No loose tasks in this Area. Tasks created here don&apos;t belong to any project.
           </div>
         ) : (
-          <div className={styles.taskList} role="list">
-            {looseTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                depth={0}
-                isSelected={selectedTaskId === task.id}
-                allTaskIds={allLooseTaskIds}
-                onSelect={(t) => onSelectTask?.(t)}
-                onOpenDetail={(t) => onSelectTask?.(t)}
-                onToggleComplete={toggleComplete}
-                onToggleStar={toggleStar}
-                onUpdateTitle={(id, title) => updateTask({ id, title })}
-                onDelete={deleteTask}
-                onDuplicate={duplicateTask}
-                onContextMenu={(e, t) => {
-                  setContextMenuTask(t);
-                  setContextMenuPos({ x: e.clientX, y: e.clientY });
-                }}
-                exiting={isExiting(task.id)}
-              />
-            ))}
-          </div>
+          <>
+            {activeLooseTasks.length > 0 && (
+              <div className={styles.taskList} role="list">
+                {activeLooseTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    depth={0}
+                    isSelected={selectedTaskId === task.id}
+                    allTaskIds={allActiveLooseTaskIds}
+                    onSelect={(t) => onSelectTask?.(t)}
+                    onOpenDetail={(t) => onSelectTask?.(t)}
+                    onToggleComplete={toggleComplete}
+                    onToggleStar={toggleStar}
+                    onUpdateTitle={(id, title) => updateTask({ id, title })}
+                    onDelete={deleteTask}
+                    onDuplicate={duplicateTask}
+                    onContextMenu={(e, t) => {
+                      setContextMenuTask(t);
+                      setContextMenuPos({ x: e.clientX, y: e.clientY });
+                    }}
+                    exiting={isExiting(task.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Collapsible Completed Section */}
+            {completedLooseTasks.length > 0 && (
+              <div className={styles.completedSection}>
+                <div
+                  className={styles.completedHeader}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isCompletedOpen}
+                  aria-label={`Completed tasks (${completedLooseTasks.length})`}
+                  onClick={() => setIsCompletedOpen((prev) => !prev)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsCompletedOpen((prev) => !prev);
+                    }
+                  }}
+                >
+                  <span
+                    className={`${styles.completedCaret} ${
+                      isCompletedOpen ? styles.completedCaretOpen : ''
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </span>
+                  <span>Completed ({completedLooseTasks.length})</span>
+                </div>
+
+                {isCompletedOpen && (
+                  <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                    {completedLooseTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        depth={0}
+                        isSelected={selectedTaskId === task.id}
+                        allTaskIds={allCompletedLooseTaskIds}
+                        onSelect={(t) => onSelectTask?.(t)}
+                        onOpenDetail={(t) => onSelectTask?.(t)}
+                        onToggleComplete={toggleComplete}
+                        onToggleStar={toggleStar}
+                        onUpdateTitle={(id, title) => updateTask({ id, title })}
+                        onDelete={deleteTask}
+                        onDuplicate={duplicateTask}
+                        onContextMenu={(e, t) => {
+                          setContextMenuTask(t);
+                          setContextMenuPos({ x: e.clientX, y: e.clientY });
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 

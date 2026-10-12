@@ -14,6 +14,7 @@ export interface UseCompletionLingerResult {
   markCompleted: (id: string, task?: Task) => void;
   cancelLinger: (id: string) => void;
   withLingering: (activeTasks: Task[]) => Task[];
+  lingerVersion: number;
 }
 
 export class CompletionLingerTracker {
@@ -137,7 +138,7 @@ export function useCompletionLinger(
       : typeof window !== 'undefined' &&
         window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
 
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const trackerRef = useRef<CompletionLingerTracker | null>(null);
 
   if (!trackerRef.current) {
@@ -181,14 +182,14 @@ export function useCompletionLinger(
     () => ({
       lingeringIds: tracker.lingeringIds,
       exitingIds: tracker.exitingIds,
-      isLingering: tracker.isLingering,
-      isExiting: tracker.isExiting,
+      isLingering: (id: string) => tracker.isLingering(id),
+      isExiting: (id: string) => tracker.isExiting(id),
       markCompleted: tracker.markCompleted,
       cancelLinger: tracker.cancelLinger,
-      withLingering: tracker.withLingering,
+      withLingering: (activeTasks: Task[]) => tracker.withLingering(activeTasks),
+      lingerVersion: tick,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tracker, tracker.lingeringIds.size, tracker.exitingIds.size]
+    [tracker, tick]
   );
 }
 

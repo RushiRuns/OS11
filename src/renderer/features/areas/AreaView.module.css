@@ -192,3 +192,45 @@
   border-color: var(--accent, #1b88ff);
   color: var(--accent, #1b88ff);
 }
+
+/* Collapsible Completed Section */
+.completedSection {
+  margin-top: 14px;
+}
+
+.completedHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) 0;
+  color: var(--text-secondary, #aaa);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast, 150ms);
+}
+
+.completedHeader:hover {
+  color: var(--text-primary, #fff);
+}
+
+.completedCaret {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 160ms var(--ease-out, ease-out);
+}
+
+.completedCaretOpen {
+  transform: rotate(90deg);
+}
+
+.completedList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: var(--space-2, 8px);
+}
+

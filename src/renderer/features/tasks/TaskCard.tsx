@@ -717,10 +717,6 @@ export const TaskCard = memo(function TaskCard({
       <div
         className={styles.checkboxWrap}
         onPointerDown={e => e.stopPropagation()}
-        onClick={e => {
-          e.stopPropagation();
-          onToggleComplete?.(task.id);
-        }}
       >
         <Checkbox
           checked={task.is_completed === 1}

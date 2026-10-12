@@ -126,7 +126,11 @@ export function sortTasksWithinDay(a: Task, b: Task): number {
 /**
  * Pure function to partition active dated tasks into planned groups.
  */
-export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[] {
+export function buildPlannedGroups(
+  tasks: Task[],
+  today: string,
+  isLingering?: (id: string) => boolean
+): PlannedGroup[] {
   const todayStr = toISODateOnly(today);
   const tomorrowStr = addDaysISO(todayStr, 1);
 
@@ -139,8 +143,10 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
   const nextWeekStartStr = nextWeekRange.startISO;
   const nextWeekEndStr = nextWeekRange.endISO;
 
-  // Filter out trashed and completed tasks
-  const eligibleTasks = tasks.filter(t => t.due_date && t.is_trashed === 0 && t.is_completed === 0);
+  // Filter out trashed and completed tasks (unless currently lingering)
+  const eligibleTasks = tasks.filter(
+    (t) => t.due_date && t.is_trashed === 0 && (t.is_completed === 0 || Boolean(isLingering?.(t.id)))
+  );
 
   // Group buckets collectors
   const overdueMap = new Map<string, Task[]>(); // dateStr -> Task[]
@@ -295,10 +301,15 @@ export function buildPlannedGroups(tasks: Task[], today: string): PlannedGroup[]
   return groups;
 }
 
-export function usePlannedGroups(tasks: Task[], today: string): PlannedGroup[] {
+export function usePlannedGroups(
+  tasks: Task[],
+  today: string,
+  isLingering?: (id: string) => boolean,
+  lingerVersion?: number
+): PlannedGroup[] {
   return useMemo(() => {
-    return buildPlannedGroups(tasks, today);
-  }, [tasks, today]);
+    return buildPlannedGroups(tasks, today, isLingering);
+  }, [tasks, today, isLingering, lingerVersion]);
 }
 
 export default usePlannedGroups;

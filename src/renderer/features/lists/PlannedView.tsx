@@ -10,6 +10,7 @@ import { Toast } from '../../components/Toast/Toast.js';
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { PlannedTimeline } from './PlannedTimeline.js';
 import { PlannedMiniCalendar } from './PlannedMiniCalendar.js';
+import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
 import styles from './PlannedView.module.css';
 
 export interface PlannedViewProps {
@@ -23,6 +24,7 @@ export function PlannedView({
 }: PlannedViewProps): React.ReactElement {
   const { loadTasks, tasksById, loading } = useTaskStore();
   const plannedTasks = usePlanned();
+  const { isLingering, lingerVersion } = useCompletionLinger(plannedTasks);
   const todayStr = useToday();
 
   // Local-only view state: resets when Planned view opens
@@ -44,7 +46,7 @@ export function PlannedView({
   }, [loadTasks]);
 
   // Chronological grouping
-  const groups = usePlannedGroups(plannedTasks, todayStr);
+  const groups = usePlannedGroups(plannedTasks, todayStr, isLingering, lingerVersion);
 
   // Month grid task dots
   const dotsByDate = useCalendarDots(plannedTasks, visibleMonth);
