@@ -1,36 +1,36 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import DOMPurify from 'dompurify';
+import * as RadixPopover from '@radix-ui/react-popover';
+import * as RadixDropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as RadixTooltip from '@radix-ui/react-tooltip';
+
 import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
-import { useAreaStore } from '../../stores/areaStore.js';
 import { useGoalStore } from '../../stores/goalStore.js';
+import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { RecurrencePicker } from './RecurrencePicker.js';
-import { ReminderEditor } from './ReminderEditor.js';
-import { AttachmentStrip } from '../attachments/AttachmentStrip.js';
+import { AttachmentStrip, type AttachmentStripHandle } from '../attachments/AttachmentStrip.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
-import { Button } from '../../components/Button/Button.js';
-import { ProgressBar } from '../../components/ProgressBar/ProgressBar.js';
-import { Tooltip } from '../../components/Tooltip/Tooltip.js';
-import type { DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
-
-const DropdownMenu = React.lazy(
-  () => import('../../components/primitives/DropdownMenu/DropdownMenu.js')
-);
-const DatePicker = React.lazy(() => import('../../components/DatePicker/DatePicker.js'));
-const WaitingRow = React.lazy(() => import('./WaitingRow.js'));
-import { useModuleStore } from '../../stores/moduleStore.js';
+import { getRadixPortalContainer } from '../../components/primitives/portal.js';
 import { humanReadableRRule } from '../../../shared/utils/recurrence.js';
 import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task, TaskHistoryRecord } from '@shared/types/index.js';
 import { getTagShapeClass } from '@shared/utils/tag-shape.js';
+import {
+  fieldsWithValue,
+  hiddenFields,
+  type OptionalField,
+} from './detailFields.js';
 import styles from './DetailPanel.module.css';
+
+const DatePicker = React.lazy(() => import('../../components/DatePicker/DatePicker.js'));
 
 export interface DetailPanelProps {
   task: Task | null;
@@ -45,26 +45,154 @@ const PRIORITY_CONFIG = [
   { value: 4, label: 'Critical (P4)', color: 'var(--priority-critical)' },
 ] as const;
 
+/* --- Line SVG Icons (var(--size-icon), single-colour line in currentColor) --- */
+function CloseIconSvg() {
+  return (
+    <svg className={styles.closeIconSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function FlagIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <line x1="4" y1="22" x2="4" y2="15" />
+    </svg>
+  );
+}
+
+function CalendarIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function BellIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+function TagIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  );
+}
+
+function RepeatIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="17 1 21 5 17 9" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <polyline points="7 23 3 19 7 15" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+}
+
+function TargetIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}
+
+function HourglassIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 22h14" />
+      <path d="M5 2h14" />
+      <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+      <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+    </svg>
+  );
+}
+
+function HabitIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21.5 2v6h-6" />
+      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+    </svg>
+  );
+}
+
+function LinkIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function AttachmentIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+function PlusIconSvg({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function ChevronIconSvg({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactElement {
   const {
     updateTask,
     toggleComplete,
-    completeTask,
     createTask,
     deleteTask,
-    duplicateTask,
     setDate,
     setBucket,
     setWaiting,
     clearWaiting,
   } = useTaskStore();
-  const isEnabled = useModuleStore((s) => s.isEnabled);
   const shouldReduceMotion = useReducedMotion();
 
-  // Always bind directly to the latest state in the store by task ID
-  // This completely eliminates any stale prop issues (such as priority dropdown lag)
+  // Always bind directly to latest state in store by task ID
   const storeTask = useTaskStore((state) => (task?.id ? state.tasksById[task.id] : null));
   const currentTask = storeTask ?? task;
+
+  const isFirstMountRef = useRef(true);
+  useEffect(() => {
+    // Switch to 'switch' after initial entrance animation
+    const timer = setTimeout(() => {
+      isFirstMountRef.current = false;
+    }, 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [title, setTitle] = useState(currentTask?.title ?? '');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -72,9 +200,35 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const [isRecurrencePickerOpen, setIsRecurrencePickerOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [datePickerPos, setDatePickerPos] = useState<{ x: number; y: number } | undefined>(undefined);
-  const [history, setHistory] = useState<TaskHistoryRecord[]>([]);
+  const [isPriorityPopoverOpen, setIsPriorityPopoverOpen] = useState(false);
+  const [isGoalPopoverOpen, setIsGoalPopoverOpen] = useState(false);
+  const [isReminderPopoverOpen, setIsReminderPopoverOpen] = useState(false);
+  const [isAddPropertyMenuOpen, setIsAddPropertyMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<TaskHistoryRecord[]>([]);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Drag over panel detection for attachment drop overlay
+  const [dragDepth, setDragDepth] = useState(0);
+
+  // Prerequisite dependency picker state
+  const [selectedDepId, setSelectedDepId] = useState('');
+  const [depError, setDepError] = useState<string | null>(null);
+
+  // Reminders state
+  interface ReminderItem {
+    id: string;
+    remind_at: string;
+  }
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
+  const [reminderCustomDate, setReminderCustomDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [reminderCustomTime, setReminderCustomTime] = useState('09:00');
+
+  const attachmentStripRef = useRef<AttachmentStripHandle>(null);
+  const storedAttachmentCount = useAttachmentStore(
+    (s) => (currentTask?.id ? s.countsByTaskId[currentTask.id] : 0) ?? 0
+  );
+  const [attachmentsCount, setAttachmentsCount] = useState(storedAttachmentCount);
 
   const prevTaskIdRef = useRef<string | null>(null);
   const isTitleFocusedRef = useRef(false);
@@ -86,11 +240,6 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const allTasks = useTaskStore((state) => state.tasksById);
   const { dependenciesByTaskId, loadDependenciesForTask, addDependency, removeDependency } =
     useProjectStore();
-  const projectsById = useProjectStore((state) => state.projectsById);
-  const areasById = useAreaStore((state) => state.areasById);
-
-  const [selectedDepId, setSelectedDepId] = useState('');
-  const [depError, setDepError] = useState<string | null>(null);
 
   const taskDependencies = currentTask ? dependenciesByTaskId[currentTask.id] ?? [] : [];
 
@@ -104,6 +253,18 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     }
     return null;
   }, [linksByGoalId, goalsById, currentTask]);
+
+  // Load reminders for task
+  const loadReminders = useCallback(async (taskId: string) => {
+    try {
+      const data = await ipc.invoke<ReminderItem[]>(IPC.REMINDERS.GET_BY_TASK, taskId);
+      if (Array.isArray(data)) {
+        setReminders(data);
+      }
+    } catch {
+      setReminders([]);
+    }
+  }, []);
 
   // TipTap Rich Text Editor for Notes
   const editor = useEditor({
@@ -128,8 +289,10 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
       prevTaskIdRef.current = currentTask.id;
       loadTagsForTask(currentTask.id);
       loadDependenciesForTask(currentTask.id);
+      loadReminders(currentTask.id);
       setSelectedDepId('');
       setDepError(null);
+      setIsHistoryOpen(false);
 
       if (editor && editor.getHTML() !== (currentTask.notes ?? '')) {
         editor.commands.setContent(currentTask.notes ?? '');
@@ -145,15 +308,32 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           setHistory([]);
         });
     } else if (!isTitleFocusedRef.current && currentTask.title !== title) {
-      // Sync external title change when not actively focused
       setTitle(currentTask.title);
     }
-  }, [currentTask, editor, loadTagsForTask, loadDependenciesForTask, title]);
+  }, [currentTask, editor, loadTagsForTask, loadDependenciesForTask, loadReminders, title]);
 
-  // Close panel on Escape
+  // Keyboard navigation & Esc hierarchy
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (e.defaultPrevented) return;
+
+        if (isPriorityPopoverOpen) {
+          setIsPriorityPopoverOpen(false);
+          return;
+        }
+        if (isGoalPopoverOpen) {
+          setIsGoalPopoverOpen(false);
+          return;
+        }
+        if (isReminderPopoverOpen) {
+          setIsReminderPopoverOpen(false);
+          return;
+        }
+        if (isAddPropertyMenuOpen) {
+          setIsAddPropertyMenuOpen(false);
+          return;
+        }
         if (isDatePickerOpen) {
           setIsDatePickerOpen(false);
           return;
@@ -171,27 +351,61 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, isDatePickerOpen, isTagPickerOpen, isRecurrencePickerOpen]);
+  }, [
+    onClose,
+    isPriorityPopoverOpen,
+    isGoalPopoverOpen,
+    isReminderPopoverOpen,
+    isAddPropertyMenuOpen,
+    isDatePickerOpen,
+    isTagPickerOpen,
+    isRecurrencePickerOpen,
+  ]);
 
-  // Breadcrumb information (Area / Project name)
-  const breadcrumbName = useMemo(() => {
-    if (!currentTask) return '📥 Inbox';
-    const area = currentTask.area_id ? areasById[currentTask.area_id] : null;
-    const project = currentTask.project_id ? projectsById[currentTask.project_id] : null;
+  /* --- On-Demand Fields Engine --- */
+  const currentFieldValues = useMemo(
+    () =>
+      fieldsWithValue(currentTask, {
+        hasGoal: Boolean(linkedGoal),
+        hasDependencies: taskDependencies.length > 0,
+        hasAttachments: attachmentsCount > 0,
+      }),
+    [currentTask, linkedGoal, taskDependencies.length, attachmentsCount]
+  );
 
-    if (area && project) {
-      return `${area.icon || '📁'} ${area.name} / ${project.icon || '📁'} ${project.name}`;
-    }
-    if (project) {
-      return `${project.icon || '📁'} ${project.name}`;
-    }
-    if (area) {
-      return `${area.icon || '📁'} ${area.name} (Loose)`;
-    }
-    return '📥 Inbox';
-  }, [currentTask, projectsById, areasById]);
+  const [sticky, setSticky] = useState<Set<OptionalField>>(() => currentFieldValues);
 
-  // Due date status formatting
+  // Synchronously reset sticky state when task id changes
+  const prevTaskIdForStickyRef = useRef(currentTask?.id);
+  if (currentTask && prevTaskIdForStickyRef.current !== currentTask.id) {
+    prevTaskIdForStickyRef.current = currentTask.id;
+    setSticky(currentFieldValues);
+  }
+
+  // Keep newly populated fields sticky so clearing value doesn't hide them mid-edit
+  useEffect(() => {
+    if (currentFieldValues.size > 0) {
+      setSticky((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const f of currentFieldValues) {
+          if (!next.has(f)) {
+            next.add(f);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [currentFieldValues]);
+
+  const visibleFields = useMemo(() => {
+    return new Set<OptionalField>([...sticky, ...currentFieldValues]);
+  }, [sticky, currentFieldValues]);
+
+  const hiddenOptionalFields = useMemo(() => hiddenFields(visibleFields), [visibleFields]);
+
+  // Due date formatting
   const dueDateInfo = useMemo(() => {
     if (!currentTask?.due_date) return null;
 
@@ -202,12 +416,10 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
     let label = dateStr;
-    let isToday = false;
     let isOverdue = false;
 
     if (dateStr === todayStr) {
       label = 'Today';
-      isToday = true;
     } else if (dateStr === tomorrowStr) {
       label = 'Tomorrow';
     } else {
@@ -235,7 +447,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
       }
     }
 
-    return { label, isToday, isOverdue };
+    return { label, isOverdue };
   }, [currentTask?.due_date, currentTask?.due_time, currentTask?.all_day, currentTask?.is_completed]);
 
   if (!currentTask) {
@@ -251,8 +463,9 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
 
   const handleTitleBlur = () => {
     isTitleFocusedRef.current = false;
-    if (title.trim() && title.trim() !== currentTask.title) {
-      updateTask({ id: currentTask.id, title: title.trim() });
+    const cleanTitle = title.trim();
+    if (cleanTitle && cleanTitle !== currentTask.title) {
+      updateTask({ id: currentTask.id, title: cleanTitle });
     } else {
       setTitle(currentTask.title);
     }
@@ -271,6 +484,55 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     }
   };
 
+  // Drag overlay events on the panel
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault();
+      setDragDepth((prev) => prev + 1);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault();
+      setDragDepth((prev) => Math.max(0, prev - 1));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    setDragDepth(0);
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const filePath = (file as unknown as { path?: string }).path;
+      if (filePath) {
+        try {
+          await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, {
+            taskId: currentTask.id,
+            sourcePath: filePath,
+          });
+        } catch (err) {
+          console.error('Failed to upload dropped file', err);
+        }
+      }
+    }
+
+    setSticky((prev) => new Set([...prev, 'attachments']));
+    attachmentStripRef.current?.refresh();
+  };
+
   const handlePaste = async (e: React.ClipboardEvent) => {
     if (!currentTask) return;
     const items = e.clipboardData?.items;
@@ -283,7 +545,12 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           const filePath = (file as unknown as { path?: string }).path;
           if (filePath) {
             try {
-              await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, { taskId: currentTask.id, sourcePath: filePath });
+              await ipc.invoke(IPC.ATTACHMENTS.UPLOAD, {
+                taskId: currentTask.id,
+                sourcePath: filePath,
+              });
+              setSticky((prev) => new Set([...prev, 'attachments']));
+              attachmentStripRef.current?.refresh();
             } catch (err) {
               console.error('Failed to upload pasted image', err);
             }
@@ -293,156 +560,98 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
     }
   };
 
-  const isMyDay = Boolean(currentTask.my_day_date);
-  const completedSubtasksCount = subtasks.filter((s) => s.is_completed === 1).length;
-  const subtaskProgress =
-    subtasks.length > 0 ? (completedSubtasksCount / subtasks.length) * 100 : 0;
+  const handleSelectOptionalField = (field: OptionalField) => {
+    setSticky((prev) => new Set([...prev, field]));
+    // Open the field's picker after grow transition
+    setTimeout(() => {
+      switch (field) {
+        case 'repeat':
+          setIsRecurrencePickerOpen(true);
+          break;
+        case 'goal':
+          setIsGoalPopoverOpen(true);
+          break;
+        case 'waitingFor': {
+          const person = prompt('Waiting on whom or what?');
+          if (person && person.trim()) {
+            setWaiting({ taskId: currentTask.id, waitingOn: person.trim() });
+          }
+          break;
+        }
+        case 'habit':
+          updateTask({ id: currentTask.id, is_habit: 1 });
+          break;
+        case 'attachments':
+          attachmentStripRef.current?.pickAndUpload();
+          break;
+        default:
+          break;
+      }
+    }, 240);
+  };
 
   const currentPriorityConfig =
     PRIORITY_CONFIG.find((p) => p.value === currentTask.priority) ?? PRIORITY_CONFIG[0];
 
-  // Priority Dropdown items
-  const priorityMenuItems: (DropdownMenuItemConfig | 'separator')[] = PRIORITY_CONFIG.map((opt) => ({
-    id: `p-${opt.value}`,
-    label: opt.label,
-    icon: (
-      <span
-        className={`${styles.priorityDot} ${opt.value === 4 ? styles.priorityCriticalPulse : ''}`}
-        style={{ backgroundColor: opt.color }}
-      />
-    ),
-    onClick: () => {
-      updateTask({
-        id: currentTask.id,
-        priority: opt.value,
-      });
-    },
-  }));
-
-  // More actions dropdown items
-  const moreActionsItems: (DropdownMenuItemConfig | 'separator')[] = [
-    {
-      id: 'toggle-my-day',
-      label: isMyDay ? 'Remove from My Day' : 'Add to My Day',
-      icon: <span>☀️</span>,
-      onClick: () => {
-        const today = new Date().toISOString().split('T')[0];
-        updateTask({
-          id: currentTask.id,
-          my_day_date: isMyDay ? null : today,
-        });
-      },
-    },
-    {
-      id: 'toggle-habit',
-      label: currentTask.is_habit === 1 ? 'Unmark as Habit' : 'Mark as Habit',
-      icon: <span>🔁</span>,
-      onClick: () => {
-        updateTask({
-          id: currentTask.id,
-          is_habit: currentTask.is_habit === 1 ? 0 : 1,
-        });
-      },
-    },
-    {
-      id: 'duplicate',
-      label: 'Duplicate Task',
-      icon: <span>📋</span>,
-      onClick: async () => {
-        await duplicateTask(currentTask.id);
-      },
-    },
-    'separator',
-    {
-      id: 'delete',
-      label: 'Delete Task',
-      icon: <span>🗑️</span>,
-      danger: true,
-      onClick: async () => {
-        if (confirm('Delete this task?')) {
-          await deleteTask(currentTask.id);
-          onClose();
-        }
-      },
-    },
-  ];
+  const portalContainer = getRadixPortalContainer();
 
   return (
     <motion.aside
       className={styles.panelContainer}
       aria-label="Task Detail Panel"
       onPaste={handlePaste}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       initial={shouldReduceMotion ? false : { x: 30, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={shouldReduceMotion ? undefined : { x: 30, opacity: 0 }}
       transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Top Header */}
-      <div className={styles.header}>
-        <div className={styles.breadcrumbBadge} title={breadcrumbName}>
-          <span>{breadcrumbName}</span>
+      {/* Drag Overlay */}
+      {dragDepth > 0 && (
+        <div className={styles.dropOverlay}>
+          <span>Drop to attach</span>
         </div>
+      )}
 
-        <div className={styles.headerActions}>
-          {/* Star Toggle */}
-          <Tooltip content={currentTask.is_starred === 1 ? 'Unstar task' : 'Star task'}>
-            <motion.button
-              type="button"
-              className={`${styles.actionBtn} ${currentTask.is_starred === 1 ? styles.starBtnActive : ''}`}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.88 }}
-              onClick={() =>
-                updateTask({
-                  id: currentTask.id,
-                  is_starred: currentTask.is_starred === 1 ? 0 : 1,
-                })
-              }
-              aria-label="Toggle star"
-            >
-              ★
-            </motion.button>
-          </Tooltip>
-
-          {/* More Actions Menu */}
-          <React.Suspense
-            fallback={
-              <button type="button" className={styles.actionBtn} aria-label="More actions">
-                •••
-              </button>
-            }
-          >
-            <DropdownMenu
-              trigger={
-                <button type="button" className={styles.actionBtn} aria-label="More actions">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="5" r="2" />
-                    <circle cx="12" cy="12" r="2" />
-                    <circle cx="12" cy="19" r="2" />
-                  </svg>
+      <div
+        key={currentTask.id}
+        className={styles.body}
+        data-entrance={isFirstMountRef.current ? 'open' : 'switch'}
+      >
+        {/* Block 0: Header with Close Icon only */}
+        <div className={`${styles.headerRow} ${styles.block}`} style={{ '--i': 0 } as React.CSSProperties}>
+          <RadixTooltip.Provider delayDuration={300}>
+            <RadixTooltip.Root>
+              <RadixTooltip.Trigger asChild>
+                <button
+                  type="button"
+                  className={styles.closeBtn}
+                  onClick={onClose}
+                  aria-label="Close task details"
+                >
+                  <CloseIconSvg />
                 </button>
-              }
-              items={moreActionsItems}
-              align="end"
-            />
-          </React.Suspense>
-
-          {/* Close Panel Button */}
-          <Tooltip content="Close (Esc)">
-            <button
-              type="button"
-              className={styles.actionBtn}
-              onClick={onClose}
-              aria-label="Close detail panel"
-            >
-              ✕
-            </button>
-          </Tooltip>
+              </RadixTooltip.Trigger>
+              <RadixTooltip.Portal container={portalContainer}>
+                <RadixTooltip.Content
+                  className={styles.glassContent}
+                  side="bottom"
+                  sideOffset={4}
+                >
+                  <span className={styles.tooltipText}>
+                    Close (Esc)
+                  </span>
+                </RadixTooltip.Content>
+              </RadixTooltip.Portal>
+            </RadixTooltip.Root>
+          </RadixTooltip.Provider>
         </div>
-      </div>
 
-      <div className={styles.content}>
-        {/* Title & Completion Hero */}
-        <div className={styles.heroSection}>
+        {/* Block 1: Title with Checkbox */}
+        <div className={`${styles.titleBlock} ${styles.block}`} style={{ '--i': 0 } as React.CSSProperties}>
           <div className={styles.checkboxWrapper}>
             <Checkbox
               checked={currentTask.is_completed === 1}
@@ -450,254 +659,264 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
               ariaLabel="Complete task"
             />
           </div>
-
-          <div className={styles.titleArea}>
-            <input
-              type="text"
-              className={`${styles.titleInput} ${
-                currentTask.is_completed === 1 ? styles.titleCompleted : ''
-              }`}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onFocus={() => {
-                isTitleFocusedRef.current = true;
-              }}
-              onBlur={handleTitleBlur}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLElement).blur();
-              }}
-              placeholder="Task title..."
-            />
-
-            {currentTask.is_completed === 1 && (
-              <span className={styles.statusIndicator}>
-                <span>✓ Completed</span>
-              </span>
-            )}
-          </div>
+          <textarea
+            rows={1}
+            className={`${styles.titleTextarea} ${
+              currentTask.is_completed === 1 ? styles.titleCompleted : ''
+            }`}
+            value={title}
+            onChange={(e) => setTitle(e.target.value.replace(/[\r\n]+/g, ' '))}
+            onFocus={() => {
+              isTitleFocusedRef.current = true;
+            }}
+            onBlur={handleTitleBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                (e.target as HTMLElement).blur();
+              }
+            }}
+            placeholder="Task title..."
+            aria-label="Task title"
+          />
         </div>
 
-        {/* Properties Matrix (Linear / Notion Style) */}
-        <div className={styles.propertiesCard}>
-          {/* Priority Row */}
-          <div className={styles.propertyRow}>
-            <span className={styles.propertyLabel}>
-              <span style={{ fontSize: '13px' }}>🚩</span> Priority
-            </span>
-            <div className={styles.propertyControl}>
-              <React.Suspense
-                fallback={
-                  <button type="button" className={styles.priorityPill}>
-                    <span
-                      className={styles.priorityDot}
-                      style={{ backgroundColor: currentPriorityConfig.color }}
-                    />
-                    <span>{currentPriorityConfig.label}</span>
-                  </button>
-                }
+        {/* Block 2: Properties Block */}
+        <div className={`${styles.propertiesBlock} ${styles.block}`} style={{ '--i': 1 } as React.CSSProperties}>
+          {/* Priority Row (Always) */}
+          <RadixPopover.Root open={isPriorityPopoverOpen} onOpenChange={setIsPriorityPopoverOpen}>
+            <RadixPopover.Trigger asChild>
+              <div
+                className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+                role="button"
+                tabIndex={0}
+                aria-label="Priority"
               >
-                <DropdownMenu
-                  trigger={
-                    <button
-                      type="button"
-                      className={`${styles.priorityPill} ${
-                        currentTask.priority === 4 ? styles.priorityCriticalGlow : ''
-                      }`}
-                      aria-label="Change priority"
-                    >
-                      <span
-                        className={`${styles.priorityDot} ${
-                          currentTask.priority === 4 ? styles.priorityCriticalPulse : ''
-                        }`}
-                        style={{ backgroundColor: currentPriorityConfig.color }}
-                      />
-                      <span>{currentPriorityConfig.label}</span>
-                      <span className={styles.chevron}>▾</span>
-                    </button>
-                  }
-                  items={priorityMenuItems}
-                  align="end"
-                />
-              </React.Suspense>
-            </div>
-          </div>
-
-          {/* When (Due Date / Anytime / Someday) Row */}
-          <div className={styles.propertyRow}>
-            <span className={styles.propertyLabel}>
-              <span style={{ fontSize: '13px' }}>📅</span> When
-            </span>
-            <div className={styles.propertyControl}>
-              {currentTask.bucket ? (
-                <div
-                  className={`${styles.datePill} ${
-                    currentTask.bucket === 'anytime' ? styles.bucketAnytime : styles.bucketSomeday
-                  }`}
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setDatePickerPos({ x: Math.max(10, rect.left - 260), y: rect.bottom + 8 });
-                    setIsDatePickerOpen(true);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <span>{currentTask.bucket === 'anytime' ? '⚡ Anytime' : '📦 Someday'}</span>
-                  <span
-                    className={styles.clearMiniBtn}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBucket(currentTask.id, null);
-                    }}
-                    title={`Clear ${currentTask.bucket}`}
-                    role="button"
-                    aria-label={`Clear ${currentTask.bucket}`}
-                  >
-                    ✕
-                  </span>
+                <div className={styles.propertyLabel}>
+                  <FlagIconSvg />
+                  <span>Priority</span>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className={`${styles.datePill} ${
-                    dueDateInfo?.isOverdue
-                      ? styles.dateOverdue
-                      : dueDateInfo?.isToday
-                        ? styles.dateToday
-                        : ''
-                  }`}
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setDatePickerPos({ x: Math.max(10, rect.left - 260), y: rect.bottom + 8 });
-                    setIsDatePickerOpen(true);
-                  }}
-                >
-                  <span>{dueDateInfo ? dueDateInfo.label : 'Set date or bucket'}</span>
-                  {dueDateInfo && (
+                <div className={styles.propertyValue}>
+                  <span
+                    className={`${styles.priorityDot} ${styles['priorityDot' + currentTask.priority]} ${
+                      currentTask.priority === 4 ? styles.priorityCriticalPulse : ''
+                    }`}
+                  />
+                  <span>{currentPriorityConfig.label}</span>
+                </div>
+              </div>
+            </RadixPopover.Trigger>
+            <RadixPopover.Portal container={portalContainer}>
+              <RadixPopover.Content
+                className={styles.glassContent}
+                align="start"
+                side="bottom"
+                sideOffset={4}
+              >
+                {PRIORITY_CONFIG.map((opt) => (
+                  <div
+                    key={opt.value}
+                    className={styles.glassItem}
+                    onClick={() => {
+                      updateTask({ id: currentTask.id, priority: opt.value });
+                      setIsPriorityPopoverOpen(false);
+                    }}
+                    role="option"
+                    aria-selected={currentTask.priority === opt.value}
+                  >
                     <span
-                      className={styles.clearMiniBtn}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDate({
-                          taskId: currentTask.id,
-                          dueDate: null,
-                          dueTime: null,
-                          allDay: false,
-                        });
-                      }}
-                      title="Clear due date"
-                      role="button"
-                      aria-label="Clear due date"
-                    >
-                      ✕
-                    </span>
-                  )}
-                </button>
+                      className={`${styles.priorityDot} ${styles['priorityDot' + opt.value]}`}
+                    />
+                    <span>{opt.label}</span>
+                    {currentTask.priority === opt.value && (
+                      <span className={styles.glassItemCheck}>✓</span>
+                    )}
+                  </div>
+                ))}
+              </RadixPopover.Content>
+            </RadixPopover.Portal>
+          </RadixPopover.Root>
+
+          {/* When Row (Always) */}
+          <div
+            className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setDatePickerPos({ x: Math.max(10, rect.left), y: rect.bottom + 6 });
+              setIsDatePickerOpen(true);
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="When"
+          >
+            <div className={styles.propertyLabel}>
+              <CalendarIconSvg />
+              <span>When</span>
+            </div>
+            <div className={styles.propertyValue}>
+              {currentTask.bucket ? (
+                <span className={styles.propertyValue}>
+                  {currentTask.bucket === 'anytime' ? 'Anytime' : 'Someday'}
+                </span>
+              ) : dueDateInfo ? (
+                <span
+                  className={`${styles.propertyValue} ${
+                    dueDateInfo.isOverdue ? styles.valueOverdue : ''
+                  }`}
+                >
+                  {dueDateInfo.label}
+                </span>
+              ) : (
+                <span className={`${styles.propertyValue} ${styles.valueEmpty}`}>
+                  Set date
+                </span>
               )}
             </div>
           </div>
 
-          {/* Waiting For Row (gated by waiting_for module) */}
-          {isEnabled('waiting_for') && (
-            <React.Suspense fallback={null}>
-              <WaitingRow
-                task={currentTask}
-                onUpdateWaiting={(waitingOn, followUpDate) =>
-                  setWaiting({ taskId: currentTask.id, waitingOn, followUpDate })
-                }
-                onClearWaiting={() => clearWaiting(currentTask.id)}
-              />
-            </React.Suspense>
-          )}
-
-          {/* Repeat / Recurrence Row */}
+          {/* Reminders Row (Always) */}
           <div className={styles.propertyRow}>
-            <span className={styles.propertyLabel}>
-              <span style={{ fontSize: '13px' }}>🔁</span> Repeat
-            </span>
-            <div className={styles.propertyControl}>
-              <button
-                type="button"
-                className={styles.propertyPill}
-                onClick={() => setIsRecurrencePickerOpen(true)}
-              >
-                <span>
-                  {currentTask.recurrence_rule
-                    ? humanReadableRRule(currentTask.recurrence_rule)
-                    : 'Does not repeat'}
-                </span>
-                {currentTask.recurrence_rule && (
-                  <span
-                    className={styles.clearMiniBtn}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateTask({
-                        id: currentTask.id,
-                        recurrence_rule: null,
-                        recurrence_basis: null,
-                      });
-                    }}
-                    title="Remove recurrence"
-                    role="button"
-                    aria-label="Remove recurrence"
-                  >
-                    ✕
-                  </span>
-                )}
-              </button>
+            <div className={styles.propertyLabel}>
+              <BellIconSvg />
+              <span>Reminders</span>
+            </div>
+            <div className={styles.propertyValue}>
+              <div className={styles.chipsContainer}>
+                {reminders.map((r) => {
+                  const d = new Date(r.remind_at);
+                  const label = d.toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  });
+                  return (
+                    <span key={r.id} className={`${styles.chip} ${styles.chipEnter}`}>
+                      <span className={styles.chipText}>{label}</span>
+                      <button
+                        type="button"
+                        className={styles.chipRemoveBtn}
+                        onClick={async () => {
+                          try {
+                            await ipc.invoke(IPC.REMINDERS.DELETE, r.id);
+                            loadReminders(currentTask.id);
+                          } catch (err) {
+                            console.error('Delete reminder failed', err);
+                          }
+                        }}
+                        aria-label={`Remove reminder ${label}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+
+                <RadixPopover.Root open={isReminderPopoverOpen} onOpenChange={setIsReminderPopoverOpen}>
+                  <RadixPopover.Trigger asChild>
+                    <button type="button" className={styles.addChipBtn} aria-label="Add reminder">
+                      + Add
+                    </button>
+                  </RadixPopover.Trigger>
+                  <RadixPopover.Portal container={portalContainer}>
+                    <RadixPopover.Content
+                      className={styles.glassContent}
+                      align="start"
+                      side="bottom"
+                      sideOffset={4}
+                    >
+                      <div className={styles.reminderPopoverBody}>
+                        {/* Presets */}
+                        <div
+                          className={styles.glassItem}
+                          onClick={async () => {
+                            const now = Date.now();
+                            const target = new Date(now + 60 * 60 * 1000).toISOString();
+                            await ipc.invoke(IPC.REMINDERS.SET, {
+                              task_id: currentTask.id,
+                              remind_at: target,
+                            });
+                            await loadReminders(currentTask.id);
+                            setIsReminderPopoverOpen(false);
+                          }}
+                        >
+                          <span>1 hour before</span>
+                        </div>
+                        <div
+                          className={styles.glassItem}
+                          onClick={async () => {
+                            const now = Date.now();
+                            const target = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+                            await ipc.invoke(IPC.REMINDERS.SET, {
+                              task_id: currentTask.id,
+                              remind_at: target,
+                            });
+                            await loadReminders(currentTask.id);
+                            setIsReminderPopoverOpen(false);
+                          }}
+                        >
+                          <span>1 day before</span>
+                        </div>
+
+                        <div className={styles.reminderInputsRow}>
+                          <input
+                            type="date"
+                            className={styles.reminderInput}
+                            value={reminderCustomDate}
+                            onChange={(e) => setReminderCustomDate(e.target.value)}
+                            aria-label="Reminder date"
+                          />
+                          <input
+                            type="time"
+                            className={styles.reminderInput}
+                            value={reminderCustomTime}
+                            onChange={(e) => setReminderCustomTime(e.target.value)}
+                            aria-label="Reminder time"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.reminderAddBtn}
+                          onClick={async () => {
+                            if (!reminderCustomDate || !reminderCustomTime) return;
+                            const iso = new Date(`${reminderCustomDate}T${reminderCustomTime}:00`).toISOString();
+                            await ipc.invoke(IPC.REMINDERS.SET, {
+                              task_id: currentTask.id,
+                              remind_at: iso,
+                            });
+                            await loadReminders(currentTask.id);
+                            setIsReminderPopoverOpen(false);
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </RadixPopover.Content>
+                  </RadixPopover.Portal>
+                </RadixPopover.Root>
+              </div>
             </div>
           </div>
 
-          {/* Goal Link Row */}
+          {/* Tags Row (Always) */}
           <div className={styles.propertyRow}>
-            <span className={styles.propertyLabel}>
-              <span style={{ fontSize: '13px' }}>🎯</span> Goal
-            </span>
-            <div className={styles.propertyControl}>
-              <select
-                className={styles.propertySelect}
-                value={linkedGoal?.id || ''}
-                onChange={(e) => {
-                  const nextGoalId = e.target.value;
-                  if (linkedGoal) {
-                    unlinkTask(linkedGoal.id, currentTask.id);
-                  }
-                  if (nextGoalId) {
-                    linkTask(nextGoalId, currentTask.id);
-                  }
-                }}
-              >
-                <option value="">None (No Goal)</option>
-                {Object.values(goalsById)
-                  .filter((g) => g.status !== 'archived' || g.id === linkedGoal?.id)
-                  .map((g) => (
-                    <option key={g.id} value={g.id}>
-                      🎯 {g.title}{g.category ? ` [${g.category}]` : ''}
-                    </option>
-                  ))}
-              </select>
+            <div className={styles.propertyLabel}>
+              <TagIconSvg />
+              <span>Tags</span>
             </div>
-          </div>
-
-          {/* Tags Row */}
-          <div className={styles.propertyRow}>
-            <span className={styles.propertyLabel}>
-              <span style={{ fontSize: '13px' }}>🏷️</span> Tags
-            </span>
-            <div className={styles.propertyControl}>
-              <div className={styles.tagsList}>
+            <div className={styles.propertyValue}>
+              <div className={styles.chipsContainer}>
                 {taskTags.map((tag) => (
-                  <span key={tag.id} className={styles.tagChip}>
+                  <span key={tag.id} className={`${styles.chip} ${styles.chipEnter}`}>
                     <span
-                      className={`${getTagShapeClass(tag.id || tag.name)} ${styles.tagDot}`}
-                      style={{ background: tag.color ?? 'var(--tag-gray)' }}
+                      className={`${getTagShapeClass(tag.id || tag.name)} ${styles.tagShapeDot}`}
                       aria-hidden="true"
                     />
-                    <span>#{tag.name}</span>
+                    <span className={styles.chipText}>#{tag.name}</span>
                     <button
                       type="button"
-                      className={styles.tagRemoveBtn}
+                      className={styles.chipRemoveBtn}
                       onClick={() => removeTagFromTask(currentTask.id, tag.id)}
-                      title="Remove tag"
                       aria-label={`Remove tag ${tag.name}`}
                     >
                       ×
@@ -706,8 +925,9 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                 ))}
                 <button
                   type="button"
-                  className={styles.addTagBtn}
+                  className={styles.addChipBtn}
                   onClick={() => setIsTagPickerOpen(true)}
+                  aria-label="Add tag"
                 >
                   + Tag
                 </button>
@@ -715,390 +935,396 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
             </div>
           </div>
 
-          {/* Quick Toggles Row (Star, My Day, Habit) */}
-          <div className={styles.quickTogglesRow}>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.94 }}
-              className={`${styles.quickToggleChip} ${
-                currentTask.is_starred === 1 ? styles.quickToggleStarActive : ''
-              }`}
-              onClick={() =>
-                updateTask({
-                  id: currentTask.id,
-                  is_starred: currentTask.is_starred === 1 ? 0 : 1,
-                })
-              }
-            >
-              <span>★</span>
-              <span>{currentTask.is_starred === 1 ? 'Starred' : 'Star'}</span>
-            </motion.button>
+          {/* On-Demand Rows (Fixed order: Repeat, Goal, Waiting For, Habit, Depends On) */}
 
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.94 }}
-              className={`${styles.quickToggleChip} ${isMyDay ? styles.quickToggleDayActive : ''}`}
-              onClick={() => {
-                const today = new Date().toISOString().split('T')[0];
-                updateTask({
-                  id: currentTask.id,
-                  my_day_date: isMyDay ? null : today,
-                });
+          {/* Repeat Row */}
+          {visibleFields.has('repeat') && (
+            <div
+              className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+              onClick={() => setIsRecurrencePickerOpen(true)}
+              role="button"
+              tabIndex={0}
+              aria-label="Repeat"
+            >
+              <div className={styles.propertyLabel}>
+                <RepeatIconSvg />
+                <span>Repeat</span>
+              </div>
+              <div className={styles.propertyValue}>
+                {currentTask.recurrence_rule ? (
+                  <span>{humanReadableRRule(currentTask.recurrence_rule)}</span>
+                ) : (
+                  <span className={styles.valueEmpty}>Does not repeat</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Goal Row */}
+          {visibleFields.has('goal') && (
+            <RadixPopover.Root open={isGoalPopoverOpen} onOpenChange={setIsGoalPopoverOpen}>
+              <RadixPopover.Trigger asChild>
+                <div
+                  className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Goal"
+                >
+                  <div className={styles.propertyLabel}>
+                    <TargetIconSvg />
+                    <span>Goal</span>
+                  </div>
+                  <div className={styles.propertyValue}>
+                    {linkedGoal ? (
+                      <span>{linkedGoal.title}</span>
+                    ) : (
+                      <span className={styles.valueEmpty}>None (No Goal)</span>
+                    )}
+                  </div>
+                </div>
+              </RadixPopover.Trigger>
+              <RadixPopover.Portal container={portalContainer}>
+                <RadixPopover.Content
+                  className={`${styles.glassContent} ${styles.goalDropdownContent}`}
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                >
+                  <div
+                    className={styles.glassItem}
+                    onClick={() => {
+                      if (linkedGoal) unlinkTask(linkedGoal.id, currentTask.id);
+                      setIsGoalPopoverOpen(false);
+                    }}
+                  >
+                    <span>None (No Goal)</span>
+                    {!linkedGoal && <span className={styles.glassItemCheck}>✓</span>}
+                  </div>
+                  {Object.values(goalsById)
+                    .filter((g) => g.status !== 'archived' || g.id === linkedGoal?.id)
+                    .map((g) => (
+                      <div
+                        key={g.id}
+                        className={styles.glassItem}
+                        onClick={() => {
+                          if (linkedGoal) unlinkTask(linkedGoal.id, currentTask.id);
+                          linkTask(g.id, currentTask.id);
+                          setIsGoalPopoverOpen(false);
+                        }}
+                      >
+                        <span className={styles.chipText}>
+                          {g.title}
+                          {g.category ? ` [${g.category}]` : ''}
+                        </span>
+                        {linkedGoal?.id === g.id && <span className={styles.glassItemCheck}>✓</span>}
+                      </div>
+                    ))}
+                </RadixPopover.Content>
+              </RadixPopover.Portal>
+            </RadixPopover.Root>
+          )}
+
+          {/* Waiting For Row */}
+          {visibleFields.has('waitingFor') && (
+            <div
+              className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+              onClick={async () => {
+                if (currentTask.waiting_on) {
+                  if (confirm(`Clear waiting status (${currentTask.waiting_on})?`)) {
+                    await clearWaiting(currentTask.id);
+                  }
+                } else {
+                  const person = prompt('Waiting on whom or what?');
+                  if (person && person.trim()) {
+                    await setWaiting({ taskId: currentTask.id, waitingOn: person.trim() });
+                  }
+                }
               }}
+              role="button"
+              tabIndex={0}
+              aria-label="Waiting For"
             >
-              <span>☀️</span>
-              <span>{isMyDay ? 'In My Day' : 'Add to My Day'}</span>
-            </motion.button>
+              <div className={styles.propertyLabel}>
+                <HourglassIconSvg />
+                <span>Waiting For</span>
+              </div>
+              <div className={styles.propertyValue}>
+                {currentTask.waiting_on ? (
+                  <span>
+                    {currentTask.waiting_on}
+                    {currentTask.follow_up_date && ` (Until ${currentTask.follow_up_date})`}
+                  </span>
+                ) : (
+                  <span className={styles.valueEmpty}>Mark waiting</span>
+                )}
+              </div>
+            </div>
+          )}
 
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.94 }}
-              className={`${styles.quickToggleChip} ${
-                currentTask.is_habit === 1 ? styles.quickToggleHabitActive : ''
-              }`}
-              onClick={() =>
-                updateTask({
-                  id: currentTask.id,
-                  is_habit: currentTask.is_habit === 1 ? 0 : 1,
-                })
-              }
+          {/* Habit Row */}
+          {visibleFields.has('habit') && (
+            <div className={styles.propertyRow}>
+              <div className={styles.propertyLabel}>
+                <HabitIconSvg />
+                <span>Habit</span>
+              </div>
+              <div className={styles.propertyValue}>
+                <button
+                  type="button"
+                  className={`${styles.habitToggleBtn} ${
+                    currentTask.is_habit === 1 ? styles.habitActive : ''
+                  }`}
+                  onClick={() =>
+                    updateTask({
+                      id: currentTask.id,
+                      is_habit: currentTask.is_habit === 1 ? 0 : 1,
+                    })
+                  }
+                  aria-label="Toggle habit"
+                >
+                  <span>{currentTask.is_habit === 1 ? 'Habit On' : 'Habit Off'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Depends On Row */}
+          {visibleFields.has('dependsOn') && (
+            <div className={styles.propertyRow}>
+              <div className={styles.propertyLabel}>
+                <LinkIconSvg />
+                <span>Depends On</span>
+              </div>
+              <div className={styles.propertyValue}>
+                <div className={styles.chipsContainer}>
+                  {taskDependencies.map((depId) => {
+                    const depTask = allTasks[depId];
+                    return (
+                      <span key={depId} className={`${styles.chip} ${styles.chipEnter}`}>
+                        <span className={styles.chipText}>
+                          {depTask ? depTask.title : `Task (${depId})`}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.chipRemoveBtn}
+                          onClick={() => removeDependency(currentTask.id, depId)}
+                          aria-label="Remove dependency"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+
+                  {/* Prerequisite Task Adder */}
+                  <select
+                    className={`${styles.addChipBtn} ${styles.depSelect}`}
+                    value={selectedDepId}
+                    onChange={async (e) => {
+                      const depId = e.target.value;
+                      if (!depId) return;
+                      try {
+                        await addDependency(currentTask.id, depId);
+                        setSelectedDepId('');
+                      } catch (err) {
+                        setDepError(err instanceof Error ? err.message : String(err));
+                      }
+                    }}
+                    aria-label="Add prerequisite task"
+                  >
+                    <option value="">+ Add Prerequisite...</option>
+                    {Object.values(allTasks)
+                      .filter(
+                        (t) =>
+                          t.id !== currentTask.id &&
+                          !taskDependencies.includes(t.id) &&
+                          t.is_trashed === 0
+                      )
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.title}
+                        </option>
+                      ))}
+                  </select>
+                  {depError && (
+                    <span className={styles.depErrorText}>
+                      {depError}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Property Trigger (Hidden when all 6 fields are visible) */}
+          {hiddenOptionalFields.length > 0 && (
+            <RadixDropdownMenu.Root
+              open={isAddPropertyMenuOpen}
+              onOpenChange={setIsAddPropertyMenuOpen}
             >
-              <span>🔁</span>
-              <span>{currentTask.is_habit === 1 ? 'Habit' : 'Habit'}</span>
-            </motion.button>
-          </div>
+              <RadixDropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  className={styles.addPropertyRow}
+                  aria-label="Add property"
+                >
+                  <PlusIconSvg className={styles.addPropertyIcon} />
+                  <span>Add property</span>
+                </button>
+              </RadixDropdownMenu.Trigger>
+              <RadixDropdownMenu.Portal container={portalContainer}>
+                <RadixDropdownMenu.Content
+                  className={styles.glassContent}
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  {hiddenOptionalFields.map((field) => {
+                    const labelMap: Record<OptionalField, { name: string; icon: React.ReactNode }> = {
+                      repeat: { name: 'Repeat', icon: <RepeatIconSvg /> },
+                      goal: { name: 'Goal', icon: <TargetIconSvg /> },
+                      waitingFor: { name: 'Waiting For', icon: <HourglassIconSvg /> },
+                      habit: { name: 'Habit', icon: <HabitIconSvg /> },
+                      dependsOn: { name: 'Depends On', icon: <LinkIconSvg /> },
+                      attachments: { name: 'Attachments', icon: <AttachmentIconSvg /> },
+                    };
+                    const item = labelMap[field];
+                    return (
+                      <RadixDropdownMenu.Item
+                        key={field}
+                        className={styles.glassItem}
+                        onSelect={() => handleSelectOptionalField(field)}
+                      >
+                        {item.icon}
+                        <span>{item.name}</span>
+                      </RadixDropdownMenu.Item>
+                    );
+                  })}
+                </RadixDropdownMenu.Content>
+              </RadixDropdownMenu.Portal>
+            </RadixDropdownMenu.Root>
+          )}
         </div>
 
-        {/* Subtasks Section */}
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionHeaderRow}>
-            <span className={styles.sectionTitle}>
-              <span>📋</span> Subtasks {subtasks.length > 0 && `(${completedSubtasksCount}/${subtasks.length})`}
-            </span>
+        {/* Block 3: Subtasks */}
+        <div className={styles.block} style={{ '--i': 2 } as React.CSSProperties}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionLabel}>SUBTASKS</span>
             {subtasks.length > 0 && (
-              <div className={styles.subtaskProgressWrapper}>
-                <ProgressBar progress={subtaskProgress} size="thin" />
-              </div>
+              <span className={styles.subtasksCounter}>
+                {subtasks.filter((s) => s.is_completed === 1).length} of {subtasks.length}
+              </span>
             )}
           </div>
 
           <div className={styles.subtasksList}>
-            <AnimatePresence initial={false}>
-              {subtasks.map((sub) => (
-                <motion.div
-                  key={sub.id}
-                  className={styles.subtaskRow}
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0, overflow: 'hidden', padding: 0 }}
-                  transition={{ duration: 0.15 }}
-                >
+            {subtasks.map((sub) => (
+              <div key={sub.id} className={styles.subtaskRow}>
+                <div className={styles.subtaskCheckbox}>
                   <Checkbox
                     checked={sub.is_completed === 1}
                     onChange={() => toggleComplete(sub.id)}
                     ariaLabel="Toggle subtask completion"
                   />
-                  <span
-                    className={`${styles.subtaskTitle} ${
-                      sub.is_completed === 1 ? styles.subtaskCompleted : ''
-                    }`}
-                  >
-                    {sub.title}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.subtaskDeleteBtn}
-                    onClick={() => deleteTask(sub.id)}
-                    title="Delete subtask"
-                    aria-label="Delete subtask"
-                  >
-                    ✕
-                  </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </div>
+                <span
+                  className={`${styles.subtaskTitle} ${
+                    sub.is_completed === 1 ? styles.subtaskTitleDone : ''
+                  }`}
+                >
+                  {sub.title}
+                </span>
+                <button
+                  type="button"
+                  className={styles.subtaskDeleteBtn}
+                  onClick={() => deleteTask(sub.id)}
+                  aria-label="Delete subtask"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
 
-            <div className={styles.subtaskInputRow}>
+            <div className={styles.subtaskAddRow}>
+              <span className={styles.subtaskAddIcon}>
+                <PlusIconSvg className={styles.subtaskAddIcon} />
+              </span>
               <input
                 type="text"
-                className={styles.subtaskInput}
-                placeholder="Add subtask (Press Enter)..."
+                className={styles.subtaskAddInput}
+                placeholder="Add subtask"
                 value={newSubtaskTitle}
                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
                 onKeyDown={handleAddSubtask}
               />
-              {newSubtaskTitle.trim() && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={async () => {
-                    if (newSubtaskTitle.trim()) {
-                      await createTask({
-                        title: newSubtaskTitle.trim(),
-                        list_id: currentTask.list_id,
-                        project_id: currentTask.project_id,
-                        parent_task_id: currentTask.id,
-                      });
-                      setNewSubtaskTitle('');
-                    }
-                  }}
-                >
-                  Add
-                </Button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Task Dependencies Section */}
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionHeaderRow}>
-            <span className={styles.sectionTitle}>
-              <span>🔗</span> Depends On {taskDependencies.length > 0 && `(${taskDependencies.length})`}
-            </span>
+        {/* Block 4: Notes (TipTap Editor) */}
+        <div className={`${styles.notesBlock} ${styles.block}`} style={{ '--i': 3 } as React.CSSProperties}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionLabel}>NOTES</span>
+            <span className={styles.markdownHint}>Markdown enabled</span>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {taskDependencies.map((depId) => {
-              const depTask = allTasks[depId];
-              const isDepDone = depTask?.is_completed === 1;
-
-              return (
-                <div key={depId} className={styles.depItem}>
-                  <span
-                    style={{
-                      textDecoration: isDepDone ? 'line-through' : 'none',
-                      color: isDepDone ? 'var(--text-tertiary)' : 'var(--text-primary)',
-                    }}
-                  >
-                    {isDepDone ? '✓ ' : '• '} {depTask ? depTask.title : `Task (${depId})`}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeDependency(currentTask.id, depId)}
-                    className={styles.clearMiniBtn}
-                    title="Remove dependency"
-                  >
-                    ✕
-                  </button>
-                </div>
-              );
-            })}
-
-            <div className={styles.depAddRow}>
-              <select
-                className={styles.propertySelect}
-                style={{ flex: 1, maxWidth: 'none' }}
-                value={selectedDepId}
-                onChange={(e) => setSelectedDepId(e.target.value)}
-              >
-                <option value="">Select prerequisite task...</option>
-                {Object.values(allTasks)
-                  .filter(
-                    (t) =>
-                      t.id !== currentTask.id &&
-                      !taskDependencies.includes(t.id) &&
-                      t.is_trashed === 0
-                  )
-                  .map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title}
-                    </option>
-                  ))}
-              </select>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={!selectedDepId}
-                onClick={async () => {
-                  setDepError(null);
-                  try {
-                    await addDependency(currentTask.id, selectedDepId);
-                    setSelectedDepId('');
-                  } catch (err: unknown) {
-                    setDepError(err instanceof Error ? err.message : String(err));
-                  }
-                }}
-              >
-                + Add
-              </Button>
-            </div>
-
-            {depError && (
-              <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>{depError}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Reminders Section */}
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionHeaderRow}>
-            <span className={styles.sectionTitle}>
-              <span>⏰</span> Reminders
-            </span>
-          </div>
-          <ReminderEditor
-            taskId={currentTask.id}
-            dueDate={currentTask.due_date}
-            dueTime={currentTask.due_time}
-          />
-        </div>
-
-        {/* Attachments Section */}
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionHeaderRow}>
-            <span className={styles.sectionTitle}>
-              <span>📎</span> Attachments
-            </span>
-          </div>
-          <AttachmentStrip taskId={currentTask.id} />
-        </div>
-
-        {/* Rich Notes Section (TipTap) */}
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionHeaderRow}>
-            <span className={styles.sectionTitle}>
-              <span>📝</span> Notes
-            </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Markdown enabled</span>
-          </div>
-          <div className={styles.editorWrapper}>
+          <div className={styles.notesEditorWrapper}>
             <EditorContent editor={editor} />
           </div>
         </div>
 
-        {/* Version History Accordion */}
-        <div className={styles.sectionCard}>
-          <div className={styles.historyHeader} onClick={() => setIsHistoryOpen(!isHistoryOpen)}>
-            <span className={styles.sectionTitle}>
-              <span>🕒</span> Version History {history.length > 0 && `(${history.length})`}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-              {isHistoryOpen ? 'Hide ▲' : 'Show ▼'}
-            </span>
+        {/* Block 5: Attachments (Only when present or added) */}
+        {visibleFields.has('attachments') && (
+          <div className={styles.block} style={{ '--i': 3 } as React.CSSProperties}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionLabel}>ATTACHMENTS</span>
+              <div className={styles.attachmentActions}>
+                <button
+                  type="button"
+                  className={styles.attachmentActionBtn}
+                  onClick={() => attachmentStripRef.current?.pickAndUpload()}
+                >
+                  Add file
+                </button>
+                <button
+                  type="button"
+                  className={styles.attachmentActionBtn}
+                  onClick={() => attachmentStripRef.current?.openAddLink()}
+                >
+                  Add link
+                </button>
+              </div>
+            </div>
+
+            <AttachmentStrip
+              ref={attachmentStripRef}
+              taskId={currentTask.id}
+              hideHeader
+              hideEmptyDropTarget
+              onAttachmentsChanged={(count) => setAttachmentsCount(count)}
+            />
           </div>
+        )}
 
-          <AnimatePresence>
-            {isHistoryOpen && (
-              <motion.div
-                className={styles.historyList}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18 }}
-              >
-                {history.length === 0 ? (
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    No edit history recorded yet.
-                  </span>
-                ) : (
-                  history.map((record) => {
-                    const dateStr = new Date(record.changed_at).toLocaleString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
-                    const diffEntries = Object.entries(record.changed_fields);
+        {/* Block 6: Footer with History & Delete */}
+        <div className={`${styles.footer} ${styles.block}`} style={{ '--i': 4 } as React.CSSProperties}>
+          {history.length > 0 ? (
+            <button
+              type="button"
+              className={`${styles.historyTrigger} ${isHistoryOpen ? styles.historyExpanded : ''}`}
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              aria-expanded={isHistoryOpen}
+            >
+              <ChevronIconSvg className={styles.historyChevron} />
+              <span>History ({history.length})</span>
+            </button>
+          ) : (
+            <div />
+          )}
 
-                    const formatVal = (v: unknown) =>
-                      v === null || v === undefined
-                        ? 'None'
-                        : typeof v === 'object'
-                          ? JSON.stringify(v)
-                          : String(v);
-
-                    return (
-                      <div key={record.id} className={styles.historyCard}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '4px',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontWeight: 'var(--weight-semibold)',
-                              color: 'var(--text-primary)',
-                              fontSize: '11px',
-                            }}
-                          >
-                            {dateStr}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={isRestoring}
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              color: 'var(--accent)',
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                              fontWeight: 'var(--weight-medium)',
-                              padding: 0,
-                            }}
-                            onClick={async () => {
-                              if (!confirm('Restore task to values from this edit?')) return;
-                              setIsRestoring(true);
-                              try {
-                                const updated = await ipc.invoke<Task>(
-                                  IPC.TASKS.RESTORE_VERSION,
-                                  record.id
-                                );
-                                if (updated) {
-                                  updateTask(updated);
-                                  const updatedHistory = await ipc.invoke<TaskHistoryRecord[]>(
-                                    IPC.TASKS.GET_HISTORY,
-                                    currentTask.id
-                                  );
-                                  if (updatedHistory) setHistory(updatedHistory);
-                                }
-                              } catch (e: unknown) {
-                                alert(`Restore error: ${e instanceof Error ? e.message : String(e)}`);
-                              } finally {
-                                setIsRestoring(false);
-                              }
-                            }}
-                          >
-                            Restore
-                          </button>
-                        </div>
-                        {diffEntries.map(([field, diff]) => (
-                          <div
-                            key={field}
-                            style={{
-                              color: 'var(--text-secondary)',
-                              fontSize: '11px',
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            <strong style={{ color: 'var(--text-primary)' }}>{field}</strong>:{' '}
-                            <span style={{ textDecoration: 'line-through' }}>{formatVal(diff.from)}</span>{' '}
-                            &rarr; {formatVal(diff.to)}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Footer Area with Timestamps & Delete button */}
-        <div className={styles.footer}>
-          <div className={styles.timestamps}>
-            <span>Created {new Date(currentTask.created_at).toLocaleDateString()}</span>
-            {currentTask.updated_at && (
-              <span>Updated {new Date(currentTask.updated_at).toLocaleDateString()}</span>
-            )}
-          </div>
-          <Button
-            size="sm"
-            variant="danger"
+          <button
+            type="button"
+            className={styles.deleteBtn}
             onClick={async () => {
               if (confirm('Delete this task?')) {
                 await deleteTask(currentTask.id);
@@ -1106,9 +1332,75 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
               }
             }}
           >
-            Delete Task
-          </Button>
+            Delete
+          </button>
         </div>
+
+        {/* History Expansion Content */}
+        {history.length > 0 && isHistoryOpen && (
+          <div className={styles.historyList}>
+            {history.map((record) => {
+              const dateStr = new Date(record.changed_at).toLocaleString([], {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              const diffEntries = Object.entries(record.changed_fields);
+
+              const formatVal = (v: unknown) =>
+                v === null || v === undefined
+                  ? 'None'
+                  : typeof v === 'object'
+                    ? JSON.stringify(v)
+                    : String(v);
+
+              return (
+                <div key={record.id} className={styles.historyItem}>
+                  <div className={styles.historyItemHeader}>
+                    <span className={styles.historyDate}>{dateStr}</span>
+                    <button
+                      type="button"
+                      disabled={isRestoring}
+                      className={styles.historyRestoreBtn}
+                      onClick={async () => {
+                        if (!confirm('Restore task to values from this edit?')) return;
+                        setIsRestoring(true);
+                        try {
+                          const updated = await ipc.invoke<Task>(
+                            IPC.TASKS.RESTORE_VERSION,
+                            record.id
+                          );
+                          if (updated) {
+                            updateTask(updated);
+                            const updatedHistory = await ipc.invoke<TaskHistoryRecord[]>(
+                              IPC.TASKS.GET_HISTORY,
+                              currentTask.id
+                            );
+                            if (updatedHistory) setHistory(updatedHistory);
+                          }
+                        } catch (e: unknown) {
+                          alert(`Restore error: ${e instanceof Error ? e.message : String(e)}`);
+                        } finally {
+                          setIsRestoring(false);
+                        }
+                      }}
+                    >
+                      Restore
+                    </button>
+                  </div>
+                  {diffEntries.map(([field, diff]) => (
+                    <div key={field}>
+                      <strong>{field}</strong>:{' '}
+                      <span className={styles.historyOldVal}>{formatVal(diff.from)}</span>{' '}
+                      &rarr; {formatVal(diff.to)}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Date Picker Popover */}
@@ -1162,7 +1454,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
             });
           }}
           onSkipOccurrence={() => {
-            completeTask(currentTask.id, { skipRecurrence: true });
+            useTaskStore.getState().completeTask(currentTask.id, { skipRecurrence: true });
           }}
         />
       )}

@@ -250,6 +250,13 @@
   --sidebar-area-spacing: var(--space-4);
   --sidebar-section-spacing: var(--space-5);
   --detail-panel-width: 360px;
+
+  /* Task detail panel */
+  --detail-label-width: 104px;      /* label column in property rows */
+  --detail-row-height: var(--space-8);
+  --detail-stagger-step: 24ms;      /* entrance stagger between blocks */
+  --size-icon: 16px;                /* row and menu icons */
+  --checkbox-size-sm: 16px;         /* subtask checkbox */
   --planned-calendar-width: 240px;
   --planned-header-height: 32px;
   --planned-cell-size: 28px;
