@@ -487,11 +487,11 @@
 }
 
 .subtaskRow {
-  height: var(--task-height-compact);
+  min-height: 32px;
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
-  padding-inline: var(--space-2);
+  padding: 6px var(--space-2);
   margin-inline: calc(-1 * var(--space-2));
   border-radius: var(--radius-md);
   box-sizing: border-box;
@@ -504,14 +504,18 @@
 }
 
 .subtaskCheckbox {
-  width: var(--checkbox-size-sm);
-  height: var(--checkbox-size-sm);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
 .subtaskTitle {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--text-primary);
+  line-height: 18px;
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -519,49 +523,69 @@
   text-overflow: ellipsis;
   transition:
     color var(--transition-default),
-    text-decoration var(--transition-default);
+    text-decoration var(--transition-default),
+    opacity var(--transition-default);
 }
 
 .subtaskTitleDone {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   text-decoration: line-through;
+  opacity: 0.65;
 }
 
 .subtaskDeleteBtn {
-  display: none;
+  opacity: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   padding: 0;
   color: var(--text-tertiary);
   cursor: pointer;
-  font-size: var(--text-sm);
-  transition: color var(--transition-fast);
+  flex-shrink: 0;
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .subtaskRow:hover .subtaskDeleteBtn,
 .subtaskRow:focus-within .subtaskDeleteBtn {
-  display: inline-flex;
+  opacity: 1;
 }
 
 .subtaskDeleteBtn:hover {
   color: var(--color-danger);
+  background-color: var(--surface-raised);
+}
+
+.subtaskDeleteIcon {
+  width: 14px;
+  height: 14px;
 }
 
 .subtaskAddRow {
-  height: var(--task-height-compact);
+  min-height: 32px;
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
-  padding-inline: var(--space-2);
+  padding: 6px var(--space-2);
   margin-inline: calc(-1 * var(--space-2));
   border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.subtaskAddRow:focus-within {
+  background: var(--surface-hover);
 }
 
 .subtaskAddIcon {
-  width: var(--checkbox-size-sm);
-  height: var(--checkbox-size-sm);
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -573,7 +597,7 @@
   border: none;
   background: transparent;
   font-family: inherit;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--text-primary);
   flex: 1;
   min-width: 0;
@@ -581,7 +605,7 @@
 }
 
 .subtaskAddInput::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-placeholder);
 }
 
 /* Notes Section */
