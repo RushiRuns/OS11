@@ -385,7 +385,6 @@ export function App(): React.ReactElement {
 
   const isRightSlotVisible =
     !activeListId.startsWith('view_') &&
-    !activeListId.startsWith('project:') &&
     ((activeListId === 'smart_my_day' &&
       (rightSlotActive === 'scheduler' || rightSlotActive === 'suggestions')) ||
       (rightSlotActive === 'detail' && Boolean(liveSelectedTask)));

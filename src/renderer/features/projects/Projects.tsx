@@ -35,7 +35,14 @@ export function Projects(): React.ReactElement {
   const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const selectedTaskId = useTaskStore((state) => state.selectedTaskId);
+  const openDetail = useTaskStore((state) => state.openDetail);
+
+  const handleSelectTask = (task: Task | null) => {
+    if (task) {
+      openDetail(task.id);
+    }
+  };
 
   useEffect(() => {
     loadProjects();
@@ -172,8 +179,8 @@ export function Projects(): React.ReactElement {
                     project={currentProject}
                     sections={projectSections}
                     tasks={projectTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    selectedTaskId={selectedTask?.id}
+                    onSelectTask={handleSelectTask}
+                    selectedTaskId={selectedTaskId}
                   />
                 )}
 
@@ -182,8 +189,8 @@ export function Projects(): React.ReactElement {
                     project={currentProject}
                     sections={projectSections}
                     tasks={projectTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    selectedTaskId={selectedTask?.id}
+                    onSelectTask={handleSelectTask}
+                    selectedTaskId={selectedTaskId}
                   />
                 )}
 
@@ -192,8 +199,8 @@ export function Projects(): React.ReactElement {
                     project={currentProject}
                     tasks={projectTasks}
                     milestones={projectMilestones}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    selectedTaskId={selectedTask?.id}
+                    onSelectTask={handleSelectTask}
+                    selectedTaskId={selectedTaskId ?? undefined}
                   />
                 )}
 
@@ -201,8 +208,8 @@ export function Projects(): React.ReactElement {
                   <ProjectCalendarView
                     project={currentProject}
                     tasks={projectTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    selectedTaskId={selectedTask?.id}
+                    onSelectTask={handleSelectTask}
+                    selectedTaskId={selectedTaskId ?? undefined}
                   />
                 )}
 
@@ -211,8 +218,8 @@ export function Projects(): React.ReactElement {
                     project={currentProject}
                     sections={projectSections}
                     tasks={projectTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    selectedTaskId={selectedTask?.id}
+                    onSelectTask={handleSelectTask}
+                    selectedTaskId={selectedTaskId}
                   />
                 )}
               </motion.div>

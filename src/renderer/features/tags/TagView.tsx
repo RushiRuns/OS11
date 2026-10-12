@@ -136,6 +136,7 @@ export function TagView({
                     isSelected={task.id === selectedTaskId}
                     allTaskIds={allActiveTaskIds}
                     onSelect={onSelectTask}
+                    onOpenDetail={onSelectTask}
                     onToggleComplete={handleToggleComplete}
                     onToggleStar={handleToggleStar}
                     onUpdateTitle={handleUpdateTitle}
@@ -196,6 +197,7 @@ export function TagView({
                         isSelected={task.id === selectedTaskId}
                         allTaskIds={allCompletedTaskIds}
                         onSelect={onSelectTask}
+                        onOpenDetail={onSelectTask}
                         onToggleComplete={handleToggleComplete}
                         onToggleStar={handleToggleStar}
                         onUpdateTitle={handleUpdateTitle}
@@ -224,6 +226,7 @@ export function TagView({
           onToggleStar={handleToggleStar}
           onDelete={handleDelete}
           onDuplicate={handleDuplicate}
+          onOpenDetail={onSelectTask}
         />
       )}
     </div>
