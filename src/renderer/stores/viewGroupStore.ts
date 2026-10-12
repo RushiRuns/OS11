@@ -31,6 +31,7 @@ const VALID_OPTIONS = new Set<string>([
 
 const STORAGE_KEY_GROUP_BY = 'os11:view-group-by';
 const STORAGE_KEY_VISIBLE = 'os11:view-group-visible';
+const STORAGE_KEY_COLLAPSED = 'os11:view-group-collapsed';
 
 function getInitialGroupByMap(): Record<string, GroupByOption> {
   try {
@@ -67,20 +68,39 @@ function getInitialVisibilityMap(): Record<string, boolean> {
   return {};
 }
 
+function getInitialCollapsedMap(): Record<string, boolean> {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(STORAGE_KEY_COLLAPSED);
+      if (raw) {
+        return JSON.parse(raw) as Record<string, boolean>;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
 export interface ViewGroupState {
   groupByMap: Record<string, GroupByOption>;
   visibleMap: Record<string, boolean>;
+  collapsedGroupsMap: Record<string, boolean>;
 
   setGroupBy: (viewId: string, option: GroupByOption) => void;
   toggleVisible: (viewId: string) => void;
   setVisible: (viewId: string, visible: boolean) => void;
   getGroupBy: (viewId: string) => GroupByOption;
   isVisible: (viewId: string) => boolean;
+  toggleGroupCollapsed: (viewId: string, groupKey: string) => void;
+  setGroupCollapsed: (viewId: string, groupKey: string, collapsed: boolean) => void;
+  isGroupCollapsed: (viewId: string, groupKey: string) => boolean;
 }
 
 export const useViewGroupStore = create<ViewGroupState>((set, get) => ({
   groupByMap: getInitialGroupByMap(),
   visibleMap: getInitialVisibilityMap(),
+  collapsedGroupsMap: getInitialCollapsedMap(),
 
   setGroupBy: (viewId: string, option: GroupByOption) => {
     set((prev) => {
@@ -138,6 +158,40 @@ export const useViewGroupStore = create<ViewGroupState>((set, get) => ({
 
   getGroupBy: (viewId: string) => get().groupByMap[viewId] ?? 'none',
   isVisible: (viewId: string) => get().visibleMap[viewId] ?? false,
+
+  toggleGroupCollapsed: (viewId: string, groupKey: string) => {
+    set((prev) => {
+      const compositeKey = `${viewId}:${groupKey}`;
+      const nextCollapsed = !prev.collapsedGroupsMap[compositeKey];
+      const nextCollapsedMap = { ...prev.collapsedGroupsMap, [compositeKey]: nextCollapsed };
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY_COLLAPSED, JSON.stringify(nextCollapsedMap));
+        }
+      } catch {
+        // ignore
+      }
+      return { collapsedGroupsMap: nextCollapsedMap };
+    });
+  },
+
+  setGroupCollapsed: (viewId: string, groupKey: string, collapsed: boolean) => {
+    set((prev) => {
+      const compositeKey = `${viewId}:${groupKey}`;
+      const nextCollapsedMap = { ...prev.collapsedGroupsMap, [compositeKey]: collapsed };
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY_COLLAPSED, JSON.stringify(nextCollapsedMap));
+        }
+      } catch {
+        // ignore
+      }
+      return { collapsedGroupsMap: nextCollapsedMap };
+    });
+  },
+
+  isGroupCollapsed: (viewId: string, groupKey: string) =>
+    Boolean(get().collapsedGroupsMap[`${viewId}:${groupKey}`]),
 }));
 
 export default useViewGroupStore;

@@ -272,12 +272,16 @@ interface DroppableGroupHeaderProps {
   groupKey: string;
   title: string;
   isEmpty?: boolean;
+  isCollapsed?: boolean;
+  onToggle?: () => void;
 }
 
 function DroppableGroupHeader({
   groupKey,
   title,
   isEmpty,
+  isCollapsed,
+  onToggle,
 }: DroppableGroupHeaderProps): React.ReactElement {
   const { setNodeRef, isOver } = useDroppable({
     id: `group-header:${groupKey}`,
@@ -291,9 +295,26 @@ function DroppableGroupHeader({
     <div
       ref={setNodeRef}
       className={`${styles.groupHeader} ${isOver ? styles.groupHeaderDropActive : ''} ${isEmpty ? styles.groupHeaderEmpty : ''}`}
-      role="region"
-      aria-label={title}
+      role="button"
+      tabIndex={0}
+      aria-expanded={!isCollapsed}
+      aria-label={`${title}${isEmpty ? ' (empty)' : ''}`}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onToggle?.();
+        }
+      }}
     >
+      <span
+        className={`${styles.groupChevron} ${isCollapsed ? styles.groupChevronCollapsed : ''}`}
+        aria-hidden="true"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </span>
       <span>{title}</span>
       {isEmpty && <span className={styles.emptyDropHint}>(Drop tasks here)</span>}
     </div>
@@ -313,7 +334,8 @@ export function TaskList({
   const { activeListId } = useAppStore();
   const groupBy = useViewGroupStore((s) => s.getGroupBy(activeListId));
   const isGroupByVisible = useViewGroupStore((s) => s.isVisible(activeListId));
-  const { setGroupBy, toggleVisible } = useViewGroupStore.getState();
+  const collapsedGroupsMap = useViewGroupStore((s) => s.collapsedGroupsMap);
+  const { setGroupBy, toggleVisible, toggleGroupCollapsed } = useViewGroupStore.getState();
   const projectsById = useProjectStore((s) => s.projectsById);
   const areasById = useAreaStore((s) => s.areasById);
   const tagsById = useTagStore((s) => s.tagsById);
@@ -1080,49 +1102,61 @@ export function TaskList({
             </div>
           ) : (
             <div className={styles.groupedContainer} role="list" aria-label="Grouped tasks">
-              {groupedTasks.map((group) => (
-                <section
-                  key={group.key}
-                  className={styles.groupSection}
-                  role="region"
-                  aria-label={group.title}
-                >
-                  <DroppableGroupHeader
-                    groupKey={group.key}
-                    title={group.title}
-                    isEmpty={group.items.length === 0}
-                  />
-                  {group.items.length > 0 && (
-                    <div className={styles.groupedTaskList}>
-                      {group.items.map((item) => (
-                        <TaskCard
-                          key={item.task.id}
-                          task={item.task}
-                          depth={item.depth}
-                          hasSubtasks={item.hasSubtasks}
-                          isExpanded={item.isExpanded}
-                          subtaskCount={item.subtaskCount}
-                          onToggleExpand={toggleParentExpand}
-                          isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
-                          allTaskIds={sortableTaskIds}
-                          onSelect={(t) => setFocusedTaskId(t.id)}
-                          onOpenDetail={(t) => onSelectTask?.(t)}
-                          onToggleComplete={toggleComplete}
-                          onToggleStar={toggleStar}
-                          onUpdateTitle={(id, title) => updateTask({ id, title })}
-                          onDelete={handleDeleteTask}
-                          onDuplicate={duplicateTask}
-                          onContextMenu={(e, t) => {
-                            setContextMenuTask(t);
-                            setContextMenuPos({ x: e.clientX, y: e.clientY });
-                          }}
-                          exiting={isExiting(item.task.id)}
-                        />
-                      ))}
+              {groupedTasks.map((group) => {
+                const isCollapsed = Boolean(collapsedGroupsMap[`${activeListId}:${group.key}`]);
+                return (
+                  <section
+                    key={group.key}
+                    className={styles.groupSection}
+                    role="region"
+                    aria-label={group.title}
+                  >
+                    <DroppableGroupHeader
+                      groupKey={group.key}
+                      title={group.title}
+                      isEmpty={group.items.length === 0}
+                      isCollapsed={isCollapsed}
+                      onToggle={() => toggleGroupCollapsed(activeListId, group.key)}
+                    />
+                    <div
+                      className={styles.collapsibleWrapper}
+                      data-collapsed={isCollapsed ? 'true' : 'false'}
+                    >
+                      <div className={styles.collapsibleInner}>
+                        {group.items.length > 0 && (
+                          <div className={styles.groupedTaskList}>
+                            {group.items.map((item) => (
+                              <TaskCard
+                                key={item.task.id}
+                                task={item.task}
+                                depth={item.depth}
+                                hasSubtasks={item.hasSubtasks}
+                                isExpanded={item.isExpanded}
+                                subtaskCount={item.subtaskCount}
+                                onToggleExpand={toggleParentExpand}
+                                isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
+                                allTaskIds={sortableTaskIds}
+                                onSelect={(t) => setFocusedTaskId(t.id)}
+                                onOpenDetail={(t) => onSelectTask?.(t)}
+                                onToggleComplete={toggleComplete}
+                                onToggleStar={toggleStar}
+                                onUpdateTitle={(id, title) => updateTask({ id, title })}
+                                onDelete={handleDeleteTask}
+                                onDuplicate={duplicateTask}
+                                onContextMenu={(e, t) => {
+                                  setContextMenuTask(t);
+                                  setContextMenuPos({ x: e.clientX, y: e.clientY });
+                                }}
+                                exiting={isExiting(item.task.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </section>
-              ))}
+                  </section>
+                );
+              })}
             </div>
           )}
 

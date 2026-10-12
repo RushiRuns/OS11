@@ -62,7 +62,8 @@ export function AnytimeView({
     storedGroupBy === 'project' || storedGroupBy === 'area' || storedGroupBy === 'none'
       ? storedGroupBy
       : 'area';
-  const { setGroupBy } = useViewGroupStore.getState();
+  const collapsedGroupsMap = useViewGroupStore((s) => s.collapsedGroupsMap);
+  const { setGroupBy, toggleGroupCollapsed } = useViewGroupStore.getState();
 
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
@@ -213,42 +214,73 @@ export function AnytimeView({
             description="Mark undated tasks as Anytime when you're ready to execute them as soon as possible."
           />
         ) : (
-          groupedTasks.map((group) => (
-            <section key={group.key} className={styles.groupSection}>
-              {groupBy !== 'none' && (
-                <div className={styles.groupHeader}>
-                  <span>{group.title}</span>
-                  <span className={styles.groupCount}>({group.tasks.length})</span>
+          groupedTasks.map((group) => {
+            const isCollapsed = Boolean(collapsedGroupsMap[`${ANYTIME_VIEW_ID}:${group.key}`]);
+            return (
+              <section key={group.key} className={styles.groupSection}>
+                {groupBy !== 'none' && (
+                  <div
+                    className={styles.groupHeader}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={!isCollapsed}
+                    aria-label={`${group.title} (${group.tasks.length} tasks)`}
+                    onClick={() => toggleGroupCollapsed(ANYTIME_VIEW_ID, group.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleGroupCollapsed(ANYTIME_VIEW_ID, group.key);
+                      }
+                    }}
+                  >
+                    <span
+                      className={`${styles.groupChevron} ${isCollapsed ? styles.groupChevronCollapsed : ''}`}
+                      aria-hidden="true"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </span>
+                    <span>{group.title}</span>
+                    <span className={styles.groupCount}>({group.tasks.length})</span>
+                  </div>
+                )}
+                <div
+                  className={styles.collapsibleWrapper}
+                  data-collapsed={isCollapsed ? 'true' : 'false'}
+                >
+                  <div className={styles.collapsibleInner}>
+                    <SortableContext
+                      items={group.tasks.map((t) => t.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className={styles.taskList}>
+                        {group.tasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            isSelected={task.id === selectedTaskId}
+                            onSelect={() => onSelectTask?.(task)}
+                            onOpenDetail={() => onSelectTask?.(task)}
+                            onToggleComplete={() => {
+                              markCompleted(task.id, task);
+                              toggleComplete(task.id);
+                            }}
+                            onToggleStar={() => toggleStar(task.id)}
+                            onDelete={() => deleteTask(task.id)}
+                            onDuplicate={() => duplicateTask(task.id)}
+                            onContextMenu={(e) => handleContextMenu(e, task)}
+                            disableDrag={false}
+                            exiting={isExiting(task.id)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </div>
                 </div>
-              )}
-              <SortableContext
-                items={group.tasks.map((t) => t.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className={styles.taskList}>
-                  {group.tasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      isSelected={task.id === selectedTaskId}
-                      onSelect={() => onSelectTask?.(task)}
-                      onOpenDetail={() => onSelectTask?.(task)}
-                      onToggleComplete={() => {
-                        markCompleted(task.id, task);
-                        toggleComplete(task.id);
-                      }}
-                      onToggleStar={() => toggleStar(task.id)}
-                      onDelete={() => deleteTask(task.id)}
-                      onDuplicate={() => duplicateTask(task.id)}
-                      onContextMenu={(e) => handleContextMenu(e, task)}
-                      disableDrag={false}
-                      exiting={isExiting(task.id)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </section>
-          ))
+              </section>
+            );
+          })
         )}
 
         {/* Collapsible Completed Section */}

@@ -164,6 +164,48 @@
   padding-bottom: var(--space-1);
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;
+  cursor: pointer;
+  transition: color var(--transition-fast, 150ms);
+}
+
+.groupHeader:hover {
+  color: var(--text-primary);
+}
+
+.groupChevron {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: transform 160ms var(--ease-out, cubic-bezier(0, 0, 0.2, 1)), color var(--transition-fast, 150ms);
+}
+
+.groupHeader:hover .groupChevron {
+  color: var(--text-primary);
+}
+
+.groupChevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.collapsibleWrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease;
+  opacity: 1;
+}
+
+.collapsibleWrapper[data-collapsed="true"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapsibleInner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 .groupedTaskList {
