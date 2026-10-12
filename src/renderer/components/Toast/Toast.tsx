@@ -31,7 +31,7 @@ export function Toast({
     setIsDismissing(true);
     setTimeout(() => {
       onDismiss(id);
-    }, 180);
+    }, 240);
   }, [id, onDismiss]);
 
   const startTimer = useCallback(() => {

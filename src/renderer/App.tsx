@@ -23,6 +23,7 @@ import { FloatingQuickAddModal } from './features/quickadd/FloatingQuickAddModal
 import { CommandPalette } from './features/command-palette/CommandPalette.js';
 import { TagView } from './features/tags/TagView.js';
 import { NotificationCenter } from './features/notifications/NotificationCenter.js';
+import { Toast } from './components/Toast/Toast.js';
 import { OnboardingFlow } from './features/onboarding/OnboardingFlow.js';
 import { FocusModeView } from './features/focus/FocusModeView.js';
 import { ReviewManager } from './features/review/ReviewManager.js';
@@ -224,6 +225,9 @@ export function App(): React.ReactElement {
   const isPomodoroFocus = usePomodoroStore(state => state.isFocusMode);
   const togglePomodoroFocus = usePomodoroStore(state => state.toggleFocusMode);
   const effectiveFocusMode = isFocusMode || isPomodoroFocus;
+  const lastToastAction = useUndoRedoStore(state => state.lastToastAction);
+  const undo = useUndoRedoStore(state => state.undo);
+  const clearToast = useUndoRedoStore(state => state.clearToast);
 
   useEffect(() => {
     fetchSystemInfo();
@@ -1033,6 +1037,32 @@ export function App(): React.ReactElement {
 
       {/* Slide-In In-App Notification Center Drawer */}
       <NotificationCenter onFocusTask={handleFocusTask} />
+
+      {/* Global In-App Notification Toast */}
+      {lastToastAction && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'var(--space-6, 24px)',
+            right: 'var(--space-6, 24px)',
+            zIndex: 'var(--z-notification, 500)',
+            pointerEvents: 'none',
+          }}
+        >
+          <Toast
+            id={lastToastAction.id}
+            message={lastToastAction.description}
+            variant="undo"
+            actionLabel="Undo"
+            onAction={async () => {
+              await undo();
+              clearToast();
+            }}
+            onDismiss={() => clearToast()}
+            duration={3500}
+          />
+        </div>
+      )}
     </div>
   );
 }

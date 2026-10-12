@@ -30,7 +30,6 @@ import { BulkActionBar } from './BulkActionBar.js';
 import { InlineTaskCreator } from './InlineTaskCreator.js';
 import { SearchView } from '../search/SearchView.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
-import { Toast } from '../../components/Toast/Toast.js';
 import { useFilteredTasks, DEFAULT_FILTER_CONFIG } from '../../hooks/useFilteredTasks.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
@@ -332,7 +331,7 @@ export function TaskList({
   } = useTaskStore();
 
   const { selectAll } = useSelectionStore();
-  const { pushAction, undo, lastToastAction, clearToast } = useUndoRedo();
+  const { pushAction, undo } = useUndoRedo();
   const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
 
@@ -1271,24 +1270,6 @@ export function TaskList({
         onOpenDetail={(t) => onSelectTask?.(t)}
         onDelete={handleDeleteTask}
       />
-
-      {/* Undo Toast Container */}
-      {lastToastAction && (
-        <div className={styles.toastWrap}>
-          <Toast
-            id="undo-toast"
-            message={lastToastAction.description}
-            variant="undo"
-            actionLabel="Undo"
-            onAction={async () => {
-              await undo();
-              clearToast();
-            }}
-            onDismiss={() => clearToast()}
-            duration={4000}
-          />
-        </div>
-      )}
     </div>
   );
 }
