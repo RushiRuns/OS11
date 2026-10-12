@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '@shared/types/task.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import { taskServiceAdapter } from '../services/task-service-adapter.js';
 import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
 import { useAppStore } from './app-store.js';
@@ -190,6 +191,11 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
   },
 
   createTask: async (payload: CreateTaskPayload): Promise<Task> => {
+    // Normalize title to start with capital letter if provided
+    if (typeof payload.title === 'string') {
+      payload = { ...payload, title: capitalizeFirstLetter(payload.title) };
+    }
+
     // 1. Generate optimistic task with sort_order placing it at the top of its scope
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const currentTasks = Object.values(get().tasksById);
@@ -274,6 +280,10 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
   },
 
   updateTask: async (payload: UpdateTaskPayload): Promise<Task> => {
+    if (typeof payload.title === 'string') {
+      payload = { ...payload, title: capitalizeFirstLetter(payload.title) };
+    }
+
     const existing = get().tasksById[payload.id];
     if (!existing) {
       throw new Error(`Task ${payload.id} not found in store`);

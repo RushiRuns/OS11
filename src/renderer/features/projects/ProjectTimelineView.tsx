@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
 import type { Project, Milestone, Task } from '@shared/types/index.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import styles from './ProjectTimelineView.module.css';
@@ -286,9 +287,9 @@ export function ProjectTimelineView({
                   backgroundColor:
                     selectedTaskId === task.id ? 'var(--surface-selected)' : undefined,
                 }}
-                title={task.title}
+                title={capitalizeFirstLetter(task.title)}
               >
-                {task.title}
+                {capitalizeFirstLetter(task.title)}
               </div>
             ))}
           </div>
@@ -327,9 +328,9 @@ export function ProjectTimelineView({
                     }}
                     onMouseDown={(e) => handleBarMouseDown(e, task)}
                     onClick={() => onSelectTask(task)}
-                    title={`${task.title} (Due: ${task.due_date || 'None'})`}
+                    title={`${capitalizeFirstLetter(task.title)} (Due: ${task.due_date || 'None'})`}
                   >
-                    <span>{task.title}</span>
+                    <span>{capitalizeFirstLetter(task.title)}</span>
                   </div>
                 </div>
               );

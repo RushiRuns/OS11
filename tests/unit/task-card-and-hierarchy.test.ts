@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { stripHtmlNotes } from '../../src/renderer/features/tasks/TaskCard.js';
+import { capitalizeFirstLetter } from '../../src/shared/utils/index.js';
 import type { Task } from '../../src/shared/types/task.js';
 
 describe('TaskCard — stripHtmlNotes helper', () => {
@@ -83,5 +84,26 @@ describe('Subtasks Tree Flattening Logic', () => {
     expect(children?.length).toBe(2);
     expect(children?.[0].id).toBe('child-1');
     expect(children?.[1].id).toBe('child-2');
+  });
+});
+
+describe('capitalizeFirstLetter helper', () => {
+  it('capitalizes the first character of a lowercase string', () => {
+    expect(capitalizeFirstLetter('fix the issue with task sidebar')).toBe('Fix the issue with task sidebar');
+    expect(capitalizeFirstLetter('sidebar')).toBe('Sidebar');
+  });
+
+  it('preserves already capitalized strings', () => {
+    expect(capitalizeFirstLetter('Already capitalized')).toBe('Already capitalized');
+    expect(capitalizeFirstLetter('NLP and OpenAI')).toBe('NLP and OpenAI');
+  });
+
+  it('handles strings with leading whitespace correctly', () => {
+    expect(capitalizeFirstLetter('   spaced task')).toBe('   Spaced task');
+  });
+
+  it('handles empty or blank strings without throwing', () => {
+    expect(capitalizeFirstLetter('')).toBe('');
+    expect(capitalizeFirstLetter('   ')).toBe('   ');
   });
 });

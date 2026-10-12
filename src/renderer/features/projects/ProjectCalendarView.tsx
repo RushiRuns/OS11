@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Project, Task } from '@shared/types/index.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import styles from './ProjectCalendarView.module.css';
 
@@ -226,13 +227,13 @@ export function ProjectCalendarView({
                         borderColor: isSelected ? 'var(--accent)' : undefined,
                         backgroundColor: isSelected ? 'var(--surface-selected)' : undefined,
                       }}
-                      title={`${task.title} (Drag to change date)`}
+                      title={`${capitalizeFirstLetter(task.title)} (Drag to change date)`}
                     >
                       <span
                         className={styles.priorityDot}
                         style={{ backgroundColor: priorityDots[task.priority] ?? 'transparent' }}
                       />
-                      <span>{task.title}</span>
+                      <span>{capitalizeFirstLetter(task.title)}</span>
                     </div>
                   );
                 })}

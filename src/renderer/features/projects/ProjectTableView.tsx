@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import type { Project, Section, Task } from '@shared/types/index.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
@@ -438,7 +439,7 @@ export function ProjectTableView({
                         className={`${styles.inlineInput} ${
                           isCompleted ? styles.titleCompleted : ''
                         }`}
-                        defaultValue={task.title}
+                        defaultValue={capitalizeFirstLetter(task.title)}
                         onBlur={(e) => {
                           const val = e.target.value.trim();
                           if (val && val !== task.title) {

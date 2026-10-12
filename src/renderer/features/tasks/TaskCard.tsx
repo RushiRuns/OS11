@@ -20,6 +20,7 @@ import { formatTimeRange } from '../lists/scheduler/useSchedulerLayout.js';
 import { CardGlyph } from './card-glyphs.js';
 import { formatDueLabel } from './due-label.js';
 import type { Task } from '@shared/types/task.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import styles from './TaskCard.module.css';
 
 export interface TaskCardProps {
@@ -777,9 +778,9 @@ export const TaskCard = memo(function TaskCard({
                 e.stopPropagation();
                 setIsEditing(true);
               }}
-              title={task.title}
+              title={capitalizeFirstLetter(task.title)}
             >
-              {task.title}
+              {capitalizeFirstLetter(task.title)}
             </span>
           )}
         </div>

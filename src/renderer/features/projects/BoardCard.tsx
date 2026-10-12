@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import type { Task } from '@shared/types/index.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
@@ -166,7 +167,7 @@ export const BoardCard = memo(function BoardCard({
           <span
             className={`${styles.cardTitle} ${isDone ? styles.cardTitleCompleted : ''}`}
           >
-            {task.title}
+            {capitalizeFirstLetter(task.title)}
           </span>
           {task.is_starred === 1 && (
             <span className={styles.starBadge} title="Starred" aria-label="Starred">

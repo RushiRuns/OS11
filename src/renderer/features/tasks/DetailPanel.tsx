@@ -23,6 +23,7 @@ import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task, TaskHistoryRecord } from '@shared/types/index.js';
 import { getTagShapeClass } from '@shared/utils/tag-shape.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import {
   fieldsWithValue,
   hiddenFields,
@@ -1248,7 +1249,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                     sub.is_completed === 1 ? styles.subtaskTitleDone : ''
                   }`}
                 >
-                  {sub.title}
+                  {capitalizeFirstLetter(sub.title)}
                 </span>
                 <button
                   type="button"

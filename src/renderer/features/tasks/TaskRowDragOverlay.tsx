@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Task } from '@shared/types/task.js';
+import { capitalizeFirstLetter } from '@shared/utils/index.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { CardGlyph } from './card-glyphs.js';
 
@@ -70,7 +71,7 @@ export function TaskRowDragOverlay({ task, subtaskCount }: TaskRowDragOverlayPro
           flex: 1,
         }}
       >
-        {task.title || 'Untitled task'}
+        {task.title ? capitalizeFirstLetter(task.title) : 'Untitled task'}
       </span>
 
       {/* Subtask count progress badge */}

@@ -19,3 +19,11 @@ export function isValidIsoDate(str: string): boolean {
 export function clamp(val: number, min: number, max: number): number {
   return Math.min(Math.max(val, min), max);
 }
+
+export function capitalizeFirstLetter(str: string): string {
+  if (!str) return '';
+  const trimmed = str.trimStart();
+  const leadingSpaces = str.slice(0, str.length - trimmed.length);
+  if (!trimmed) return str;
+  return leadingSpaces + trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
