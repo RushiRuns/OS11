@@ -55,7 +55,9 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  height: var(--space-10);
+  height: calc(var(--space-10) + var(--space-4));
+  padding-top: var(--space-4);
+  box-sizing: border-box;
   flex-shrink: 0;
 }
 

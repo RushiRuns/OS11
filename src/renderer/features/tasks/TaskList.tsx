@@ -509,12 +509,16 @@ export function TaskList({
     }
 
     const childrenByParentId = new Map<string, Task[]>();
-    for (const t of filteredIncomplete) {
-      if (t.parent_task_id) {
+    for (const t of Object.values(tasksById)) {
+      if (t.is_trashed === 0 && t.is_completed === 0 && t.parent_task_id) {
         const list = childrenByParentId.get(t.parent_task_id) || [];
         list.push(t);
         childrenByParentId.set(t.parent_task_id, list);
       }
+    }
+    // Ensure stable sort order for subtasks
+    for (const childList of childrenByParentId.values()) {
+      childList.sort((a, b) => a.sort_order - b.sort_order);
     }
 
     const subtaskStats = new Map<string, { completed: number; total: number }>();

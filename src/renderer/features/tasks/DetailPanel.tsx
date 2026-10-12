@@ -478,6 +478,8 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
         area_id: currentTask.area_id,
         project_id: currentTask.project_id,
         list_id: currentTask.list_id,
+        section_id: currentTask.section_id,
+        my_day_date: currentTask.my_day_date,
         parent_task_id: currentTask.id,
       });
       setNewSubtaskTitle('');

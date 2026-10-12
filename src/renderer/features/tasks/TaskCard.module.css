@@ -171,20 +171,24 @@
 
 .notesRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
-  min-height: 17px;
-  line-height: 17px;
+  margin-top: 2px;
+  margin-bottom: 2px;
 }
 
 .notesText {
   color: var(--text-secondary);
   font-size: 12px;
-  line-height: 17px;
-  white-space: nowrap;
+  line-height: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .tagsRow {

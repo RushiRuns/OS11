@@ -53,6 +53,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-left: 12px;
+  box-sizing: border-box;
 }
 
 /* Collapsible Completed Section */
@@ -94,6 +96,8 @@
   flex-direction: column;
   gap: 4px;
   padding-top: var(--space-2);
+  padding-left: 12px;
+  box-sizing: border-box;
 }
 
 /* Empty State */
@@ -194,4 +198,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-left: 12px;
+  box-sizing: border-box;
 }

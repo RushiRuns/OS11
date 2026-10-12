@@ -45,6 +45,22 @@ export interface TaskCardProps {
   exiting?: boolean;
 }
 
+export function stripHtmlNotes(html?: string | null): string {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function formatDateTime(
   dueDate?: string | null,
   dueTime?: string | null,
@@ -768,12 +784,16 @@ export const TaskCard = memo(function TaskCard({
           )}
         </div>
 
-        {/* Row 2: Notes (if present) - lighter text */}
-        {task.notes && (
-          <div className={styles.notesRow} title={task.notes}>
-            <span className={styles.notesText}>{task.notes}</span>
-          </div>
-        )}
+        {/* Row 2: Notes (if present) - clean snippet */}
+        {(() => {
+          const cleanNotes = stripHtmlNotes(task.notes);
+          if (!cleanNotes) return null;
+          return (
+            <div className={styles.notesRow} title={cleanNotes}>
+              <span className={styles.notesText}>{cleanNotes}</span>
+            </div>
+          );
+        })()}
 
         {/* Row 3: Unified Metadata Row: [Container] · [Smart Status] · [Scheduled Time] · [Due Date] · [Tags] · [Subtask Progress] */}
         {metadataSegments.length > 0 && (
