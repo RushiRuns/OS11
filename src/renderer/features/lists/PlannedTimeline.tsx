@@ -340,6 +340,15 @@ export function PlannedTimeline({
             setContextMenuTask(null);
             setContextMenuPos(null);
           }}
+          onSetPriority={(id, priority) => updateTask({ id, priority })}
+          onSetDueDate={(id, date, time, allDay) =>
+            updateTask({
+              id,
+              due_date: date,
+              due_time: time,
+              all_day: allDay ? 1 : 0,
+            })
+          }
           onDelete={handleDeleteTask}
           onDuplicate={duplicateTask}
         />

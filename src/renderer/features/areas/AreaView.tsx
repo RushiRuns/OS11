@@ -298,6 +298,15 @@ export function AreaView({
         }}
         onToggleComplete={toggleComplete}
         onToggleStar={toggleStar}
+        onSetPriority={(id, priority) => updateTask({ id, priority })}
+        onSetDueDate={(id, date, time, allDay) =>
+          updateTask({
+            id,
+            due_date: date,
+            due_time: time,
+            all_day: allDay ? 1 : 0,
+          })
+        }
         onOpenDetail={onSelectTask}
         onDelete={deleteTask}
         onDuplicate={duplicateTask}

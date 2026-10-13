@@ -358,6 +358,15 @@ export function AnytimeView({
             toggleComplete(id);
           }}
           onToggleStar={(id) => toggleStar(id)}
+          onSetPriority={(id, priority) => updateTask({ id, priority })}
+          onSetDueDate={(id, date, time, allDay) =>
+            updateTask({
+              id,
+              due_date: date,
+              due_time: time,
+              all_day: allDay ? 1 : 0,
+            })
+          }
           onDelete={(id) => deleteTask(id)}
           onDuplicate={(id) => duplicateTask(id)}
           onOpenDetail={(task) => {
