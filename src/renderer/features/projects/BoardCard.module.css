@@ -223,3 +223,40 @@
   font-weight: var(--weight-medium);
   flex-shrink: 0;
 }
+
+.detailBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast),
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.boardCard:hover .detailBtn,
+.boardCard:focus-within .detailBtn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.detailBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.detailBtn:active {
+  background: var(--surface-active);
+}
+

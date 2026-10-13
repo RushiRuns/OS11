@@ -15,6 +15,7 @@ export interface BoardColumnProps {
   tasks: Task[];
   selectedTaskId?: string | null;
   onSelectTask: (task: Task) => void;
+  onOpenDetail?: (task: Task) => void;
   onToggleComplete: (id: string) => void;
   onTaskContextMenu: (e: React.MouseEvent, task: Task) => void;
   onAddCard: (sectionId: string, title: string) => void;
@@ -27,6 +28,7 @@ export function BoardColumn({
   tasks,
   selectedTaskId,
   onSelectTask,
+  onOpenDetail,
   onToggleComplete,
   onTaskContextMenu,
   onAddCard,
@@ -289,6 +291,7 @@ export function BoardColumn({
               task={task}
               isSelected={selectedTaskId === task.id}
               onSelect={onSelectTask}
+              onOpenDetail={onOpenDetail}
               onToggleComplete={onToggleComplete}
               onContextMenu={onTaskContextMenu}
             />

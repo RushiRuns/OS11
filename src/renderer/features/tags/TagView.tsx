@@ -26,6 +26,7 @@ export function TagView({
   const [tasks, setTasks] = useState<Task[]>([]);
   const { isLingering, isExiting, lingerVersion } = useCompletionLinger(tasks);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const activeTasks = useMemo(
@@ -133,9 +134,9 @@ export function TagView({
                   <TaskCard
                     key={task.id}
                     task={task}
-                    isSelected={task.id === selectedTaskId}
+                    isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
                     allTaskIds={allActiveTaskIds}
-                    onSelect={onSelectTask}
+                    onSelect={(t) => setFocusedTaskId(t.id)}
                     onOpenDetail={onSelectTask}
                     onToggleComplete={handleToggleComplete}
                     onToggleStar={handleToggleStar}
@@ -194,9 +195,9 @@ export function TagView({
                       <TaskCard
                         key={task.id}
                         task={task}
-                        isSelected={task.id === selectedTaskId}
+                        isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
                         allTaskIds={allCompletedTaskIds}
-                        onSelect={onSelectTask}
+                        onSelect={(t) => setFocusedTaskId(t.id)}
                         onOpenDetail={onSelectTask}
                         onToggleComplete={handleToggleComplete}
                         onToggleStar={handleToggleStar}

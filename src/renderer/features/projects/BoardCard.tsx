@@ -6,12 +6,14 @@ import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
+import { CardGlyph } from '../tasks/card-glyphs.js';
 import styles from './BoardCard.module.css';
 
 export interface BoardCardProps {
   task: Task;
   isSelected?: boolean;
   onSelect?: (task: Task) => void;
+  onOpenDetail?: (task: Task) => void;
   onToggleComplete?: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, task: Task) => void;
   isOverlay?: boolean;
@@ -36,6 +38,7 @@ export const BoardCard = memo(function BoardCard({
   task,
   isSelected = false,
   onSelect,
+  onOpenDetail,
   onToggleComplete,
   onContextMenu,
   isOverlay = false,
@@ -174,6 +177,19 @@ export const BoardCard = memo(function BoardCard({
               ★
             </span>
           )}
+          <button
+            type="button"
+            className={styles.detailBtn}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetail?.(task);
+            }}
+            title="Open task details"
+            aria-label="Open task details"
+          >
+            <CardGlyph name="details" />
+          </button>
         </div>
       </div>
 

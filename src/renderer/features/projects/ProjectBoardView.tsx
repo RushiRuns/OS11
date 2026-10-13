@@ -49,6 +49,7 @@ export function ProjectBoardView({
   // Local optimistic task list for smooth cross-column dragging
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
   // Column creation state
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -254,8 +255,9 @@ export function ProjectBoardView({
               created_at: '',
             }}
             tasks={unassignedTasks}
-            selectedTaskId={selectedTaskId}
-            onSelectTask={onSelectTask}
+            selectedTaskId={selectedTaskId || focusedTaskId}
+            onSelectTask={(t) => setFocusedTaskId(t.id)}
+            onOpenDetail={onSelectTask}
             onToggleComplete={toggleComplete}
             onTaskContextMenu={(e, t) => {
               setContextMenuTask(t);
@@ -276,8 +278,9 @@ export function ProjectBoardView({
               key={section.id}
               section={section}
               tasks={colTasks}
-              selectedTaskId={selectedTaskId}
-              onSelectTask={onSelectTask}
+              selectedTaskId={selectedTaskId || focusedTaskId}
+              onSelectTask={(t) => setFocusedTaskId(t.id)}
+              onOpenDetail={onSelectTask}
               onToggleComplete={toggleComplete}
               onTaskContextMenu={(e, t) => {
                 setContextMenuTask(t);

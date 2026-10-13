@@ -53,6 +53,7 @@ export function AnytimeView({
     [visibleCompletedTasks]
   );
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const projectsById = useProjectStore((s) => s.projectsById);
   const areasById = useAreaStore((s) => s.areasById);
   const { toggleComplete, toggleStar, deleteTask, duplicateTask, updateTask } = useTaskStore();
@@ -259,8 +260,8 @@ export function AnytimeView({
                           <TaskCard
                             key={task.id}
                             task={task}
-                            isSelected={task.id === selectedTaskId}
-                            onSelect={() => onSelectTask?.(task)}
+                            isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
+                            onSelect={() => setFocusedTaskId(task.id)}
                             onOpenDetail={() => onSelectTask?.(task)}
                             onToggleComplete={() => {
                               markCompleted(task.id, task);
@@ -328,9 +329,9 @@ export function AnytimeView({
                   <TaskCard
                     key={task.id}
                     task={task}
-                    isSelected={task.id === selectedTaskId}
+                    isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
                     allTaskIds={allCompletedTaskIds}
-                    onSelect={() => onSelectTask?.(task)}
+                    onSelect={() => setFocusedTaskId(task.id)}
                     onOpenDetail={() => onSelectTask?.(task)}
                     onToggleComplete={() => toggleComplete(task.id)}
                     onToggleStar={() => toggleStar(task.id)}

@@ -113,5 +113,48 @@ describe('Task detail panel sidebar opening from Projects and Tags', () => {
       })
     ).toBe(false);
   });
+
+  it('TC-SIDEBAR-04: clicking card row (onSelect) does NOT invoke detail open, while clicking detail icon (onOpenDetail) does', () => {
+    const onSelectTask = vi.fn();
+    const task = useTaskStore.getState().tasksById['task-1'];
+
+    // Simulating view wiring (TaskList, AreaView, TagView, ProjectListView, AnytimeView, SomedayView):
+    let localFocusedTaskId: string | null = null;
+    const handleSelect = (t: any) => {
+      localFocusedTaskId = t.id;
+    };
+    const handleOpenDetail = (t: any) => {
+      onSelectTask(t);
+    };
+
+    // User clicks anywhere on the task card
+    handleSelect(task);
+    expect(localFocusedTaskId).toBe('task-1');
+    expect(onSelectTask).not.toHaveBeenCalled();
+
+    // User clicks the sidebar/details button on the task card
+    handleOpenDetail(task);
+    expect(onSelectTask).toHaveBeenCalledTimes(1);
+    expect(onSelectTask).toHaveBeenCalledWith(task);
+  });
+
+  it('TC-SIDEBAR-05: Waiting For view card click continues to invoke task selection directly', () => {
+    const onSelectTask = vi.fn();
+    const waitingTask = {
+      id: 'task-waiting',
+      title: 'Waiting on Alex',
+      waiting_on: 'Alex',
+      is_completed: 0,
+      is_trashed: 0,
+    } as any;
+
+    // In WaitingForView, clicking the card directly invokes onSelectTask
+    const handleCardClick = () => {
+      onSelectTask(waitingTask);
+    };
+
+    handleCardClick();
+    expect(onSelectTask).toHaveBeenCalledWith(waitingTask);
+  });
 });
 

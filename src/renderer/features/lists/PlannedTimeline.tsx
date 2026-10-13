@@ -136,6 +136,7 @@ export function PlannedTimeline({
 
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
   const allTasksArray = useMemo(() => Object.values(tasksById), [tasksById]);
   const { isLingering, isExiting, lingerVersion } = useCompletionLinger(allTasksArray);
@@ -309,9 +310,9 @@ export function PlannedTimeline({
                       ? tasksById[item.task.parent_task_id]?.title
                       : undefined
                   }
-                  isSelected={selectedTaskId === item.task.id}
+                  isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
                   allTaskIds={allTaskIds}
-                  onSelect={t => onSelectTask?.(t)}
+                  onSelect={t => setFocusedTaskId(t.id)}
                   onOpenDetail={t => onSelectTask?.(t)}
                   onToggleComplete={toggleComplete}
                   onToggleStar={toggleStar}

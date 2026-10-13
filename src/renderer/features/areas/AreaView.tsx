@@ -43,6 +43,7 @@ export function AreaView({
 
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
 
@@ -125,9 +126,9 @@ export function AreaView({
                     key={task.id}
                     task={task}
                     depth={0}
-                    isSelected={selectedTaskId === task.id}
+                    isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
                     allTaskIds={allActiveLooseTaskIds}
-                    onSelect={(t) => onSelectTask?.(t)}
+                    onSelect={(t) => setFocusedTaskId(t.id)}
                     onOpenDetail={(t) => onSelectTask?.(t)}
                     onToggleComplete={toggleComplete}
                     onToggleStar={toggleStar}
@@ -190,9 +191,9 @@ export function AreaView({
                         key={task.id}
                         task={task}
                         depth={0}
-                        isSelected={selectedTaskId === task.id}
+                        isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
                         allTaskIds={allCompletedLooseTaskIds}
-                        onSelect={(t) => onSelectTask?.(t)}
+                        onSelect={(t) => setFocusedTaskId(t.id)}
                         onOpenDetail={(t) => onSelectTask?.(t)}
                         onToggleComplete={toggleComplete}
                         onToggleStar={toggleStar}

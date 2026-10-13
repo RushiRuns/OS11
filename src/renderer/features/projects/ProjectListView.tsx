@@ -505,7 +505,6 @@ export function ProjectListView({
                   allTaskIds={allActiveTaskIds}
                   onSelect={(t) => {
                     setFocusedTaskId(t.id);
-                    onSelectTask(t);
                   }}
                   onOpenDetail={(t) => onSelectTask(t)}
                   onToggleComplete={handleToggleComplete}
@@ -562,7 +561,6 @@ export function ProjectListView({
                                 allTaskIds={sortableTaskIds}
                                 onSelect={(t) => {
                                   setFocusedTaskId(t.id);
-                                  onSelectTask(t);
                                 }}
                                 onOpenDetail={(t) => onSelectTask(t)}
                                 onToggleComplete={handleToggleComplete}
@@ -646,7 +644,6 @@ export function ProjectListView({
                     allTaskIds={allCompletedTaskIds}
                     onSelect={(t) => {
                       setFocusedTaskId(t.id);
-                      onSelectTask(t);
                     }}
                     onOpenDetail={(t) => onSelectTask(t)}
                     onToggleComplete={handleToggleComplete}
