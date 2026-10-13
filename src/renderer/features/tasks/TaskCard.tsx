@@ -319,16 +319,52 @@ export const TaskCard = memo(function TaskCard({
     }
   }, [isEditing]);
 
-  const handleSaveTitle = () => {
-    setIsEditing(false);
-    if (editTitle.trim() && editTitle.trim() !== task.title) {
-      onUpdateTitle?.(task.id, editTitle.trim());
-    } else {
-      setEditTitle(task.title);
-    }
-  };
+  const commitEdit = useCallback(
+    (valueToCommit: string) => {
+      setIsEditing(false);
+      const trimmed = valueToCommit.trim();
+      if (trimmed && trimmed !== task.title) {
+        setEditTitle(trimmed);
+        onUpdateTitle?.(task.id, trimmed);
+      } else {
+        setEditTitle(task.title);
+      }
+    },
+    [task.id, task.title, onUpdateTitle]
+  );
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const cancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditTitle(task.title);
+  }, [task.title]);
+
+  // Keep a ref to the latest editTitle and commitEdit for cleanup on unmount
+  const editTitleRef = useRef(editTitle);
+  editTitleRef.current = editTitle;
+  const isEditingRef = useRef(isEditing);
+  isEditingRef.current = isEditing;
+  const commitEditRef = useRef(commitEdit);
+  commitEditRef.current = commitEdit;
+
+  // Unmount cleanup: if task card unmounts while editing, safely commit pending changes
+  useEffect(() => {
+    return () => {
+      if (isEditingRef.current) {
+        commitEditRef.current(editTitleRef.current);
+      }
+    };
+  }, []);
+
+  // When selection moves to another task, commit any ongoing edit
+  const prevSelectedRef = useRef(isSelected);
+  useEffect(() => {
+    if (prevSelectedRef.current && !isSelected && isEditing) {
+      commitEdit(editTitle);
+    }
+    prevSelectedRef.current = isSelected;
+  }, [isSelected, isEditing, editTitle, commitEdit]);
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
       e.preventDefault();
       e.stopPropagation();
@@ -336,10 +372,22 @@ export const TaskCard = memo(function TaskCard({
       return;
     }
     if (e.key === 'Enter') {
-      handleSaveTitle();
+      e.preventDefault();
+      e.stopPropagation();
+      commitEdit(editTitle);
     } else if (e.key === 'Escape') {
-      setIsEditing(false);
-      setEditTitle(task.title);
+      e.preventDefault();
+      e.stopPropagation();
+      cancelEdit();
+    }
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent) => {
+    if (!isEditing && (isSelected || document.activeElement === cardRef.current)) {
+      if (e.key === 'F2' || e.key === 'Enter') {
+        e.preventDefault();
+        setIsEditing(true);
+      }
     }
   };
 
@@ -676,6 +724,7 @@ export const TaskCard = memo(function TaskCard({
       tabIndex={0}
       role="row"
       aria-selected={isSelected || isMultiSelected}
+      onKeyDown={handleCardKeyDown}
     >
       {/* Multi-Select Checkbox (only rendered when multi-select is active) */}
       {(isMultiSelectActive || isMultiSelected) && (
@@ -764,8 +813,8 @@ export const TaskCard = memo(function TaskCard({
               className={styles.titleInput}
               value={editTitle}
               onChange={e => setEditTitle(e.target.value)}
-              onBlur={handleSaveTitle}
-              onKeyDown={handleKeyDown}
+              onBlur={() => commitEdit(editTitle)}
+              onKeyDown={handleInputKeyDown}
               onPointerDown={e => e.stopPropagation()}
               onClick={e => e.stopPropagation()}
               aria-label={`Edit title for ${task.title}`}

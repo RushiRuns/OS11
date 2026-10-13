@@ -297,6 +297,7 @@
   min-width: 0;
   min-height: 20px;
   line-height: 20px;
+  position: relative;
 }
 
 .titleText {
@@ -327,27 +328,29 @@
   text-decoration: line-through;
 }
 
+/* Seamless Ghost Input: Zero layout shift, matching .titleText exactly */
 .titleInput {
   width: 100%;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0;
+  padding: 0 0 1px 0;
+  margin: 0;
+  font-family: inherit;
   font-size: var(--text-sm);
+  font-weight: inherit;
   line-height: 20px;
   color: var(--text-primary);
   outline: none;
   box-shadow: none;
   box-sizing: border-box;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast);
 }
 
 .titleInput:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
   outline: none;
+  border-bottom-color: var(--accent);
 }
 
 .subtaskRow .titleInput {
