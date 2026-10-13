@@ -224,6 +224,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-left: 12px;
+  box-sizing: border-box;
 }
 
 .groupHeaderDropActive {

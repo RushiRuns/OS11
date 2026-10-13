@@ -351,7 +351,14 @@ export function TaskContextMenu({
             type="button"
             className={styles.item}
             onClick={() => {
-              onToggleMyDay?.(task.id);
+              if (onToggleMyDay) {
+                onToggleMyDay(task.id);
+              } else {
+                updateTask({
+                  id: task.id,
+                  my_day_date: isInMyDay ? null : today,
+                });
+              }
               onClose();
             }}
           >
