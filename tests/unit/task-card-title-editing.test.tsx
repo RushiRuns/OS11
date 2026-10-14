@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import React from 'react';
 import type { Task } from '../../src/shared/types/task.js';
 
 let stateIndex = 0;

@@ -1,39 +1,48 @@
+/* SuggestionsSidebar.module.css - Suggestions Drawer */
+
 .panelContainer {
-  width: var(--detail-panel-width, 340px);
+  width: var(--detail-panel-width);
   height: 100%;
+  flex-shrink: 0;
   background: var(--surface-raised);
-  border-left: 1px solid var(--border-subtle);
+  border-left: var(--space-px) solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
   z-index: 20;
 }
 
+/* Header */
 .header {
+  height: var(--toolbar-height);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .headerTitle {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-widest);
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .closeButton {
+  width: var(--space-7);
+  height: var(--space-7);
+  border-radius: var(--radius-sm);
   background: transparent;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,88 +54,274 @@
   background: var(--surface-hover);
 }
 
+.closeIcon {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  stroke: currentColor;
+}
+
+/* List Content */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-5);
+  overflow-x: hidden;
+  padding: var(--space-2) var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  box-sizing: border-box;
 }
 
 .suggestionList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
-.suggestionRow {
+/* Sections */
+.section {
   display: flex;
+  flex-direction: column;
+}
+
+.section:not(:first-child) {
+  margin-top: var(--space-4);
+}
+
+.sectionHeader {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.sectionRows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Row Collapse Wrapper */
+.rowWrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--motion-slow) var(--ease-in-out);
+}
+
+.rowWrapper[data-leaving="true"] {
+  grid-template-rows: 0fr;
+  transition-delay: var(--motion-fast);
+}
+
+/* Clip Element: carries row spacing as bottom padding */
+.rowClip {
+  min-height: 0;
+  padding-bottom: var(--space-0-5);
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.rowWrapper[data-leaving="true"] .rowClip {
+  overflow: hidden;
+}
+
+/* Suggestion Row Surface */
+.suggestionRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  column-gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--surface-hover);
-  border: 1px solid var(--border-subtle);
-  transition: background var(--transition-fast);
+  min-height: var(--task-height);
+  background: transparent;
+  box-sizing: border-box;
+  transition: background var(--transition-fast), transform var(--motion-default) var(--ease-out), opacity var(--motion-default) var(--ease-out);
 }
 
-.suggestionTitleWrap {
-  flex: 1;
+/* Row Entrance Keyframe and Stagger */
+@keyframes suggestion-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-1));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestionList[data-entering="true"] .suggestionRow {
+  animation: suggestion-row-in var(--motion-default) var(--ease-out) backwards;
+  animation-delay: calc(var(--motion-fast) + min(var(--row-index, 0), var(--stagger-max-rows)) * var(--detail-stagger-step));
+}
+
+.suggestionRow:hover,
+.suggestionRow:focus-within {
+  background: var(--surface-hover);
+}
+
+.rowWrapper[data-leaving="true"] .suggestionRow {
+  opacity: 0;
+  transform: translateX(calc(-1 * var(--space-2)));
+  transition-delay: var(--motion-fast);
+  pointer-events: none;
+}
+
+/* Title and Chip Layout */
+.suggestionInfo {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .suggestionTitle {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-snug);
   color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-.dueBadge {
-  font-size: var(--text-xs);
-  color: var(--color-danger);
-  flex-shrink: 0;
-}
-
-.followUpBadge {
-  font-size: var(--text-xs);
-  color: var(--color-warning);
-  background: var(--color-warning-muted, rgba(245, 158, 11, 0.15));
-  padding: 1px var(--space-2);
+/* Add Button */
+.addButton {
+  height: var(--space-7);
+  padding: 0 var(--space-3);
+  min-width: var(--space-16);
   border-radius: var(--radius-full);
-  flex-shrink: 0;
+  font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-}
-
-.anytimeBadge {
-  font-size: var(--text-xs);
-  color: var(--accent);
-  background: var(--accent-subtle, rgba(99, 102, 241, 0.12));
-  padding: 1px var(--space-2);
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-  font-weight: var(--weight-medium);
-}
-
-.priorityBadge {
-  font-size: var(--text-xs);
+  border: 1px solid var(--border-default);
+  background: transparent;
   color: var(--text-secondary);
-  background: var(--surface-raised);
-  padding: 1px var(--space-2);
-  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-spring);
+}
+
+/* Cue that row action is the Add button */
+.suggestionRow:hover .addButton,
+.suggestionRow:focus-within .addButton {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.addButton:hover {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+}
+
+.addButton:active {
+  transform: scale(var(--press-scale));
+  background: var(--surface-active);
+}
+
+.addButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.addButton[data-added="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+  pointer-events: none;
+  transform: none;
+}
+
+.addButtonIcon {
+  width: var(--size-icon);
+  height: var(--size-icon);
   flex-shrink: 0;
 }
 
+.checkIcon {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  flex-shrink: 0;
+  animation: check-scale var(--motion-fast) var(--ease-spring);
+}
+
+@keyframes check-scale {
+  from {
+    transform: scale(0.6);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Empty State */
 .emptyStateContainer {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-6);
+  box-sizing: border-box;
+}
+
+.emptyStateCustom {
+  max-width: 100%;
+  padding: 0;
+}
+
+.emptyStateCustom h3 {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.emptyStateCustom p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Visually Hidden for Live Region */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .suggestionList[data-entering="true"] .suggestionRow {
+    animation: none !important;
+    transition-delay: 0s !important;
+  }
+  .rowWrapper {
+    transition: none !important;
+    transition-delay: 0s !important;
+  }
+  .rowClip {
+    transition: none !important;
+    transition-delay: 0s !important;
+  }
+  .suggestionRow {
+    animation: none !important;
+    transition: none !important;
+    transition-delay: 0s !important;
+  }
+  .checkIcon {
+    animation: none !important;
+  }
 }

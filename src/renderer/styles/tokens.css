@@ -255,6 +255,8 @@
   --detail-label-width: 104px;      /* label column in property rows */
   --detail-row-height: var(--space-8);
   --detail-stagger-step: 24ms;      /* entrance stagger between blocks */
+  --stagger-max-rows: 7;            /* cap on row entrance stagger */
+  --press-scale: 0.96;              /* pressed state scale */
   --size-icon: 16px;                /* row and menu icons */
   --checkbox-size-sm: 16px;         /* subtask checkbox */
   --planned-calendar-width: 240px;
