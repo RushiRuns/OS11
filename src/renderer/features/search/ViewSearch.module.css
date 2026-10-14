@@ -1,0 +1,176 @@
+.container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  width: var(--search-trigger-size, 32px);
+  min-width: var(--search-trigger-size, 32px);
+  max-width: var(--search-field-width, 264px);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: width var(--motion-search-open) var(--ease-out),
+              background var(--motion-fast) var(--ease-out),
+              border-color var(--motion-fast) var(--ease-out);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.containerOpen {
+  width: var(--search-field-width, 264px);
+  background: var(--surface-raised);
+  border-color: var(--border-default);
+}
+
+.containerOpen:focus-within {
+  border-color: var(--accent-border);
+  background: var(--surface-overlay);
+}
+
+/* Trigger button when closed */
+.triggerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--search-trigger-size, 32px);
+  height: 32px;
+  min-width: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--motion-fast) var(--ease-out),
+              color var(--motion-fast) var(--ease-out);
+}
+
+.triggerBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* Field inner elements */
+.fieldContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 4px 0 8px;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.fieldContentOpen {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 180ms var(--ease-out) 70ms;
+}
+
+.searchIconOpen {
+  color: var(--accent);
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  line-height: 1.4;
+  padding: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-secondary);
+}
+
+.endArea {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.escKeycap {
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  padding: 1px 4px;
+  line-height: 1.3;
+  user-select: none;
+}
+
+.matchCount {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full, 9999px);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--motion-fast) var(--ease-out),
+              color var(--motion-fast) var(--ease-out);
+}
+
+.closeBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* Visually hidden screen reader status */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Narrow screens down to 200px */
+@media (max-width: 600px) {
+  .containerOpen {
+    width: 200px;
+    min-width: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container,
+  .fieldContent,
+  .triggerBtn,
+  .closeBtn {
+    transition: none !important;
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
@@ -15,6 +15,8 @@ import { CreateProjectModal } from './CreateProjectModal.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import type { ProjectViewMode } from './ViewSwitcher.js';
 import type { Task } from '@shared/types/index.js';
+import { useViewSearch } from '../../hooks/useViewSearch.js';
+import { ViewSearchContext } from '../search/ViewSearchContext.js';
 import styles from './Projects.module.css';
 
 export function Projects(): React.ReactElement {
@@ -117,6 +119,20 @@ export function Projects(): React.ReactElement {
     );
   }, [tasksById, currentProject]);
 
+  const handleOpenTaskDetail = useCallback(
+    (taskId: string) => {
+      openDetail(taskId);
+    },
+    [openDetail]
+  );
+
+  const search = useViewSearch({
+    tasks: projectTasks,
+    viewKey: currentProject ? `project:${currentProject.id}` : 'project',
+    viewName: currentProject?.name ?? 'Project',
+    onOpenTaskDetail: handleOpenTaskDetail,
+  });
+
   const handleCreateNewProject = () => {
     setIsCreateProjectModalOpen(true);
   };
@@ -147,21 +163,23 @@ export function Projects(): React.ReactElement {
   }
 
   return (
-    <div className={styles.container}>
-      {currentProject && (
-        <>
-          {/* Project Header Overview */}
-          <ProjectHeader
-            project={currentProject}
-            sections={projectSections}
-            tasks={projectTasks}
-            milestones={projectMilestones}
-            currentView={currentView}
-            onViewChange={handleViewChange}
-            onUpdateViews={handleUpdateViews}
-            onOpenMilestones={() => setIsMilestonesModalOpen(true)}
-            onOpenTemplates={() => setIsTemplateModalOpen(true)}
-          />
+    <ViewSearchContext.Provider value={search}>
+      <div className={styles.container}>
+        {currentProject && (
+          <>
+            {/* Project Header Overview */}
+            <ProjectHeader
+              project={currentProject}
+              sections={projectSections}
+              tasks={projectTasks}
+              milestones={projectMilestones}
+              currentView={currentView}
+              searchState={search}
+              onViewChange={handleViewChange}
+              onUpdateViews={handleUpdateViews}
+              onOpenMilestones={() => setIsMilestonesModalOpen(true)}
+              onOpenTemplates={() => setIsTemplateModalOpen(true)}
+            />
 
           {/* Crossfade Animated View Container (< 200ms per Phase 10 spec) */}
           <div className={styles.viewWrapper}>
@@ -253,7 +271,8 @@ export function Projects(): React.ReactElement {
         </>
       )}
     </div>
-  );
+  </ViewSearchContext.Provider>
+);
 }
 
 export default Projects;

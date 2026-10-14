@@ -313,6 +313,14 @@
   /* Reduced-motion override — use in every keyframe declaration */
   /* @media (prefers-reduced-motion: reduce) { animation: none; transition: none; } */
 
+  /* View Search */
+  --search-trigger-size: var(--space-8);
+  --search-field-width: 264px;
+  --search-mark-bg: var(--accent-muted);
+  --search-mark-line: var(--accent);
+  --motion-search-open: 220ms;
+  --motion-row-collapse: 180ms;
+
   /* ----------------------------------------------------------
      Z-INDEX SCALE
      Never use a magic number. Always use one of these.

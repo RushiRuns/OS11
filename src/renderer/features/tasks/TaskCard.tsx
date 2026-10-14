@@ -21,6 +21,8 @@ import { CardGlyph } from './card-glyphs.js';
 import { formatDueLabel } from './due-label.js';
 import type { Task } from '@shared/types/task.js';
 import { capitalizeFirstLetter } from '@shared/utils/index.js';
+import { useOptionalViewSearchContext } from '../search/ViewSearchContext.js';
+import { HighlightMark } from '../search/HighlightMark.js';
 import styles from './TaskCard.module.css';
 
 export interface TaskCardProps {
@@ -156,6 +158,22 @@ export const TaskCard = memo(function TaskCard({
     prevCompletedRef.current = task.is_completed;
   }, [task.is_completed]);
 
+  const searchCtx = useOptionalViewSearchContext();
+  const isSearchFiltering = Boolean(searchCtx?.isFiltering);
+  const isSearchCursor = Boolean(searchCtx?.cursorTaskId === task.id);
+  const matchResult = searchCtx?.results.get(task.id);
+  const isTitleMatch = matchResult?.isTitleMatch ?? false;
+  const searchTokens = searchCtx?.tokens ?? [];
+
+  useEffect(() => {
+    if (isEditing && searchCtx?.pin) {
+      searchCtx.pin(task.id);
+      return () => {
+        searchCtx.unpin(task.id);
+      };
+    }
+  }, [isEditing, task.id, searchCtx]);
+
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [collapseStyle, setCollapseStyle] = useState<React.CSSProperties | null>(null);
 
@@ -280,9 +298,10 @@ export const TaskCard = memo(function TaskCard({
     loadTagsForTask(task.id);
   }, [task.id, loadTagsForTask]);
 
+  const effectiveDisableDrag = disableDrag || isSearchFiltering;
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: task.id,
-    disabled: disableDrag,
+    disabled: effectiveDisableDrag,
     data: {
       type: 'task-row',
       taskId: task.id,
@@ -667,7 +686,10 @@ export const TaskCard = memo(function TaskCard({
       // a card to attach them - that is a different feature and still needs them.
       className={`${styles.taskCard} ${depth > 0 ? styles.subtaskRow : ''} ${getPriorityClass(task.priority)} ${
         isSelected ? styles.taskCardSelected : ''
-      } ${isHoveredFromBlock ? styles.rowHighlightedFromBlock : ''}`}
+      } ${isHoveredFromBlock ? styles.rowHighlightedFromBlock : ''} ${
+        isSearchCursor ? styles.searchCursorRow : ''
+      }`}
+      aria-current={isSearchCursor ? 'true' : undefined}
       data-multiselect={isMultiSelectActive || isMultiSelected ? 'active' : 'inactive'}
       data-dragging={isDragging ? 'true' : 'false'}
       data-filedrop={fileOver ? 'true' : 'false'}
@@ -830,7 +852,14 @@ export const TaskCard = memo(function TaskCard({
               }}
               title={capitalizeFirstLetter(task.title)}
             >
-              {capitalizeFirstLetter(task.title)}
+              {isSearchFiltering && isTitleMatch && searchTokens.length > 0 ? (
+                <HighlightMark
+                  text={capitalizeFirstLetter(task.title)}
+                  tokens={searchTokens}
+                />
+              ) : (
+                capitalizeFirstLetter(task.title)
+              )}
             </span>
           )}
         </div>

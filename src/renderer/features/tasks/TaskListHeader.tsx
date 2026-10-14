@@ -5,6 +5,8 @@ import { Tooltip } from '../../components/Tooltip/Tooltip.js';
 import type { DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import type { GroupByOption } from '../../stores/viewGroupStore.js';
 import { GROUP_BY_LABELS } from '../../stores/viewGroupStore.js';
+import type { ViewSearchState } from '../search/ViewSearchContext.js';
+import { ViewSearch } from '../search/ViewSearch.js';
 import styles from './TaskListHeader.module.css';
 
 const DropdownMenu = lazy(() => import('../../components/primitives/DropdownMenu/DropdownMenu.js'));
@@ -24,6 +26,8 @@ export interface TaskListHeaderProps {
   isGroupByVisible?: boolean;
   onGroupByChange?: (opt: GroupByOption) => void;
   onToggleGroupBy?: () => void;
+  searchState?: ViewSearchState;
+  onOpenTaskDetail?: (taskId: string) => void;
 }
 
 export function TaskListHeader({
@@ -41,6 +45,8 @@ export function TaskListHeader({
   isGroupByVisible = false,
   onGroupByChange,
   onToggleGroupBy,
+  searchState,
+  onOpenTaskDetail,
 }: TaskListHeaderProps): React.ReactElement {
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
@@ -177,6 +183,11 @@ export function TaskListHeader({
               </Suspense>
             </div>
           )}
+
+          {searchState && (
+            <ViewSearch searchState={searchState} onOpenDetail={onOpenTaskDetail} />
+          )}
+
           {isMyDayList && (
             <>
               <Tooltip

@@ -3,7 +3,6 @@ import { useTaskStore } from '../stores/taskStore.js';
 import { useListStore } from '../stores/listStore.js';
 import { useAppStore } from '../stores/app-store.js';
 import { useModuleStore } from '../stores/moduleStore.js';
-import { useSearchStore } from '../stores/searchStore.js';
 import { useUndoRedo } from './useUndoRedo.js';
 import { useShortcutStore, matchesShortcut } from '../stores/shortcutStore.js';
 import { ipc } from '../services/ipc.js';
@@ -33,7 +32,6 @@ export function useKeyboardShortcuts({
     useTaskStore();
   const { orderedIds, listsById, setActiveList } = useListStore();
   const { setActiveListId } = useAppStore();
-  const { toggleSearch, openSearch } = useSearchStore();
   const { undo, redo, pushAction } = useUndoRedo();
 
   useEffect(() => {
@@ -82,13 +80,6 @@ export function useKeyboardShortcuts({
       if (matchesShortcut(e, shortcuts['toggle_focus_mode'] || ['Ctrl', 'Shift', 'F'])) {
         e.preventDefault();
         onToggleFocusMode?.();
-        return;
-      }
-
-      // 3. Search tasks
-      if (matchesShortcut(e, shortcuts['search_tasks'] || ['Ctrl', 'F'])) {
-        e.preventDefault();
-        openSearch();
         return;
       }
 
@@ -299,13 +290,6 @@ export function useKeyboardShortcuts({
         updateTask({ id: selectedTask.id, due_date: nextDue });
         return;
       }
-
-      // Slash '/' -> Focus search
-      if (e.key === '/' && !modKey) {
-        e.preventDefault();
-        openSearch();
-        return;
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -328,8 +312,6 @@ export function useKeyboardShortcuts({
     listsById,
     setActiveListId,
     setActiveList,
-    toggleSearch,
-    openSearch,
     undo,
     redo,
     pushAction,

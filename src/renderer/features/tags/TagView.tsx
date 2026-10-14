@@ -8,6 +8,10 @@ import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import type { Task } from '@shared/types/task.js';
 import { getTagShapeClass } from '@shared/utils/tag-shape.js';
+import { useViewSearch } from '../../hooks/useViewSearch.js';
+import { ViewSearch } from '../search/ViewSearch.js';
+import { ViewSearchContext } from '../search/ViewSearchContext.js';
+import { SearchCollapse } from '../search/SearchCollapse.js';
 import styles from './TagView.module.css';
 
 export interface TagViewProps {
@@ -96,124 +100,205 @@ export function TagView({
     fetchTasksForTag();
   };
 
+  const searchTasks = useMemo(
+    () => [...activeTasks, ...completedTasks],
+    [activeTasks, completedTasks]
+  );
+
+  const handleOpenTaskDetail = useCallback(
+    (taskId: string) => {
+      const target = tasks.find((t) => t.id === taskId);
+      if (target && onSelectTask) {
+        onSelectTask(target);
+      }
+    },
+    [tasks, onSelectTask]
+  );
+
+  const tagName = currentTag?.name ? `#${currentTag.name}` : '#Tag';
+
+  const search = useViewSearch({
+    tasks: searchTasks,
+    viewKey: `tag:${tagId}`,
+    viewName: tagName,
+    onOpenTaskDetail: handleOpenTaskDetail,
+  });
+
+  const hasCompletedMatches = useMemo(() => {
+    return completedTasks.some((t) => search.results.get(t.id)?.isMatch);
+  }, [completedTasks, search.results]);
+
+  const isCompletedSectionVisible = search.isFiltering
+    ? hasCompletedMatches
+    : completedTasks.length > 0;
+
+  const isCompletedExpanded = search.groupOpen('completed', isCompletedOpen, hasCompletedMatches);
+
   return (
-    <div className={styles.tagViewContainer}>
-      <header className={styles.header}>
-        <div className={styles.tagBadgeRow}>
-          <span
-            className={`${styles.colorDot} ${getTagShapeClass(currentTag?.id || currentTag?.name || '')}`}
-            style={{ background: currentTag?.color ?? 'var(--tag-gray)' }}
-            aria-hidden="true"
-          />
-          <h1 className={styles.tagName}>
-            #{currentTag?.name ?? 'Tag'}
-          </h1>
-          <span className={styles.taskCount}>
-            {activeTasks.length} {activeTasks.length === 1 ? 'task' : 'tasks'}
-          </span>
-        </div>
-      </header>
+    <ViewSearchContext.Provider value={search}>
+      <div className={styles.tagViewContainer}>
+        <header className={styles.header}>
+          <div className={styles.tagBadgeRow}>
+            <div className={styles.tagTitleGroup}>
+              <span
+                className={`${styles.colorDot} ${getTagShapeClass(currentTag?.id || currentTag?.name || '')}`}
+                style={{ background: currentTag?.color ?? 'var(--tag-gray)' }}
+                aria-hidden="true"
+              />
+              <h1 className={styles.tagName}>
+                #{currentTag?.name ?? 'Tag'}
+              </h1>
+              <span className={styles.taskCount}>
+                {activeTasks.length} {activeTasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+            </div>
 
-      <div className={styles.scrollArea}>
-        {isLoading ? (
-          <div className={styles.emptyState}>
-            <span className={styles.emptyText}>Loading tasks...</span>
+            <ViewSearch searchState={search} onOpenDetail={handleOpenTaskDetail} />
           </div>
-        ) : activeTasks.length === 0 && completedTasks.length === 0 ? (
-          <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}>🏷️</span>
-            <span className={styles.emptyText}>
-              No tasks tagged with #{currentTag?.name ?? 'this tag'}
-            </span>
-          </div>
-        ) : (
-          <>
-            {activeTasks.length > 0 && (
-              <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {activeTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
-                    allTaskIds={allActiveTaskIds}
-                    onSelect={(t) => setFocusedTaskId(t.id)}
-                    onOpenDetail={onSelectTask}
-                    onToggleComplete={handleToggleComplete}
-                    onToggleStar={handleToggleStar}
-                    onUpdateTitle={handleUpdateTitle}
-                    onDelete={handleDelete}
-                    onDuplicate={handleDuplicate}
-                    onContextMenu={handleContextMenu}
-                    exiting={isExiting(task.id)}
-                  />
-                ))}
+        </header>
+
+        <div className={styles.scrollArea}>
+          {isLoading ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyText}>Loading tasks...</span>
+            </div>
+          ) : activeTasks.length === 0 && completedTasks.length === 0 ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}>🏷️</span>
+              <span className={styles.emptyText}>
+                No tasks tagged with #{currentTag?.name ?? 'this tag'}
+              </span>
+            </div>
+          ) : search.isFiltering && search.matchCount === 0 ? (
+            <div className={styles.emptySearchState}>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={styles.emptySearchIcon}
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <div className={styles.emptySearchTitle}>
+                No tasks match &ldquo;{search.query}&rdquo;
               </div>
-            )}
-
-            {/* Collapsible Completed Section */}
-            {completedTasks.length > 0 && (
-              <div className={styles.completedSection}>
-                <div
-                  className={styles.completedHeader}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={isCompletedOpen}
-                  aria-label={`Completed tasks (${completedTasks.length})`}
-                  onClick={() => setIsCompletedOpen((prev) => !prev)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setIsCompletedOpen((prev) => !prev);
-                    }
-                  }}
-                >
-                  <span
-                    className={`${styles.completedCaret} ${
-                      isCompletedOpen ? styles.completedCaretOpen : ''
-                    }`}
-                    aria-hidden="true"
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </span>
-                  <span>Completed ({completedTasks.length})</span>
+              <div className={styles.emptySearchSubtitle}>
+                in #{currentTag?.name ?? 'tag'}
+              </div>
+            </div>
+          ) : (
+            <>
+              {activeTasks.length > 0 && (
+                <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {activeTasks.map((task) => {
+                    const isVisible = search.isRowVisible(task.id);
+                    return (
+                      <SearchCollapse key={task.id} collapsed={!isVisible}>
+                        <TaskCard
+                          task={task}
+                          isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
+                          allTaskIds={allActiveTaskIds}
+                          onSelect={(t) => setFocusedTaskId(t.id)}
+                          onOpenDetail={onSelectTask}
+                          onToggleComplete={handleToggleComplete}
+                          onToggleStar={handleToggleStar}
+                          onUpdateTitle={handleUpdateTitle}
+                          onDelete={handleDelete}
+                          onDuplicate={handleDuplicate}
+                          onContextMenu={handleContextMenu}
+                          exiting={isExiting(task.id)}
+                        />
+                      </SearchCollapse>
+                    );
+                  })}
                 </div>
+              )}
 
-                {isCompletedOpen && (
-                  <div className={styles.completedList} role="list" aria-label="Completed tasks">
-                    {completedTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
-                        allTaskIds={allCompletedTaskIds}
-                        onSelect={(t) => setFocusedTaskId(t.id)}
-                        onOpenDetail={onSelectTask}
-                        onToggleComplete={handleToggleComplete}
-                        onToggleStar={handleToggleStar}
-                        onUpdateTitle={handleUpdateTitle}
-                        onDelete={handleDelete}
-                        onDuplicate={handleDuplicate}
-                        onContextMenu={handleContextMenu}
-                      />
-                    ))}
+              {/* Collapsible Completed Section */}
+              {isCompletedSectionVisible && (
+                <div className={styles.completedSection}>
+                  <div
+                    className={styles.completedHeader}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isCompletedExpanded}
+                    aria-label={`Completed tasks (${completedTasks.length})`}
+                    onClick={() => {
+                      if (search.isFiltering) {
+                        search.setGroupOverride('completed', !isCompletedExpanded);
+                      } else {
+                        setIsCompletedOpen((prev) => !prev);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (search.isFiltering) {
+                          search.setGroupOverride('completed', !isCompletedExpanded);
+                        } else {
+                          setIsCompletedOpen((prev) => !prev);
+                        }
+                      }
+                    }}
+                  >
+                    <span
+                      className={`${styles.completedCaret} ${
+                        isCompletedExpanded ? styles.completedCaretOpen : ''
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </span>
+                    <span>Completed ({completedTasks.length})</span>
                   </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+
+                  {isCompletedExpanded && (
+                    <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                      {completedTasks.map((task) => {
+                        const isVisible = search.isRowVisible(task.id);
+                        return (
+                          <SearchCollapse key={task.id} collapsed={!isVisible}>
+                            <TaskCard
+                              task={task}
+                              isSelected={task.id === selectedTaskId || task.id === focusedTaskId}
+                              allTaskIds={allCompletedTaskIds}
+                              onSelect={(t) => setFocusedTaskId(t.id)}
+                              onOpenDetail={onSelectTask}
+                              onToggleComplete={handleToggleComplete}
+                              onToggleStar={handleToggleStar}
+                              onUpdateTitle={handleUpdateTitle}
+                              onDelete={handleDelete}
+                              onDuplicate={handleDuplicate}
+                              onContextMenu={handleContextMenu}
+                            />
+                          </SearchCollapse>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
       {contextMenuTask && (
         <TaskContextMenu
@@ -231,6 +316,7 @@ export function TagView({
         />
       )}
     </div>
+  </ViewSearchContext.Provider>
   );
 }
 

@@ -15,6 +15,12 @@
   margin-bottom: var(--space-6, 24px);
 }
 
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
 .titleArea {
   display: flex;
   align-items: center;
@@ -232,5 +238,15 @@
   flex-direction: column;
   gap: 4px;
   padding-top: var(--space-2, 8px);
+}
+
+.emptySearchState {
+  padding: var(--space-6, 24px) var(--space-4, 16px);
+  text-align: center;
+  color: var(--text-tertiary, #888);
+  font-size: var(--text-sm, 13px);
+  border: 1px dashed var(--border-subtle, #2a2a2e);
+  border-radius: var(--radius-md, 8px);
+  margin-top: var(--space-2, 8px);
 }
 

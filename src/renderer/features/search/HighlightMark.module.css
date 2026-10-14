@@ -1,0 +1,6 @@
+.mark {
+  background: var(--search-mark-bg);
+  color: inherit;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 -1.5px 0 var(--search-mark-line);
+}

@@ -39,6 +39,10 @@
   background: var(--surface-selected);
 }
 
+.searchCursorRow {
+  background: var(--surface-profile-menu-hover) !important;
+}
+
 .subtaskRow {
   padding: 8px 12px 8px 28px;
   min-height: 34px;

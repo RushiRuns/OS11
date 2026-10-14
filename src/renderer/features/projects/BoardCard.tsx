@@ -7,6 +7,8 @@ import { useTagStore } from '../../stores/tagStore.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { CardGlyph } from '../tasks/card-glyphs.js';
+import { useOptionalViewSearchContext } from '../search/ViewSearchContext.js';
+import { HighlightMark } from '../search/HighlightMark.js';
 import styles from './BoardCard.module.css';
 
 export interface BoardCardProps {
@@ -43,10 +45,13 @@ export const BoardCard = memo(function BoardCard({
   onContextMenu,
   isOverlay = false,
 }: BoardCardProps): React.ReactElement {
+  const search = useOptionalViewSearchContext();
+  const isSearchFiltering = Boolean(search?.isFiltering);
+
   // Sortable hook only when not rendered inside a DragOverlay
   const sortable = useSortable({
     id: task.id,
-    disabled: isOverlay,
+    disabled: isOverlay || isSearchFiltering,
     data: {
       type: 'task-row',
       taskId: task.id,
@@ -170,7 +175,7 @@ export const BoardCard = memo(function BoardCard({
           <span
             className={`${styles.cardTitle} ${isDone ? styles.cardTitleCompleted : ''}`}
           >
-            {capitalizeFirstLetter(task.title)}
+            <HighlightMark text={capitalizeFirstLetter(task.title)} tokens={search?.tokens ?? []} />
           </span>
           {task.is_starred === 1 && (
             <span className={styles.starBadge} title="Starred" aria-label="Starred">

@@ -11,6 +11,9 @@ import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { PlannedTimeline } from './PlannedTimeline.js';
 import { PlannedMiniCalendar } from './PlannedMiniCalendar.js';
 import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
+import { useViewSearch } from '../../hooks/useViewSearch.js';
+import { ViewSearch } from '../search/ViewSearch.js';
+import { ViewSearchContext } from '../search/ViewSearchContext.js';
 import styles from './PlannedView.module.css';
 
 export interface PlannedViewProps {
@@ -74,20 +77,39 @@ export function PlannedView({
     setScrollRequest({ dateISO: todayStr, timestamp: Date.now() });
   }, [todayStr]);
 
-  return (
-    <div className={styles.container}>
-      {/* Top Header Row */}
-      <header className={styles.headerRow}>
-        <div className={styles.titleArea}>
-          <h2 className={styles.title}>Planned</h2>
-          <span className={styles.countBadge} aria-label={`${totalPlannedCount} tasks`}>
-            {totalPlannedCount}
-          </span>
-        </div>
-      </header>
+  const handleOpenTaskDetail = useCallback(
+    (taskId: string) => {
+      const target = tasksById[taskId] || plannedTasks.find((t) => t.id === taskId);
+      if (target && onSelectTask) {
+        onSelectTask(target);
+      }
+    },
+    [tasksById, plannedTasks, onSelectTask]
+  );
 
-      {/* Main Two-Panel Content Area */}
-      <div className={styles.contentSplit}>
+  const search = useViewSearch({
+    tasks: plannedTasks,
+    viewKey: 'smart_planned',
+    viewName: 'Planned',
+    onOpenTaskDetail: handleOpenTaskDetail,
+  });
+
+  return (
+    <ViewSearchContext.Provider value={search}>
+      <div className={styles.container}>
+        {/* Top Header Row */}
+        <header className={styles.headerRow}>
+          <div className={styles.titleArea}>
+            <h2 className={styles.title}>Planned</h2>
+            <span className={styles.countBadge} aria-label={`${totalPlannedCount} tasks`}>
+              {totalPlannedCount}
+            </span>
+          </div>
+          <ViewSearch searchState={search} onOpenDetail={handleOpenTaskDetail} />
+        </header>
+
+        {/* Main Two-Panel Content Area */}
+        <div className={styles.contentSplit}>
         {/* Left Column: Grouped Timeline & InlineTaskCreator */}
         <div className={styles.leftCol}>
           <InlineTaskCreator defaultDueDate={selectedDate ?? todayStr} />
@@ -128,7 +150,8 @@ export function PlannedView({
         />
       )}
     </div>
-  );
+  </ViewSearchContext.Provider>
+);
 }
 
 export default PlannedView;

@@ -28,7 +28,8 @@ import { TaskListHeader } from './TaskListHeader.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from './TaskContextMenu.js';
 import { BulkActionBar } from './BulkActionBar.js';
 import { InlineTaskCreator } from './InlineTaskCreator.js';
-import { SearchView } from '../search/SearchView.js';
+import { useViewSearch } from '../../hooks/useViewSearch.js';
+import { ViewSearchContext } from '../search/ViewSearchContext.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { useFilteredTasks, DEFAULT_FILTER_CONFIG } from '../../hooks/useFilteredTasks.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
@@ -332,6 +333,34 @@ export function TaskList({
   suggestionsCount: propSuggestionsCount,
 }: TaskListProps): React.ReactElement {
   const { activeListId } = useAppStore();
+  const headerTitle = useMemo(() => {
+    switch (activeListId) {
+      case 'list_inbox':
+      case 'smart_inbox':
+        return 'Inbox';
+      case 'smart_my_day':
+        return 'My Day';
+      case 'smart_important':
+        return 'Important';
+      case 'smart_planned':
+        return 'Planned';
+      case 'smart_all':
+      case 'smart_all_tasks':
+        return 'All Tasks';
+      case 'smart_completed':
+        return 'Completed';
+      default:
+        if (activeListId.startsWith('project:')) {
+          const proj = useProjectStore.getState().projectsById[activeListId.slice(8)];
+          return proj?.name ?? 'Project';
+        }
+        if (activeListId.startsWith('area:')) {
+          const area = useAreaStore.getState().areasById[activeListId.slice(5)];
+          return area ? `${area.name} — Tasks` : 'Area Tasks';
+        }
+        return 'Tasks';
+    }
+  }, [activeListId]);
   const groupBy = useViewGroupStore((s) => s.getGroupBy(activeListId));
   const isGroupByVisible = useViewGroupStore((s) => s.isVisible(activeListId));
   const collapsedGroupsMap = useViewGroupStore((s) => s.collapsedGroupsMap);
@@ -502,6 +531,56 @@ export function TaskList({
     [completedTasks, isLingering, lingerVersion]
   );
 
+  const getChildren = useCallback(
+    (parentId: string) => {
+      return Object.values(tasksById).filter(
+        (t) => t.parent_task_id === parentId && t.is_trashed === 0
+      );
+    },
+    [tasksById]
+  );
+
+  const searchTasks = useMemo(
+    () => [...activeTasks, ...visibleCompletedTasks],
+    [activeTasks, visibleCompletedTasks]
+  );
+
+  const handleOpenTaskDetail = useCallback(
+    (taskId: string) => {
+      const target =
+        activeTasks.find((t) => t.id === taskId) ||
+        visibleCompletedTasks.find((t) => t.id === taskId) ||
+        tasksById[taskId];
+      if (target && onSelectTask) {
+        onSelectTask(target);
+      }
+    },
+    [activeTasks, visibleCompletedTasks, tasksById, onSelectTask]
+  );
+
+  const search = useViewSearch({
+    tasks: searchTasks,
+    getChildren,
+    viewKey: activeListId,
+    viewName: headerTitle,
+    onOpenTaskDetail: handleOpenTaskDetail,
+  });
+
+  const hasCompletedMatches = useMemo(() => {
+    return visibleCompletedTasks.some((t) => search.results.get(t.id)?.isMatch);
+  }, [visibleCompletedTasks, search.results]);
+
+  const isCompletedSectionVisible = search.isFiltering
+    ? hasCompletedMatches
+    : visibleCompletedTasks.length > 0;
+
+  const isCompletedExpanded = search.groupOpen('completed', isCompletedOpen, hasCompletedMatches);
+
+  const displayedCompletedTasks = useMemo(() => {
+    if (!search.isFiltering) return visibleCompletedTasks;
+    return visibleCompletedTasks.filter((t) => search.isRowVisible(t.id));
+  }, [visibleCompletedTasks, search]);
+
   // Filter & Sort (deferred value avoids blocking user inputs)
   const deferredConfig = useDeferredValue(filterConfig);
   // Memoised: an inline .filter() hands useFilteredTasks a new array every render, which
@@ -542,16 +621,24 @@ export function TaskList({
       }
     }
 
-    const rootTasks = filteredIncomplete.filter(
-      (t) => !t.parent_task_id || !activeTasksMap.has(t.parent_task_id)
-    );
+    const rootTasks = filteredIncomplete.filter((t) => {
+      const isRoot = !t.parent_task_id || !activeTasksMap.has(t.parent_task_id);
+      if (!isRoot) return false;
+      if (search.isFiltering) {
+        return search.isRowVisible(t.id);
+      }
+      return true;
+    });
 
     const result: FlattenedTaskItem[] = [];
 
     const appendTree = (task: Task, depth: number) => {
       const stats = subtaskStats.get(task.id) || { completed: 0, total: 0 };
       const hasSubtasks = stats.total > 0;
-      const isExpanded = !collapsedParentIds.has(task.id);
+      const matchResult = search.isFiltering ? search.results.get(task.id) : undefined;
+      const isSubtaskOnlyMatch =
+        search.isFiltering && !matchResult?.isTitleMatch && Boolean(matchResult?.isMatch);
+      const isExpanded = isSubtaskOnlyMatch ? true : !collapsedParentIds.has(task.id);
 
       result.push({
         task,
@@ -562,7 +649,10 @@ export function TaskList({
       });
 
       if (hasSubtasks && isExpanded) {
-        const children = childrenByParentId.get(task.id) || [];
+        let children = childrenByParentId.get(task.id) || [];
+        if (isSubtaskOnlyMatch && matchResult) {
+          children = children.filter((child) => matchResult.visibleIds.has(child.id));
+        }
         for (const child of children) {
           appendTree(child, depth + 1);
         }
@@ -574,7 +664,14 @@ export function TaskList({
     }
 
     return result;
-  }, [filteredIncomplete, tasksById, collapsedParentIds]);
+  }, [
+    filteredIncomplete,
+    tasksById,
+    collapsedParentIds,
+    search.isFiltering,
+    search.results,
+    search.isRowVisible,
+  ]);
 
   const allTaskIds = useMemo(
     () => flattenedIncomplete.map((item) => item.task.id),
@@ -973,35 +1070,6 @@ export function TaskList({
     onDragCancel: clearDragState,
   });
 
-  const headerTitle = (() => {
-    switch (activeListId) {
-      case 'list_inbox':
-      case 'smart_inbox':
-        return 'Inbox';
-      case 'smart_my_day':
-        return 'My Day';
-      case 'smart_important':
-        return 'Important';
-      case 'smart_planned':
-        return 'Planned';
-      case 'smart_all':
-      case 'smart_all_tasks':
-        return 'All Tasks';
-      case 'smart_completed':
-        return 'Completed';
-      default:
-        if (activeListId.startsWith('project:')) {
-          const proj = useProjectStore.getState().projectsById[activeListId.slice(8)];
-          return proj?.name ?? 'Project';
-        }
-        if (activeListId.startsWith('area:')) {
-          const area = useAreaStore.getState().areasById[activeListId.slice(5)];
-          return area ? `${area.name} — Tasks` : 'Area Tasks';
-        }
-        return 'Tasks';
-    }
-  })();
-
   const calculatedSuggestionsCount = useMemo(() => {
     if (!isMyDay) return 0;
     if (propSuggestionsCount !== undefined) return propSuggestionsCount;
@@ -1015,53 +1083,70 @@ export function TaskList({
   }, [isMyDay, propSuggestionsCount, tasksById, todayStr]);
 
   return (
-    <div className={styles.taskListContainer} data-dragging={Boolean(draggingTaskId)}>
-      {/* Header with Search/Filter bar */}
-      <TaskListHeader
-        title={headerTitle}
-        count={filteredIncomplete.length}
-        filterConfig={filterConfig}
-        onFilterChange={setFilterConfig}
-        isMyDayList={isMyDay}
-        isSuggestionsOpen={isSuggestionsOpen}
-        onToggleSuggestions={onToggleSuggestions}
-        isSchedulerOpen={isSchedulerOpen}
-        onToggleScheduler={onToggleScheduler}
-        suggestionsCount={calculatedSuggestionsCount}
-        groupBy={groupBy}
-        isGroupByVisible={isGroupByVisible}
-        onGroupByChange={(opt) => setGroupBy(activeListId, opt)}
-        onToggleGroupBy={() => toggleVisible(activeListId)}
-      />
+    <ViewSearchContext.Provider value={search}>
+      <div className={styles.taskListContainer} data-dragging={Boolean(draggingTaskId)}>
+        {/* Header with Search/Filter bar */}
+        <TaskListHeader
+          title={headerTitle}
+          count={filteredIncomplete.length}
+          filterConfig={filterConfig}
+          onFilterChange={setFilterConfig}
+          isMyDayList={isMyDay}
+          isSuggestionsOpen={isSuggestionsOpen}
+          onToggleSuggestions={onToggleSuggestions}
+          isSchedulerOpen={isSchedulerOpen}
+          onToggleScheduler={onToggleScheduler}
+          suggestionsCount={calculatedSuggestionsCount}
+          groupBy={groupBy}
+          isGroupByVisible={isGroupByVisible}
+          onGroupByChange={(opt) => setGroupBy(activeListId, opt)}
+          onToggleGroupBy={() => toggleVisible(activeListId)}
+          searchState={search}
+          onOpenTaskDetail={handleOpenTaskDetail}
+        />
 
-      {/* Inline FTS5 Search View (Ctrl+F or /) */}
-      <SearchView
-        onSelectTask={(taskId) => {
-          const matched = activeTasks.find((t) => t.id === taskId);
-          if (matched) {
-            onSelectTask?.(matched);
-          }
-        }}
-      />
+        {/* Inline Task Creator (Active row rendered at top, resting trigger anchored at bottom) */}
+        <InlineTaskCreator listId={activeListId} />
 
-      {/* Inline Task Creator (Active row rendered at top, resting trigger anchored at bottom) */}
-      <InlineTaskCreator listId={activeListId} />
-
-      {/* Virtual Scroll Area wrapped in SortableContext */}
-      <SortableContext
-        items={sortableTaskIds}
-        strategy={verticalListSortingStrategy}
-      >
-        <div
-          ref={setCombinedListRef}
-          className={`${styles.virtualScrollArea} ${isMyDay && isTimeBlockDragging && isOverMyDayList ? styles.unscheduleTarget : ''}`}
+        {/* Virtual Scroll Area wrapped in SortableContext */}
+        <SortableContext
+          items={sortableTaskIds}
+          strategy={verticalListSortingStrategy}
         >
-          {isMyDay && isTimeBlockDragging && isOverMyDayList && (
-            <div className={styles.unscheduleBadge} aria-hidden="true">
-              Drop to unschedule
-            </div>
-          )}
-          {flattenedIncomplete.length === 0 && completedTasks.length === 0 ? (
+          <div
+            ref={setCombinedListRef}
+            className={`${styles.virtualScrollArea} ${isMyDay && isTimeBlockDragging && isOverMyDayList ? styles.unscheduleTarget : ''}`}
+          >
+            {isMyDay && isTimeBlockDragging && isOverMyDayList && (
+              <div className={styles.unscheduleBadge} aria-hidden="true">
+                Drop to unschedule
+              </div>
+            )}
+            {search.isFiltering && search.matchCount === 0 ? (
+              <div className={styles.emptySearchState}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={styles.emptySearchIcon}
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <div className={styles.emptySearchTitle}>
+                  No tasks match &ldquo;{search.query}&rdquo;
+                </div>
+                <div className={styles.emptySearchSubtitle}>
+                  in {headerTitle}
+                </div>
+              </div>
+            ) : flattenedIncomplete.length === 0 && completedTasks.length === 0 ? (
             <EmptyState
               title="All clear"
               description="No tasks in this list. Press Ctrl+N to add one."
@@ -1118,7 +1203,14 @@ export function TaskList({
           ) : (
             <div className={styles.groupedContainer} role="list" aria-label="Grouped tasks">
               {groupedTasks.map((group) => {
-                const isCollapsed = Boolean(collapsedGroupsMap[`${activeListId}:${group.key}`]);
+                if (search.isFiltering && group.items.length === 0) {
+                  return null;
+                }
+                const isGroupCollapsed = !search.groupOpen(
+                  group.key,
+                  !Boolean(collapsedGroupsMap[`${activeListId}:${group.key}`]),
+                  group.items.length > 0
+                );
                 return (
                   <section
                     key={group.key}
@@ -1130,12 +1222,18 @@ export function TaskList({
                       groupKey={group.key}
                       title={group.title}
                       isEmpty={group.items.length === 0}
-                      isCollapsed={isCollapsed}
-                      onToggle={() => toggleGroupCollapsed(activeListId, group.key)}
+                      isCollapsed={isGroupCollapsed}
+                      onToggle={() => {
+                        if (search.isFiltering) {
+                          search.setGroupOverride(group.key, isGroupCollapsed);
+                        } else {
+                          toggleGroupCollapsed(activeListId, group.key);
+                        }
+                      }}
                     />
                     <div
                       className={styles.collapsibleWrapper}
-                      data-collapsed={isCollapsed ? 'true' : 'false'}
+                      data-collapsed={isGroupCollapsed ? 'true' : 'false'}
                     >
                       <div className={styles.collapsibleInner}>
                         {group.items.length > 0 && (
@@ -1176,25 +1274,35 @@ export function TaskList({
           )}
 
           {/* Collapsible Completed Section */}
-          {visibleCompletedTasks.length > 0 && (
+          {isCompletedSectionVisible && (
             <div className={styles.completedSection}>
               <div
                 className={styles.completedHeader}
                 role="button"
                 tabIndex={0}
-                aria-expanded={isCompletedOpen}
-                aria-label={`Completed tasks (${visibleCompletedTasks.length})`}
-                onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+                aria-expanded={isCompletedExpanded}
+                aria-label={`Completed tasks (${displayedCompletedTasks.length})`}
+                onClick={() => {
+                  if (search.isFiltering) {
+                    search.setGroupOverride('completed', !isCompletedExpanded);
+                  } else {
+                    setIsCompletedOpen(!isCompletedOpen);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    setIsCompletedOpen(!isCompletedOpen);
+                    if (search.isFiltering) {
+                      search.setGroupOverride('completed', !isCompletedExpanded);
+                    } else {
+                      setIsCompletedOpen(!isCompletedOpen);
+                    }
                   }
                 }}
               >
                 <span
                   className={`${styles.completedCaret} ${
-                    isCompletedOpen ? styles.completedCaretOpen : ''
+                    isCompletedExpanded ? styles.completedCaretOpen : ''
                   }`}
                   aria-hidden="true"
                 >
@@ -1211,12 +1319,12 @@ export function TaskList({
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </span>
-                <span>Completed ({visibleCompletedTasks.length})</span>
+                <span>Completed ({displayedCompletedTasks.length})</span>
               </div>
 
-              {isCompletedOpen && (
+              {isCompletedExpanded && (
                 <div className={styles.completedList} role="list" aria-label="Completed tasks">
-                  {visibleCompletedTasks.map((task) => (
+                  {displayedCompletedTasks.map((task) => (
                     <div key={task.id} role="listitem" className={styles.completedTaskItem}>
                       <TaskCard
                         task={task}
@@ -1320,7 +1428,8 @@ export function TaskList({
         onDelete={handleDeleteTask}
       />
     </div>
-  );
+  </ViewSearchContext.Provider>
+);
 }
 
 export default TaskList;

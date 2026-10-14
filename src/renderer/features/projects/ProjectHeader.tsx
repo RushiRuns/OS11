@@ -9,6 +9,8 @@ import { useModuleStore } from '../../stores/moduleStore.js';
 import { useViewGroupStore, GROUP_BY_LABELS, type GroupByOption } from '../../stores/viewGroupStore.js';
 import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
 import { isStalled } from '@shared/utils/project-health.js';
+import { ViewSearch } from '../search/ViewSearch.js';
+import type { ViewSearchState } from '../search/ViewSearchContext.js';
 import styles from './ProjectHeader.module.css';
 import menuStyles from '../lists/ListContextMenu.module.css';
 
@@ -26,6 +28,7 @@ interface ProjectHeaderProps {
   tasks: Task[];
   milestones: Milestone[];
   currentView: ProjectViewMode;
+  searchState?: ViewSearchState;
   onViewChange: (view: ProjectViewMode) => void;
   onUpdateViews?: (views: ProjectViewMode[]) => void | Promise<void>;
   onOpenMilestones: () => void;
@@ -38,6 +41,7 @@ export function ProjectHeader({
   tasks,
   milestones,
   currentView,
+  searchState,
   onViewChange,
   onUpdateViews,
   onOpenMilestones,
@@ -161,6 +165,8 @@ export function ProjectHeader({
               />
             </div>
           )}
+
+          <ViewSearch searchState={searchState} />
 
           <ViewSwitcher
             currentView={currentView}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppStore } from '../../stores/app-store.js';
 import { useListStore } from '../../stores/listStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
-import { useSearchStore } from '../../stores/searchStore.js';
+import { VIEW_SEARCH_OPEN_EVENT } from '../search/ViewSearchContext.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
@@ -40,7 +40,6 @@ export function CommandPalette({
   const areasById = useAreaStore((state) => state.areasById);
   const projectsById = useProjectStore((state) => state.projectsById);
   const { setSelectedTaskId } = useTaskStore();
-  const { openSearch } = useSearchStore();
   const { everyAttachment, loadEveryAttachment } = useAttachmentStore();
 
   useEffect(() => {
@@ -101,11 +100,13 @@ export function CommandPalette({
 
     items.push({
       id: 'action_search',
-      title: 'Search Tasks (Full-Text Search)',
+      title: 'Search in this view',
       category: 'Action',
       icon: '🔍',
       shortcut: 'Ctrl+F',
-      onSelect: () => openSearch(),
+      onSelect: () => {
+        window.dispatchEvent(new CustomEvent(VIEW_SEARCH_OPEN_EVENT));
+      },
     });
 
     items.push({
@@ -242,7 +243,7 @@ export function CommandPalette({
     });
 
     return items;
-  }, [listsById, tasksById, activeListId, setActiveListId, setSelectedTaskId, openSearch, onToggleFocusMode, everyAttachment]);
+  }, [listsById, tasksById, activeListId, setActiveListId, setSelectedTaskId, onToggleFocusMode, everyAttachment]);
 
   // Fuzzy filter items
   const filteredItems = useMemo(() => {

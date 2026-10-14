@@ -7,6 +7,8 @@ import {
 } from '@dnd-kit/sortable';
 import type { Section, Task } from '@shared/types/index.js';
 import { BoardCard } from './BoardCard.js';
+import { useOptionalViewSearchContext } from '../search/ViewSearchContext.js';
+import { SearchCollapse } from '../search/SearchCollapse.js';
 import styles from './BoardColumn.module.css';
 import menuStyles from '../lists/ListContextMenu.module.css';
 
@@ -35,6 +37,9 @@ export function BoardColumn({
   onRenameSection,
   onDeleteSection,
 }: BoardColumnProps): React.ReactElement {
+  const search = useOptionalViewSearchContext();
+  const isSearchFiltering = Boolean(search?.isFiltering);
+
   // Droppable setup
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `col_${section.id}`,
@@ -138,6 +143,10 @@ export function BoardColumn({
 
   // Metrics for Column Ring SVG
   const totalCount = tasks.length;
+  const matchingCount = useMemo(
+    () => (isSearchFiltering ? tasks.filter((t) => search?.isRowVisible(t.id)).length : totalCount),
+    [isSearchFiltering, tasks, search?.query, search?.results, totalCount]
+  );
   const completedCount = useMemo(
     () => tasks.filter((t) => t.is_completed === 1).length,
     [tasks]
@@ -150,7 +159,11 @@ export function BoardColumn({
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
 
   return (
-    <div className={styles.column} id={`col_${section.id}`}>
+    <div
+      className={styles.column}
+      id={`col_${section.id}`}
+      data-has-matches={matchingCount > 0 ? 'true' : 'false'}
+    >
       {/* Column Header */}
       <div className={styles.columnHeader}>
         <div className={styles.columnHeaderLeft}>
@@ -197,8 +210,15 @@ export function BoardColumn({
             </span>
           )}
 
-          <span className={styles.columnCountBadge} aria-label={`${totalCount} tasks in column`}>
-            {totalCount}
+          <span
+            className={styles.columnCountBadge}
+            aria-label={
+              isSearchFiltering
+                ? `${matchingCount} of ${totalCount} tasks matching in column`
+                : `${totalCount} tasks in column`
+            }
+          >
+            {isSearchFiltering ? `${matchingCount}/${totalCount}` : totalCount}
           </span>
         </div>
 
@@ -286,23 +306,31 @@ export function BoardColumn({
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <BoardCard
+            <SearchCollapse
               key={task.id}
-              task={task}
-              isSelected={selectedTaskId === task.id}
-              onSelect={onSelectTask}
-              onOpenDetail={onOpenDetail}
-              onToggleComplete={onToggleComplete}
-              onContextMenu={onTaskContextMenu}
-            />
+              collapsed={isSearchFiltering && !search?.isRowVisible(task.id)}
+            >
+              <BoardCard
+                task={task}
+                isSelected={selectedTaskId === task.id}
+                onSelect={onSelectTask}
+                onOpenDetail={onOpenDetail}
+                onToggleComplete={onToggleComplete}
+                onContextMenu={onTaskContextMenu}
+              />
+            </SearchCollapse>
           ))}
         </SortableContext>
 
-        {tasks.length === 0 && (
+        {tasks.length === 0 ? (
           <div className={styles.emptyColumn}>
             <span>Drop cards here</span>
           </div>
-        )}
+        ) : isSearchFiltering && matchingCount === 0 ? (
+          <div className={styles.emptyColumn}>
+            <span>No matches</span>
+          </div>
+        ) : null}
       </div>
 
       {/* Column Footer: Add Card Input */}

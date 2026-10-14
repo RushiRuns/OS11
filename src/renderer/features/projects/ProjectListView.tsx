@@ -30,6 +30,7 @@ import {
   ROW_GAP_PX,
   type DropPlan,
 } from '../tasks/TaskList.js';
+import { useOptionalViewSearchContext } from '../search/ViewSearchContext.js';
 import styles from './ProjectListView.module.css';
 
 interface DroppableGroupHeaderProps {
@@ -146,6 +147,9 @@ export function ProjectListView({
   const tagsById = useTagStore((state) => state.tagsById);
   const taskTagsByTaskId = useTagStore((state) => state.taskTagsByTaskId);
 
+  const search = useOptionalViewSearchContext();
+  const isSearchFiltering = Boolean(search?.isFiltering);
+
   // Filter tasks into active and completed
   const { isLingering, isExiting, lingerVersion, markCompleted } = useCompletionLinger(tasks);
 
@@ -201,7 +205,9 @@ export function ProjectListView({
     }
 
     const rootTasks = activeTasks.filter(
-      (t) => !t.parent_task_id || !activeTasksMap.has(t.parent_task_id)
+      (t) =>
+        (!t.parent_task_id || !activeTasksMap.has(t.parent_task_id)) &&
+        (!search?.isFiltering || search.isRowVisible(t.id))
     );
 
     const result: FlattenedTaskItem[] = [];
@@ -209,7 +215,14 @@ export function ProjectListView({
     const appendTree = (task: Task, depth: number) => {
       const stats = subtaskStats.get(task.id) || { completed: 0, total: 0 };
       const hasSubtasks = stats.total > 0;
-      const isExpanded = !collapsedParentIds.has(task.id);
+      let isExpanded = !collapsedParentIds.has(task.id);
+
+      if (search?.isFiltering) {
+        const res = search.results.get(task.id);
+        if (res && !res.isTitleMatch && res.isMatch) {
+          isExpanded = true;
+        }
+      }
 
       result.push({
         task,
@@ -220,7 +233,13 @@ export function ProjectListView({
       });
 
       if (hasSubtasks && isExpanded) {
-        const children = childrenByParentId.get(task.id) || [];
+        let children = childrenByParentId.get(task.id) || [];
+        if (search?.isFiltering) {
+          const parentRes = search.results.get(task.id);
+          if (parentRes && !parentRes.isTitleMatch) {
+            children = children.filter((c) => search.isRowVisible(c.id));
+          }
+        }
         for (const child of children) {
           appendTree(child, depth + 1);
         }
@@ -232,7 +251,7 @@ export function ProjectListView({
     }
 
     return result;
-  }, [activeTasks, tasksById, collapsedParentIds]);
+  }, [activeTasks, tasksById, collapsedParentIds, search?.isFiltering, search?.query, search?.results]);
 
   const groupedTasks = useGroupedTasks({
     items: flattenedActiveItems,
@@ -277,10 +296,15 @@ export function ProjectListView({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (isSearchFiltering) return;
     setDraggingTaskId(String(event.active.id));
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
+    if (isSearchFiltering) {
+      setDropIndicator(null);
+      return;
+    }
     const { active, over, delta } = event;
     if (
       !over ||
@@ -323,6 +347,10 @@ export function ProjectListView({
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (isSearchFiltering) {
+      clearDragState();
+      return;
+    }
     const { active, over, delta } = event;
     clearDragState();
     if (!over) return;
@@ -488,7 +516,31 @@ export function ProjectListView({
       <InlineTaskCreator defaultProjectId={project.id} />
 
       {/* Active Tasks Reorderable Stream */}
-      {activeTasks.length > 0 ? (
+      {search?.isFiltering && search.matchCount === 0 ? (
+        <div className={styles.emptySearchState} data-testid="empty-search-state">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={styles.emptySearchIcon}
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <div className={styles.emptySearchTitle}>
+            No tasks match &ldquo;{search.query}&rdquo;
+          </div>
+          <div className={styles.emptySearchSubtitle}>
+            in {project.name}
+          </div>
+        </div>
+      ) : activeTasks.length > 0 ? (
         groupBy === 'none' ? (
           <SortableContext items={allActiveTaskIds} strategy={verticalListSortingStrategy}>
             <div className={styles.tasksList} role="list" aria-label="Active tasks">
@@ -500,6 +552,7 @@ export function ProjectListView({
                   hasSubtasks={item.hasSubtasks}
                   isExpanded={item.isExpanded}
                   subtaskCount={item.subtaskCount}
+                  disableDrag={isSearchFiltering}
                   onToggleExpand={toggleParentExpand}
                   isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
                   allTaskIds={allActiveTaskIds}
@@ -526,7 +579,9 @@ export function ProjectListView({
           <SortableContext items={sortableTaskIds} strategy={verticalListSortingStrategy}>
             <div className={styles.groupedContainer} role="list" aria-label="Grouped tasks">
               {groupedTasks.map((group) => {
-                const isCollapsed = Boolean(collapsedGroupsMap[`${viewId}:${group.key}`]);
+                if (search?.isFiltering && group.items.length === 0) return null;
+                const userCollapsed = Boolean(collapsedGroupsMap[`${viewId}:${group.key}`]);
+                const isCollapsed = !search?.groupOpen(group.key, !userCollapsed, group.items.length > 0);
                 return (
                   <section
                     key={group.key}
@@ -539,7 +594,13 @@ export function ProjectListView({
                       title={group.title}
                       isEmpty={group.items.length === 0}
                       isCollapsed={isCollapsed}
-                      onToggle={() => toggleGroupCollapsed(viewId, group.key)}
+                      onToggle={() => {
+                        if (search?.isFiltering) {
+                          search.setGroupOverride(group.key, isCollapsed);
+                        } else {
+                          toggleGroupCollapsed(viewId, group.key);
+                        }
+                      }}
                     />
                     <div
                       className={styles.collapsibleWrapper}
@@ -556,6 +617,7 @@ export function ProjectListView({
                                 hasSubtasks={item.hasSubtasks}
                                 isExpanded={item.isExpanded}
                                 subtaskCount={item.subtaskCount}
+                                disableDrag={isSearchFiltering}
                                 onToggleExpand={toggleParentExpand}
                                 isSelected={selectedTaskId === item.task.id || focusedTaskId === item.task.id}
                                 allTaskIds={sortableTaskIds}
@@ -596,73 +658,95 @@ export function ProjectListView({
       ) : null}
 
       {/* Collapsible Completed Section */}
-      {completedTasks.length > 0 && (
-        <div className={styles.completedSection}>
-          <div
-            className={styles.completedHeader}
-            role="button"
-            tabIndex={0}
-            aria-expanded={isCompletedOpen}
-            aria-label={`Completed tasks (${completedTasks.length})`}
-            onClick={() => setIsCompletedOpen((prev) => !prev)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setIsCompletedOpen((prev) => !prev);
-              }
-            }}
-          >
-            <span
-              className={`${styles.completedCaret} ${
-                isCompletedOpen ? styles.completedCaretOpen : ''
-              }`}
-              aria-hidden="true"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </span>
-            <span>Completed ({completedTasks.length})</span>
-          </div>
+      {completedTasks.length > 0 &&
+        (!search?.isFiltering || completedTasks.some((t) => search?.isRowVisible(t.id))) &&
+        (() => {
+          const hasCompletedMatches = completedTasks.some((t) => Boolean(search?.isRowVisible(t.id)));
+          const completedMatches = search?.isFiltering
+            ? completedTasks.filter((t) => search?.isRowVisible(t.id))
+            : completedTasks;
+          const isSectionOpen =
+            search?.groupOpen('completed', isCompletedOpen, hasCompletedMatches) ?? isCompletedOpen;
 
-          {isCompletedOpen && (
-            <div className={styles.completedList} role="list" aria-label="Completed tasks">
-              {completedTasks.map((task) => (
-                <div key={task.id} className={styles.completedTaskItem}>
-                  <TaskCard
-                    task={task}
-                    isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                    allTaskIds={allCompletedTaskIds}
-                    onSelect={(t) => {
-                      setFocusedTaskId(t.id);
-                    }}
-                    onOpenDetail={(t) => onSelectTask(t)}
-                    onToggleComplete={handleToggleComplete}
-                    onToggleStar={toggleStar}
-                    onUpdateTitle={(id, title) => updateTask({ id, title })}
-                    onDelete={(id) => deleteTask(id)}
-                    onDuplicate={duplicateTask}
-                    onContextMenu={(e, t) => {
-                      e.preventDefault();
-                      setContextMenuTask(t);
-                      setContextMenuPos({ x: e.clientX, y: e.clientY });
-                    }}
-                  />
+          return (
+            <div className={styles.completedSection}>
+              <div
+                className={styles.completedHeader}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isSectionOpen}
+                aria-label={`Completed tasks (${completedMatches.length})`}
+                onClick={() => {
+                  if (search?.isFiltering) {
+                    search.setGroupOverride('completed', !isSectionOpen);
+                  } else {
+                    setIsCompletedOpen((prev) => !prev);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (search?.isFiltering) {
+                      search.setGroupOverride('completed', !isSectionOpen);
+                    } else {
+                      setIsCompletedOpen((prev) => !prev);
+                    }
+                  }
+                }}
+              >
+                <span
+                  className={`${styles.completedCaret} ${
+                    isSectionOpen ? styles.completedCaretOpen : ''
+                  }`}
+                  aria-hidden="true"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </span>
+                <span>Completed ({completedMatches.length})</span>
+              </div>
+
+              {isSectionOpen && (
+                <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                  {completedMatches.map((task) => (
+                    <div key={task.id} className={styles.completedTaskItem}>
+                      <TaskCard
+                        task={task}
+                        disableDrag={true}
+                        isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                        allTaskIds={allCompletedTaskIds}
+                        onSelect={(t) => {
+                          setFocusedTaskId(t.id);
+                        }}
+                        onOpenDetail={(t) => onSelectTask(t)}
+                        onToggleComplete={handleToggleComplete}
+                        onToggleStar={toggleStar}
+                        onUpdateTitle={(id, title) => updateTask({ id, title })}
+                        onDelete={(id) => deleteTask(id)}
+                        onDuplicate={duplicateTask}
+                        onContextMenu={(e, t) => {
+                          e.preventDefault();
+                          setContextMenuTask(t);
+                          setContextMenuPos({ x: e.clientX, y: e.clientY });
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-      )}
+          );
+        })()}
 
       {/* Task Context Menu */}
       <TaskContextMenu

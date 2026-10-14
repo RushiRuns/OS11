@@ -9,6 +9,10 @@ import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { CreateProjectModal } from '../projects/CreateProjectModal.js';
 import { Button } from '../../components/Button/Button.js';
 import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
+import { useViewSearch } from '../../hooks/useViewSearch.js';
+import { ViewSearch } from '../search/ViewSearch.js';
+import { ViewSearchContext } from '../search/ViewSearchContext.js';
+import { SearchCollapse } from '../search/SearchCollapse.js';
 import type { Task } from '@shared/types/index.js';
 import styles from './AreaView.module.css';
 
@@ -60,6 +64,30 @@ export function AreaView({
   const allActiveLooseTaskIds = useMemo(() => activeLooseTasks.map((t) => t.id), [activeLooseTasks]);
   const allCompletedLooseTaskIds = useMemo(() => completedLooseTasks.map((t) => t.id), [completedLooseTasks]);
 
+  const allSearchTasks = useMemo(() => {
+    return [...activeLooseTasks, ...completedLooseTasks];
+  }, [activeLooseTasks, completedLooseTasks]);
+
+  const search = useViewSearch({
+    tasks: allSearchTasks,
+    viewKey: `area:${areaId}`,
+    viewName: area?.name ?? 'Area',
+  });
+
+  const isSearchFiltering = Boolean(search.isFiltering);
+
+  const hasMatchingCompleted = useMemo(() => {
+    if (!isSearchFiltering) return false;
+    return completedLooseTasks.some((t) => search.isRowVisible(t.id));
+  }, [isSearchFiltering, completedLooseTasks, search.results, search.query]);
+
+  const showCompletedSection = useMemo(() => {
+    if (!isSearchFiltering) return completedLooseTasks.length > 0;
+    return hasMatchingCompleted;
+  }, [isSearchFiltering, completedLooseTasks.length, hasMatchingCompleted]);
+
+  const isCompletedExpanded = isSearchFiltering ? hasMatchingCompleted : isCompletedOpen;
+
   // Stats calculation for project cards
   const projectStats = useMemo(() => {
     const allTasks = Object.values(tasksById).filter((t) => t.is_trashed === 0);
@@ -84,115 +112,64 @@ export function AreaView({
   }
 
   return (
-    <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.titleArea}>
-          <span className={styles.icon}>{area.icon || '📁'}</span>
-          <h1 className={styles.title}>
-            {area.name}
-            <span className={styles.badge}>
-              {activeLooseTasks.length} {activeLooseTasks.length === 1 ? 'task' : 'tasks'} · {projects.length} {projects.length === 1 ? 'project' : 'projects'}
-            </span>
-          </h1>
-        </div>
-        <Button
-          variant="primary"
-          onClick={() => setIsCreateProjectOpen(true)}
-        >
-          + New Project
-        </Button>
-      </div>
-
-      {/* Loose Tasks Section */}
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Loose Tasks</h2>
-        </div>
-
-        {/* Inline task creator for loose tasks inside this Area */}
-        <InlineTaskCreator defaultAreaId={area.id} />
-
-        {activeLooseTasks.length === 0 && completedLooseTasks.length === 0 ? (
-          <div className={styles.emptyNotice}>
-            No loose tasks in this Area. Tasks created here don&apos;t belong to any project.
+    <ViewSearchContext.Provider value={search}>
+      <div className={styles.container}>
+        {/* Header */}
+        <div className={styles.header}>
+          <div className={styles.titleArea}>
+            <span className={styles.icon}>{area.icon || '📁'}</span>
+            <h1 className={styles.title}>
+              {area.name}
+              <span className={styles.badge}>
+                {activeLooseTasks.length} {activeLooseTasks.length === 1 ? 'task' : 'tasks'} · {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+              </span>
+            </h1>
           </div>
-        ) : (
-          <>
-            {activeLooseTasks.length > 0 && (
-              <div className={styles.taskList} role="list">
-                {activeLooseTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    depth={0}
-                    isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                    allTaskIds={allActiveLooseTaskIds}
-                    onSelect={(t) => setFocusedTaskId(t.id)}
-                    onOpenDetail={(t) => onSelectTask?.(t)}
-                    onToggleComplete={toggleComplete}
-                    onToggleStar={toggleStar}
-                    onUpdateTitle={(id, title) => updateTask({ id, title })}
-                    onDelete={deleteTask}
-                    onDuplicate={duplicateTask}
-                    onContextMenu={(e, t) => {
-                      setContextMenuTask(t);
-                      setContextMenuPos({ x: e.clientX, y: e.clientY });
-                    }}
-                    exiting={isExiting(task.id)}
-                  />
-                ))}
-              </div>
-            )}
+          <div className={styles.headerControls}>
+            <ViewSearch
+              searchState={search}
+              onOpenDetail={(taskId) => {
+                const target = allSearchTasks.find((t) => t.id === taskId);
+                if (target) onSelectTask?.(target);
+              }}
+            />
+            <Button
+              variant="primary"
+              onClick={() => setIsCreateProjectOpen(true)}
+            >
+              + New Project
+            </Button>
+          </div>
+        </div>
 
-            {/* Collapsible Completed Section */}
-            {completedLooseTasks.length > 0 && (
-              <div className={styles.completedSection}>
-                <div
-                  className={styles.completedHeader}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={isCompletedOpen}
-                  aria-label={`Completed tasks (${completedLooseTasks.length})`}
-                  onClick={() => setIsCompletedOpen((prev) => !prev)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setIsCompletedOpen((prev) => !prev);
-                    }
-                  }}
-                >
-                  <span
-                    className={`${styles.completedCaret} ${
-                      isCompletedOpen ? styles.completedCaretOpen : ''
-                    }`}
-                    aria-hidden="true"
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </span>
-                  <span>Completed ({completedLooseTasks.length})</span>
-                </div>
+        {/* Loose Tasks Section */}
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Loose Tasks</h2>
+          </div>
 
-                {isCompletedOpen && (
-                  <div className={styles.completedList} role="list" aria-label="Completed tasks">
-                    {completedLooseTasks.map((task) => (
+          {/* Inline task creator for loose tasks inside this Area */}
+          <InlineTaskCreator defaultAreaId={area.id} />
+
+          {activeLooseTasks.length === 0 && completedLooseTasks.length === 0 ? (
+            <div className={styles.emptyNotice}>
+              No loose tasks in this Area. Tasks created here don&apos;t belong to any project.
+            </div>
+          ) : isSearchFiltering && search.matchCount === 0 ? (
+            <div className={styles.emptySearchState} data-testid="empty-search-state">
+              No matching loose tasks in {area.name}
+            </div>
+          ) : (
+            <>
+              {activeLooseTasks.length > 0 && (
+                <div className={styles.taskList} role="list">
+                  {activeLooseTasks.map((task) => (
+                    <SearchCollapse key={task.id} collapsed={isSearchFiltering && !search.isRowVisible(task.id)}>
                       <TaskCard
-                        key={task.id}
                         task={task}
                         depth={0}
                         isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                        allTaskIds={allCompletedLooseTaskIds}
+                        allTaskIds={allActiveLooseTaskIds}
                         onSelect={(t) => setFocusedTaskId(t.id)}
                         onOpenDetail={(t) => onSelectTask?.(t)}
                         onToggleComplete={toggleComplete}
@@ -204,15 +181,86 @@ export function AreaView({
                           setContextMenuTask(t);
                           setContextMenuPos({ x: e.clientX, y: e.clientY });
                         }}
+                        exiting={isExiting(task.id)}
                       />
-                    ))}
+                    </SearchCollapse>
+                  ))}
+                </div>
+              )}
+
+              {/* Collapsible Completed Section */}
+              {showCompletedSection && (
+                <div className={styles.completedSection}>
+                  <div
+                    className={styles.completedHeader}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isCompletedExpanded}
+                    aria-label={`Completed tasks (${completedLooseTasks.length})`}
+                    onClick={() => {
+                      if (!isSearchFiltering) {
+                        setIsCompletedOpen((prev) => !prev);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && !isSearchFiltering) {
+                        e.preventDefault();
+                        setIsCompletedOpen((prev) => !prev);
+                      }
+                    }}
+                  >
+                    <span
+                      className={`${styles.completedCaret} ${
+                        isCompletedExpanded ? styles.completedCaretOpen : ''
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </span>
+                    <span>Completed ({completedLooseTasks.length})</span>
                   </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+
+                  {isCompletedExpanded && (
+                    <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                      {completedLooseTasks.map((task) => (
+                        <SearchCollapse key={task.id} collapsed={isSearchFiltering && !search.isRowVisible(task.id)}>
+                          <TaskCard
+                            task={task}
+                            depth={0}
+                            isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                            allTaskIds={allCompletedLooseTaskIds}
+                            onSelect={(t) => setFocusedTaskId(t.id)}
+                            onOpenDetail={(t) => onSelectTask?.(t)}
+                            onToggleComplete={toggleComplete}
+                            onToggleStar={toggleStar}
+                            onUpdateTitle={(id, title) => updateTask({ id, title })}
+                            onDelete={deleteTask}
+                            onDuplicate={duplicateTask}
+                            onContextMenu={(e, t) => {
+                              setContextMenuTask(t);
+                              setContextMenuPos({ x: e.clientX, y: e.clientY });
+                            }}
+                          />
+                        </SearchCollapse>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
       {/* Projects Section */}
       <div className={styles.section}>
@@ -312,7 +360,8 @@ export function AreaView({
         onDuplicate={duplicateTask}
       />
     </div>
-  );
+  </ViewSearchContext.Provider>
+);
 }
 
 export default AreaView;

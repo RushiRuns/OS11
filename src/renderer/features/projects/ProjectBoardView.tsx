@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   useDndMonitor,
   type DragStartEvent,
@@ -11,6 +11,7 @@ import { useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { BoardColumn } from './BoardColumn.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
+import { useOptionalViewSearchContext } from '../search/ViewSearchContext.js';
 import styles from './ProjectBoardView.module.css';
 
 interface ProjectBoardViewProps {
@@ -45,6 +46,9 @@ export function ProjectBoardView({
     makeSubtask,
   } = useTaskStore();
   const { createSection, deleteSection, updateSection } = useProjectStore();
+  const search = useOptionalViewSearchContext();
+  const isSearchFiltering = Boolean(search?.isFiltering);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Local optimistic task list for smooth cross-column dragging
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
@@ -66,6 +70,17 @@ export function ProjectBoardView({
     }
   }, [tasks, activeTaskId]);
 
+  // Auto-scroll horizontally to the first matching column when search filtering and matches exist
+  useEffect(() => {
+    if (!isSearchFiltering || !search || search.matchCount === 0 || !boardContainerRef.current) {
+      return;
+    }
+    const container = boardContainerRef.current;
+    const firstMatchingCol = container.querySelector('[data-has-matches="true"]');
+    if (firstMatchingCol) {
+      firstMatchingCol.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [search?.query, isSearchFiltering, search?.matchCount]);
 
   // Non-trashed tasks
   const activeTasks = useMemo(() => {
@@ -82,10 +97,12 @@ export function ProjectBoardView({
 
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
+    if (isSearchFiltering) return;
     setActiveTaskId(String(event.active.id));
   };
 
   const handleDragOver = (event: DragOverEvent) => {
+    if (isSearchFiltering) return;
     const { active, over } = event;
     if (!over) return;
 
@@ -143,6 +160,10 @@ export function ProjectBoardView({
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (isSearchFiltering) {
+      setActiveTaskId(null);
+      return;
+    }
     const { active, over } = event;
     const activeId = String(active.id);
     setActiveTaskId(null);
@@ -241,7 +262,7 @@ export function ProjectBoardView({
 
   return (
     <>
-      <div className={styles.boardContainer}>
+      <div className={styles.boardContainer} ref={boardContainerRef}>
         {/* Unassigned column if any tasks lack section */}
         {unassignedTasks.length > 0 && (
           <BoardColumn

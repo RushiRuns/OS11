@@ -10,6 +10,7 @@ import { computeTaskItemEstimate } from '../tasks/TaskList.js';
 import { PlannedDateGroup } from './PlannedDateGroup.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
+import { useOptionalViewSearchContext } from '../search/ViewSearchContext.js';
 import type { PlannedGroup } from '../../hooks/usePlannedGroups.js';
 import styles from './PlannedTimeline.module.css';
 
@@ -23,7 +24,7 @@ export interface PlannedTimelineProps {
 }
 
 type TimelineItem =
-  | { type: 'header'; group: PlannedGroup; key: string }
+  | { type: 'header'; group: PlannedGroup; key: string; count: number }
   | { type: 'task'; task: Task; group: PlannedGroup; key: string };
 
 interface TaskRowDroppableProps {
@@ -60,6 +61,8 @@ const PlannedTaskRow = React.memo(function PlannedTaskRow({
   exiting,
 }: TaskRowDroppableProps) {
   const isOverdue = group.kind === 'overdue';
+  const search = useOptionalViewSearchContext();
+  const isSearchFiltering = Boolean(search?.isFiltering);
 
   const {
     attributes,
@@ -68,6 +71,7 @@ const PlannedTaskRow = React.memo(function PlannedTaskRow({
     isDragging,
   } = useDraggable({
     id: task.id,
+    disabled: isSearchFiltering,
   });
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -133,6 +137,7 @@ export function PlannedTimeline({
   const { updateTask, deleteTask, restoreTask, toggleComplete, toggleStar, duplicateTask } =
     useTaskStore();
   const { pushAction } = useUndoRedo();
+  const search = useOptionalViewSearchContext();
 
   const [contextMenuTask, setContextMenuTask] = useState<Task | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<TaskContextMenuPosition | null>(null);
@@ -148,11 +153,26 @@ export function PlannedTimeline({
     const taskIds: string[] = [];
 
     for (const group of groups) {
+      const groupTasks: Task[] = [];
+      for (const taskId of group.taskIds) {
+        const task = tasksById[taskId];
+        if (task && task.is_trashed === 0 && (task.is_completed === 0 || isLingering(task.id))) {
+          if (!search?.isFiltering || search.isRowVisible(task.id)) {
+            groupTasks.push(task);
+          }
+        }
+      }
+
+      if (search?.isFiltering && groupTasks.length === 0) {
+        continue;
+      }
+
       const headerIndex = items.length;
       items.push({
         type: 'header',
         group,
         key: `header_${group.kind}_${group.dateISO ?? group.label}`,
+        count: search?.isFiltering ? groupTasks.length : group.taskIds.length,
       });
 
       if (group.dateISO) {
@@ -162,22 +182,19 @@ export function PlannedTimeline({
         indexMap[group.targetDropDateISO] = headerIndex;
       }
 
-      for (const taskId of group.taskIds) {
-        const task = tasksById[taskId];
-        if (task && task.is_trashed === 0 && (task.is_completed === 0 || isLingering(task.id))) {
-          taskIds.push(task.id);
-          items.push({
-            type: 'task',
-            task,
-            group,
-            key: `task_${task.id}`,
-          });
-        }
+      for (const task of groupTasks) {
+        taskIds.push(task.id);
+        items.push({
+          type: 'task',
+          task,
+          group,
+          key: `task_${task.id}`,
+        });
       }
     }
 
     return { flattenedItems: items, dateIndexMap: indexMap, allTaskIds: taskIds };
-  }, [groups, tasksById, isLingering, lingerVersion]);
+  }, [groups, tasksById, isLingering, lingerVersion, search?.isFiltering, search?.query, search?.results]);
 
   // Virtualizer for the flat timeline
   const virtualizer = useVirtualizer({
@@ -266,6 +283,38 @@ export function PlannedTimeline({
     );
   }
 
+  if (search?.isFiltering && search.matchCount === 0) {
+    return (
+      <div className={styles.timelinePanel}>
+        <div className={styles.emptyWrap}>
+          <div className={styles.emptySearchState} data-testid="empty-search-state">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={styles.emptySearchIcon}
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <div className={styles.emptySearchTitle}>
+              No tasks match &ldquo;{search.query}&rdquo;
+            </div>
+            <div className={styles.emptySearchSubtitle}>
+              in Planned
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (flattenedItems.length === 0) {
     return (
       <div className={styles.timelinePanel}>
@@ -300,7 +349,7 @@ export function PlannedTimeline({
               }}
             >
               {item.type === 'header' ? (
-                <PlannedDateGroup group={item.group} taskCount={item.group.taskIds.length} />
+                <PlannedDateGroup group={item.group} taskCount={item.count} />
               ) : (
                 <PlannedTaskRow
                   task={item.task}
