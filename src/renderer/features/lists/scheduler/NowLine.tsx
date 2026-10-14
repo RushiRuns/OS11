@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PIXELS_PER_MINUTE, GUTTER_WIDTH } from './useSchedulerLayout.js';
+import { PIXELS_PER_MINUTE } from './useSchedulerLayout.js';
 import styles from './SchedulerPanel.module.css';
 
 export function NowLine(): React.ReactElement {
@@ -27,8 +27,8 @@ export function NowLine(): React.ReactElement {
       style={{ top: `${top}px` }}
       aria-hidden="true"
     >
-      <div className={styles.nowLineDot} style={{ left: `${GUTTER_WIDTH - 5}px` }} />
-      <div className={styles.nowLineBar} style={{ left: `${GUTTER_WIDTH}px` }} />
+      <div className={styles.nowLineDot} />
+      <div className={styles.nowLineBar} />
     </div>
   );
 }

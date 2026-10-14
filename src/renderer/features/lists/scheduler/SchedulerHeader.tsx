@@ -42,6 +42,7 @@ export function SchedulerHeader(): React.ReactElement {
           title="Close scheduler"
         >
           <svg
+            className={styles.closeIcon}
             width="16"
             height="16"
             viewBox="0 0 24 24"

@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useLayoutEffect, type RefObject } from 'react';
 
 export const HOUR_HEIGHT = 80;
 export const PIXELS_PER_MINUTE = HOUR_HEIGHT / 60; // 1.3333... px per min
@@ -25,11 +25,11 @@ export function formatTimeRange(startMin: number, durationMin: number): string {
     return `${hours12}:${padMins} ${period}`;
   };
 
-  return `${formatMin(startMin)} – ${formatMin(endMin)}`;
+  return `${formatMin(startMin)} - ${formatMin(endMin)}`;
 }
 
 export function useAutoScrollToNow(containerRef: RefObject<HTMLElement | null>): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!containerRef.current) return;
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();

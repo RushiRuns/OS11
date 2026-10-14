@@ -65,7 +65,12 @@ export function SchedulerPanel(): React.ReactElement {
       <SchedulerHeader />
 
       {/* Scrollable 24-hour grid */}
-      <div ref={scrollRef} className={styles.scrollContainer}>
+      <div
+        ref={scrollRef}
+        className={styles.scrollContainer}
+        tabIndex={-1}
+        data-testid="scheduler-scroll-container"
+      >
         <SchedulerGrid />
       </div>
     </aside>

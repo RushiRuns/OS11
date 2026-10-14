@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import type { Task } from '@shared/types/task.js';
-import { PIXELS_PER_MINUTE, GUTTER_WIDTH, formatTimeRange } from './useSchedulerLayout.js';
+import { PIXELS_PER_MINUTE, formatTimeRange } from './useSchedulerLayout.js';
 import { SNAP, resizeLimits, type BlockInterval } from '@shared/utils/schedulerMath.js';
 import { toISODate } from '@shared/utils/date.js';
 import { useTaskStore } from '../../../stores/taskStore.js';
@@ -9,11 +9,31 @@ import { useSchedulerUiStore } from '../../../stores/schedulerUiStore.js';
 import { useUndoRedoStore } from '../../../hooks/useUndoRedo.js';
 import styles from './SchedulerPanel.module.css';
 
-interface TimeBlockProps {
+export interface TimeBlockProps {
   task: Task;
+  isLeaving?: boolean;
+  isNew?: boolean;
+  onAnimationEnd?: (taskId: string) => void;
+  onTransitionEnd?: (taskId: string, e: React.TransitionEvent<HTMLDivElement>) => void;
+  onRemove?: (task: Task) => void;
 }
 
-export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
+function getSizeVariant(durationMin: number): 'compact' | 'tight' | 'regular' | 'roomy' {
+  if (durationMin <= 15) return 'compact';
+  if (durationMin <= 30) return 'tight';
+  if (durationMin <= 45) return 'regular';
+  return 'roomy';
+}
+
+function TimeBlockComponent({
+  task,
+  isLeaving = false,
+  isNew = false,
+  onAnimationEnd,
+  onTransitionEnd,
+  onRemove,
+}: TimeBlockProps): React.ReactElement {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [resizingEdge, setResizingEdge] = useState<'top' | 'bottom' | null>(null);
   const [liveStart, setLiveStart] = useState<number>(task.scheduled_start_min ?? 0);
   const [liveDuration, setLiveDuration] = useState<number>(task.scheduled_duration_min ?? 30);
@@ -118,7 +138,7 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
   }, [resizingEdge, task.id, task.title]);
 
   const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>, edge: 'top' | 'bottom') => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || isLeaving) return;
     e.stopPropagation();
     e.preventDefault();
 
@@ -168,7 +188,7 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `block:${task.id}`,
-    disabled: resizingEdge !== null,
+    disabled: resizingEdge !== null || isLeaving,
     data: {
       type: 'time-block',
       taskId: task.id,
@@ -176,72 +196,91 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
     },
   });
 
+  const prevDraggingRef = useRef(false);
+  const [isArrived, setIsArrived] = useState(false);
+
+  useEffect(() => {
+    if (prevDraggingRef.current && !isDragging) {
+      setIsArrived(true);
+    }
+    prevDraggingRef.current = isDragging;
+  }, [isDragging]);
+
   const selectedBlockId = useSchedulerUiStore((s) => s.selectedBlockId);
+  const isSelected = selectedBlockId === task.id;
+  const isHovered = useSchedulerUiStore((s) => s.hoveredBlockId === task.id);
   const setSelectedBlockId = useSchedulerUiStore((s) => s.setSelectedBlockId);
-  const hoveredBlockId = useSchedulerUiStore((s) => s.hoveredBlockId);
   const setHoveredBlockId = useSchedulerUiStore((s) => s.setHoveredBlockId);
 
-  const isSelected = selectedBlockId === task.id;
-  const isHovered = hoveredBlockId === task.id;
   const isCompleted = task.is_completed === 1;
-
   const effectiveStart = resizingEdge ? liveStart : (task.scheduled_start_min ?? 0);
   const effectiveDuration = resizingEdge ? liveDuration : (task.scheduled_duration_min ?? 30);
-  const isCompact = effectiveDuration <= 30;
+  const sizeVariant = getSizeVariant(effectiveDuration);
 
   const top = effectiveStart * PIXELS_PER_MINUTE;
   const height = Math.max(18, effectiveDuration * PIXELS_PER_MINUTE - 2);
 
-  const handleUnschedule = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const prevStart = task.scheduled_start_min;
-    const prevDuration = task.scheduled_duration_min;
-    useTaskStore.getState().unscheduleTask(task.id).catch(console.error);
-    if (isSelected) {
-      setSelectedBlockId(null);
-    }
-    if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
-      useUndoRedoStore.getState().pushAction({
-        description: `Unscheduled "${task.title}"`,
-        undoFn: async () => {
-          await useTaskStore.getState().updateTimeBlock(task.id, prevStart, prevDuration);
-        },
-        redoFn: async () => {
-          await useTaskStore.getState().unscheduleTask(task.id);
-        },
-      });
-    }
-  };
+  const handleUnschedule = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (
+        typeof document !== 'undefined' &&
+        (document.activeElement === rootRef.current || rootRef.current?.contains(document.activeElement))
+      ) {
+        const scrollEl = document.querySelector(
+          '[data-testid="scheduler-scroll-container"]'
+        ) as HTMLElement | null;
+        scrollEl?.focus();
+      }
+
+      if (onRemove) {
+        onRemove(task);
+      } else {
+        const prevStart = task.scheduled_start_min;
+        const prevDuration = task.scheduled_duration_min;
+        useTaskStore.getState().unscheduleTask(task.id).catch(console.error);
+        if (isSelected) {
+          setSelectedBlockId(null);
+        }
+        if (
+          prevStart !== null &&
+          prevDuration !== null &&
+          prevStart !== undefined &&
+          prevDuration !== undefined
+        ) {
+          useUndoRedoStore.getState().pushAction({
+            description: `Unscheduled "${task.title}"`,
+            undoFn: async () => {
+              await useTaskStore.getState().updateTimeBlock(task.id, prevStart, prevDuration);
+            },
+            redoFn: async () => {
+              await useTaskStore.getState().unscheduleTask(task.id);
+            },
+          });
+        }
+      }
+    },
+    [task, isSelected, onRemove, setSelectedBlockId]
+  );
 
   const handleClick = (e: React.MouseEvent) => {
+    if (isLeaving) return;
     e.stopPropagation();
     setSelectedBlockId(task.id);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
+    if (isLeaving) return;
     e.stopPropagation();
     useTaskStore.getState().openDetail(task.id);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isLeaving) return;
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       e.stopPropagation();
-      const prevStart = task.scheduled_start_min;
-      const prevDuration = task.scheduled_duration_min;
-      useTaskStore.getState().unscheduleTask(task.id).catch(console.error);
-      setSelectedBlockId(null);
-      if (prevStart !== null && prevDuration !== null && prevStart !== undefined && prevDuration !== undefined) {
-        useUndoRedoStore.getState().pushAction({
-          description: `Unscheduled "${task.title}"`,
-          undoFn: async () => {
-            await useTaskStore.getState().updateTimeBlock(task.id, prevStart, prevDuration);
-          },
-          redoFn: async () => {
-            await useTaskStore.getState().unscheduleTask(task.id);
-          },
-        });
-      }
+      handleUnschedule(e as unknown as React.MouseEvent);
     } else if (e.key === 'Escape') {
       setSelectedBlockId(null);
     } else if (e.key === 'Enter') {
@@ -250,93 +289,121 @@ export function TimeBlock({ task }: TimeBlockProps): React.ReactElement {
     }
   };
 
-  const priorityClass =
-    task.priority === 4
-      ? styles.priorityP1
-      : task.priority === 3
-        ? styles.priorityP2
-        : task.priority === 2
-          ? styles.priorityP3
-          : task.priority === 1
-            ? styles.priorityP4
-            : '';
+  const handleAnimationEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    if (isArrived) {
+      setIsArrived(false);
+    }
+    if (isNew && onAnimationEnd) {
+      onAnimationEnd(task.id);
+    }
+  };
+
+  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    if (isLeaving && onTransitionEnd) {
+      onTransitionEnd(task.id, e);
+    }
+  };
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(el) => {
+        setNodeRef(el);
+        rootRef.current = el;
+      }}
       data-dnd-kind="time-block"
       data-task-id={task.id}
+      data-priority={task.priority ? String(task.priority) : undefined}
+      data-size={sizeVariant}
+      data-dragging={isDragging ? 'true' : undefined}
+      data-resizing={resizingEdge !== null ? 'true' : undefined}
+      data-arrived={isArrived ? 'true' : undefined}
+      data-new={isNew ? 'true' : undefined}
+      data-leaving={isLeaving ? 'true' : undefined}
+      title={
+        sizeVariant === 'compact'
+          ? `${task.title} (${formatTimeRange(effectiveStart, effectiveDuration)})`
+          : undefined
+      }
       aria-label={`${task.title}, ${formatTimeRange(effectiveStart, effectiveDuration)}`}
       className={`
         ${styles.timeBlock}
-        ${priorityClass}
         ${isSelected ? styles.timeBlockSelected : ''}
         ${isHovered ? styles.timeBlockHovered : ''}
         ${isCompleted ? styles.timeBlockCompleted : ''}
-        ${isDragging ? styles.timeBlockDragging : ''}
-        ${resizingEdge ? styles.timeBlockResizing : ''}
-        ${isCompact ? styles.timeBlockCompact : ''}
       `}
       style={{
         top: `${top}px`,
         height: `${height}px`,
-        left: `${GUTTER_WIDTH + 4}px`,
       }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
-      onMouseEnter={() => setHoveredBlockId(task.id)}
-      onMouseLeave={() => setHoveredBlockId(null)}
+      onMouseEnter={() => !isLeaving && setHoveredBlockId(task.id)}
+      onMouseLeave={() => !isLeaving && setHoveredBlockId(null)}
+      onAnimationEnd={handleAnimationEnd}
+      onTransitionEnd={handleTransitionEnd}
       {...attributes}
       {...listeners}
     >
-      {/* Top resize handle */}
+      {/* Top resize handle & grip */}
       <div
         data-resize-handle="top"
         className={styles.resizeHandleTop}
         onPointerDown={(e) => handleResizeStart(e, 'top')}
         aria-label="Resize start time"
-      />
+      >
+        <div className={styles.resizeGrip} />
+      </div>
 
       <div className={styles.timeBlockContent}>
-        <div className={styles.timeBlockHeader}>
-          <span className={styles.timeBlockRange}>
-            {formatTimeRange(effectiveStart, effectiveDuration)}
-          </span>
-          <button
-            type="button"
-            className={styles.timeBlockRemoveBtn}
-            onClick={handleUnschedule}
-            title="Unschedule task"
-            aria-label="Unschedule task"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
         <div className={styles.timeBlockTitle} title={task.title}>
           {task.title}
         </div>
+        {sizeVariant !== 'compact' && (
+          <span className={styles.timeBlockRange}>
+            {formatTimeRange(effectiveStart, effectiveDuration)}
+          </span>
+        )}
       </div>
 
-      {/* Bottom resize handle */}
+      {/* Remove button */}
+      <button
+        type="button"
+        className={styles.timeBlockRemoveBtn}
+        onClick={handleUnschedule}
+        title={`Remove time block: ${task.title}`}
+        aria-label={`Remove time block: ${task.title}`}
+      >
+        <svg
+          className={styles.removeIcon}
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
+      {/* Bottom resize handle & grip */}
       <div
         data-resize-handle="bottom"
         className={styles.resizeHandleBottom}
         onPointerDown={(e) => handleResizeStart(e, 'bottom')}
         aria-label="Resize duration"
-      />
+      >
+        <div className={styles.resizeGrip} />
+      </div>
     </div>
   );
 }
+
+export const TimeBlock = React.memo(TimeBlockComponent);
+export default TimeBlock;
