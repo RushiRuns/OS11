@@ -111,6 +111,36 @@ Named sections within a project.
 - `sections:delete` — Delete section.
 - `sections:reorder` — Update fractional sort order of section.
 
+### CUSTOM_GROUPS
+Library of reusable custom groups with sections.
+- `custom-groups:get-all` — Retrieve all non-deleted custom groups with their non-deleted sections.
+- `custom-groups:create` — Create a new custom group and optional initial sections.
+- `custom-groups:update` — Update custom group name or sort order.
+- `custom-groups:delete` — Soft-delete a custom group (`deleted_at`).
+- `custom-groups:restore` — Restore a soft-deleted custom group (`deleted_at = null`).
+- `custom-groups:get-delete-impact` — Query task count and distinct project count affected before deleting.
+- `custom-groups:mark-used` — Update `last_used_at` timestamp for MRU ordering.
+
+### CUSTOM_GROUP_SECTIONS
+Sections belonging to a custom group.
+- `custom-group-sections:create` — Create a section in a custom group (enforces 12 section cap).
+- `custom-group-sections:update` — Rename or update a section.
+- `custom-group-sections:delete` — Soft-delete a section (`deleted_at`).
+- `custom-group-sections:restore` — Restore a soft-deleted section.
+- `custom-group-sections:reorder` — Batch update sort order of sections in a group.
+
+### PROJECT_GROUP_OVERRIDES
+Per-project section overrides (hide, rename, sort).
+- `project-group-overrides:get-for-project` — Retrieve all overrides for a given project ID.
+- `project-group-overrides:set` — Set hide, rename, or sort override for a project section.
+- `project-group-overrides:clear` — Remove override and reset section to group default.
+
+### TASK_CUSTOM_VALUES
+Task assignments to custom group sections.
+- `task-custom-values:get-for-project` — Retrieve task custom values for all tasks in a project and group.
+- `task-custom-values:move-tasks` — Atomically assign or clear section value and sort order for tasks.
+
+
 ### MILESTONES
 Key target dates on project timelines.
 - `milestones:get-all` — Retrieve all milestones for a given project ID.

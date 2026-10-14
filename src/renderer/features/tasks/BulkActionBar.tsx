@@ -4,18 +4,26 @@ import { useSelectionStore } from '../../stores/selectionStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
+import { useViewGroupStore } from '../../stores/viewGroupStore.js';
+import { useCustomGroupStore } from '../../stores/customGroupStore.js';
 import { useUndoRedo } from '../../hooks/useUndoRedo.js';
 import styles from './BulkActionBar.module.css';
 
 export function BulkActionBar(): React.ReactElement {
-  const { selectedIds, isMultiSelectActive, clearSelection } = useSelectionStore();
-  const { tasksById, updateTask, deleteTask, restoreTask } = useTaskStore();
+  const storeSelection = useSelectionStore();
+  const { selectedIds, isMultiSelectActive, clearSelection } =
+    typeof window === 'undefined' ? useSelectionStore.getState() : storeSelection;
+
+  const storeTasks = useTaskStore();
+  const { tasksById, updateTask, deleteTask, restoreTask } =
+    typeof window === 'undefined' ? useTaskStore.getState() : storeTasks;
   const areas = useAreaStore((state) => state.orderedAreaIds.map((id) => state.areasById[id]).filter(Boolean));
   const projects = useProjectStore((state) => Object.values(state.projectsById).filter((p) => p.status !== 'archived'));
   const { pushAction } = useUndoRedo();
 
   const [showPriorityPopover, setShowPriorityPopover] = useState(false);
   const [showMovePopover, setShowMovePopover] = useState(false);
+  const [showSectionPopover, setShowSectionPopover] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -30,6 +38,31 @@ export function BulkActionBar(): React.ReactElement {
 
   const count = selectedIds.size;
   const idsArray = Array.from(selectedIds);
+
+  const activeProjectIds = new Set(
+    idsArray.map((id) => tasksById[id]?.project_id).filter(Boolean)
+  );
+  const commonProjectId = activeProjectIds.size === 1 ? Array.from(activeProjectIds)[0] : null;
+  const hookActiveGroupId = commonProjectId
+    ? useViewGroupStore((state) => state.getActiveCustomGroup(`project:${commonProjectId}`))
+    : null;
+  const activeGroupId = typeof window === 'undefined'
+    ? (commonProjectId ? useViewGroupStore.getState().getActiveCustomGroup(`project:${commonProjectId}`) : null)
+    : hookActiveGroupId;
+
+  const hookCustomGroups = useCustomGroupStore((state) => state.groups);
+  const customGroups = typeof window === 'undefined' ? useCustomGroupStore.getState().groups : hookCustomGroups;
+  const activeCustomGroup = commonProjectId && activeGroupId
+    ? customGroups.find((g) => g.id === activeGroupId)
+    : null;
+  const hookCustomOverrides = useCustomGroupStore((state) => state.overrides);
+  const customOverrides = typeof window === 'undefined' ? useCustomGroupStore.getState().overrides : hookCustomOverrides;
+
+  const handleBulkMoveToSection = async (sectionId: string | null) => {
+    await useCustomGroupStore.getState().moveTasks(idsArray, sectionId);
+    setShowSectionPopover(false);
+    clearSelection();
+  };
 
   const handleBulkComplete = async () => {
     const now = new Date().toISOString();
@@ -128,6 +161,55 @@ export function BulkActionBar(): React.ReactElement {
               <span>My Day</span>
             </button>
 
+            {/* Section Popover Toggle */}
+            {activeCustomGroup && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={() => {
+                    setShowSectionPopover(!showSectionPopover);
+                    setShowPriorityPopover(false);
+                    setShowMovePopover(false);
+                  }}
+                  title="Move all to section"
+                >
+                  <span>🗂️</span>
+                  <span>Section</span>
+                </button>
+
+                {showSectionPopover && (
+                  <div className={styles.moveListPopover} style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                    <button
+                      type="button"
+                      className={styles.moveListItem}
+                      onClick={() => handleBulkMoveToSection(null)}
+                    >
+                      <span>Unsorted</span>
+                    </button>
+
+                    {(activeCustomGroup.sections ?? [])
+                      .filter((s) => !customOverrides.some((o) => o.section_id === s.id && o.is_hidden === 1))
+                      .map((sec) => {
+                        const override = customOverrides.find((o) => o.section_id === sec.id);
+                        const secName = override?.name_override ?? sec.name;
+
+                        return (
+                          <button
+                            key={sec.id}
+                            type="button"
+                            className={styles.moveListItem}
+                            onClick={() => handleBulkMoveToSection(sec.id)}
+                          >
+                            <span>{secName}</span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Priority Popover Toggle */}
             <div style={{ position: 'relative' }}>
               <button
@@ -136,6 +218,7 @@ export function BulkActionBar(): React.ReactElement {
                 onClick={() => {
                   setShowPriorityPopover(!showPriorityPopover);
                   setShowMovePopover(false);
+                  setShowSectionPopover(false);
                 }}
                 title="Set priority for all"
               >
@@ -173,6 +256,7 @@ export function BulkActionBar(): React.ReactElement {
                 onClick={() => {
                   setShowMovePopover(!showMovePopover);
                   setShowPriorityPopover(false);
+                  setShowSectionPopover(false);
                 }}
                 title="Move all to list"
               >

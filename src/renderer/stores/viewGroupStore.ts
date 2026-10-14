@@ -7,7 +7,8 @@ export type GroupByOption =
   | 'tag'
   | 'project'
   | 'area'
-  | 'priority';
+  | 'priority'
+  | 'custom';
 
 export const GROUP_BY_LABELS: Record<GroupByOption, string> = {
   none: 'None',
@@ -17,6 +18,7 @@ export const GROUP_BY_LABELS: Record<GroupByOption, string> = {
   project: 'Project',
   area: 'Area',
   priority: 'Priority',
+  custom: 'Custom',
 };
 
 const VALID_OPTIONS = new Set<string>([
@@ -27,11 +29,14 @@ const VALID_OPTIONS = new Set<string>([
   'project',
   'area',
   'priority',
+  'custom',
 ]);
 
 const STORAGE_KEY_GROUP_BY = 'os11:view-group-by';
 const STORAGE_KEY_VISIBLE = 'os11:view-group-visible';
 const STORAGE_KEY_COLLAPSED = 'os11:view-group-collapsed';
+const STORAGE_KEY_ACTIVE_CUSTOM_GROUP = 'os11:view-active-custom-group';
+const STORAGE_KEY_HIDE_EMPTY = 'os11:view-hide-empty';
 
 function getInitialGroupByMap(): Record<string, GroupByOption> {
   try {
@@ -82,10 +87,40 @@ function getInitialCollapsedMap(): Record<string, boolean> {
   return {};
 }
 
+function getInitialActiveCustomGroupMap(): Record<string, string> {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(STORAGE_KEY_ACTIVE_CUSTOM_GROUP);
+      if (raw) {
+        return JSON.parse(raw) as Record<string, string>;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function getInitialHideEmptyMap(): Record<string, boolean> {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(STORAGE_KEY_HIDE_EMPTY);
+      if (raw) {
+        return JSON.parse(raw) as Record<string, boolean>;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
 export interface ViewGroupState {
   groupByMap: Record<string, GroupByOption>;
   visibleMap: Record<string, boolean>;
   collapsedGroupsMap: Record<string, boolean>;
+  activeCustomGroupMap: Record<string, string>;
+  hideEmptyMap: Record<string, boolean>;
 
   setGroupBy: (viewId: string, option: GroupByOption) => void;
   toggleVisible: (viewId: string) => void;
@@ -95,12 +130,20 @@ export interface ViewGroupState {
   toggleGroupCollapsed: (viewId: string, groupKey: string) => void;
   setGroupCollapsed: (viewId: string, groupKey: string, collapsed: boolean) => void;
   isGroupCollapsed: (viewId: string, groupKey: string) => boolean;
+
+  setActiveCustomGroup: (viewId: string, groupId: string | null) => void;
+  getActiveCustomGroup: (viewId: string) => string | null;
+  setHideEmpty: (viewId: string, hide: boolean) => void;
+  isHideEmpty: (viewId: string) => boolean;
+  validateActiveCustomGroups: (validGroupIds: Set<string>) => void;
 }
 
 export const useViewGroupStore = create<ViewGroupState>((set, get) => ({
   groupByMap: getInitialGroupByMap(),
   visibleMap: getInitialVisibilityMap(),
   collapsedGroupsMap: getInitialCollapsedMap(),
+  activeCustomGroupMap: getInitialActiveCustomGroupMap(),
+  hideEmptyMap: getInitialHideEmptyMap(),
 
   setGroupBy: (viewId: string, option: GroupByOption) => {
     set((prev) => {
@@ -192,6 +235,79 @@ export const useViewGroupStore = create<ViewGroupState>((set, get) => ({
 
   isGroupCollapsed: (viewId: string, groupKey: string) =>
     Boolean(get().collapsedGroupsMap[`${viewId}:${groupKey}`]),
+
+  setActiveCustomGroup: (viewId: string, groupId: string | null) => {
+    set((prev) => {
+      const nextActiveMap = { ...prev.activeCustomGroupMap };
+      if (groupId === null) {
+        delete nextActiveMap[viewId];
+      } else {
+        nextActiveMap[viewId] = groupId;
+      }
+
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY_ACTIVE_CUSTOM_GROUP, JSON.stringify(nextActiveMap));
+        }
+      } catch {
+        // ignore
+      }
+
+      return { activeCustomGroupMap: nextActiveMap };
+    });
+  },
+
+  getActiveCustomGroup: (viewId: string) => get().activeCustomGroupMap[viewId] ?? null,
+
+  setHideEmpty: (viewId: string, hide: boolean) => {
+    set((prev) => {
+      const nextHideMap = { ...prev.hideEmptyMap, [viewId]: hide };
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY_HIDE_EMPTY, JSON.stringify(nextHideMap));
+        }
+      } catch {
+        // ignore
+      }
+      return { hideEmptyMap: nextHideMap };
+    });
+  },
+
+  isHideEmpty: (viewId: string) => get().hideEmptyMap[viewId] ?? false,
+
+  validateActiveCustomGroups: (validGroupIds: Set<string>) => {
+    set((prev) => {
+      let changed = false;
+      const nextGroupByMap = { ...prev.groupByMap };
+      const nextActiveMap = { ...prev.activeCustomGroupMap };
+
+      for (const [viewId, groupId] of Object.entries(prev.activeCustomGroupMap)) {
+        if (!validGroupIds.has(groupId)) {
+          delete nextActiveMap[viewId];
+          if (nextGroupByMap[viewId] === 'custom') {
+            nextGroupByMap[viewId] = 'none';
+          }
+          changed = true;
+        }
+      }
+
+      if (!changed) return prev;
+
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(STORAGE_KEY_GROUP_BY, JSON.stringify(nextGroupByMap));
+          window.localStorage.setItem(STORAGE_KEY_ACTIVE_CUSTOM_GROUP, JSON.stringify(nextActiveMap));
+        }
+      } catch {
+        // ignore
+      }
+
+      return {
+        groupByMap: nextGroupByMap,
+        activeCustomGroupMap: nextActiveMap,
+      };
+    });
+  },
 }));
 
 export default useViewGroupStore;

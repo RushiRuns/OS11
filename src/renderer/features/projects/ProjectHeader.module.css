@@ -145,3 +145,35 @@
   background-color: var(--surface-hover);
   color: var(--text-primary);
 }
+
+.groupTriggerGroup {
+  display: inline-flex;
+  align-items: center;
+}
+
+.groupTriggerGroup .groupTriggerBtn {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.groupTriggerChevronBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding: 4px var(--space-1);
+  background-color: var(--surface-raised);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.groupTriggerChevronBtn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+

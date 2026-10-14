@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { Project, Section, Milestone, Task } from '@shared/types/index.js';
+import type { Project, Section, Milestone, Task, CustomGroup } from '@shared/types/index.js';
 import { ViewSwitcher, type ProjectViewMode } from './ViewSwitcher.js';
 import { exportProjectToCsv, exportProjectToMarkdown, exportProjectToPdf } from './projectExport.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { useViewGroupStore, GROUP_BY_LABELS, type GroupByOption } from '../../stores/viewGroupStore.js';
+import { useCustomGroupStore } from '../../stores/customGroupStore.js';
 import { DropdownMenu, type DropdownMenuItemConfig } from '../../components/primitives/DropdownMenu/DropdownMenu.js';
+import { CustomGroupPickerModal } from './CustomGroupPickerModal.js';
+import { CustomGroupEditorModal } from './CustomGroupEditorModal.js';
 import { isStalled } from '@shared/utils/project-health.js';
 import { ViewSearch } from '../search/ViewSearch.js';
 import type { ViewSearchState } from '../search/ViewSearchContext.js';
@@ -16,6 +19,7 @@ import menuStyles from '../lists/ListContextMenu.module.css';
 
 const PROJECT_GROUP_BY_OPTIONS: GroupByOption[] = [
   'none',
+  'custom',
   'time',
   'date',
   'tag',
@@ -55,16 +59,44 @@ export function ProjectHeader({
   const viewId = `project:${project.id}`;
   const groupBy = useViewGroupStore((state) => state.getGroupBy(viewId));
   const isGroupByVisible = useViewGroupStore((state) => state.isVisible(viewId));
-  const { setGroupBy, toggleVisible } = useViewGroupStore.getState();
+  const activeCustomGroupId = useViewGroupStore((state) => state.getActiveCustomGroup(viewId));
+  const isHideEmpty = useViewGroupStore((state) => state.isHideEmpty(viewId));
+  const { setGroupBy, toggleVisible, setHideEmpty } = useViewGroupStore.getState();
+
+  const customGroups = useCustomGroupStore((state) => state.groups);
+  const activeCustomGroup = customGroups.find((g) => g.id === activeCustomGroupId);
+
+  const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
+  const [isCustomEditorOpen, setIsCustomEditorOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<CustomGroup | null>(null);
+
+  const customTriggerLabel =
+    groupBy === 'custom'
+      ? activeCustomGroup
+        ? `Custom: ${activeCustomGroup.name}`
+        : 'Custom'
+      : GROUP_BY_LABELS[groupBy ?? 'none'];
 
   const groupByMenuItems: DropdownMenuItemConfig[] = React.useMemo(
     () =>
-      PROJECT_GROUP_BY_OPTIONS.map((opt) => ({
-        id: `groupby-${opt}`,
-        label: `${GROUP_BY_LABELS[opt]}${groupBy === opt ? ' ✓' : ''}`,
-        onClick: () => setGroupBy(viewId, opt),
-      })),
-    [groupBy, viewId, setGroupBy]
+      PROJECT_GROUP_BY_OPTIONS.map((opt) => {
+        let label = GROUP_BY_LABELS[opt];
+        if (opt === 'custom' && activeCustomGroup) {
+          label = `Custom: ${activeCustomGroup.name}`;
+        }
+        return {
+          id: `groupby-${opt}`,
+          label: `${label}${groupBy === opt ? ' ✓' : ''}`,
+          onClick: () => {
+            if (opt === 'custom') {
+              setIsCustomPickerOpen(true);
+            } else {
+              setGroupBy(viewId, opt);
+            }
+          },
+        };
+      }),
+    [groupBy, viewId, setGroupBy, activeCustomGroup]
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -139,30 +171,66 @@ export function ProjectHeader({
           {currentView === 'list' && isGroupByVisible && (
             <div className={styles.groupByControl}>
               <label className={styles.groupByLabel}>Group by:</label>
-              <DropdownMenu
-                trigger={
+              {groupBy === 'custom' ? (
+                <div className={styles.groupTriggerGroup}>
                   <button
                     type="button"
                     className={styles.groupTriggerBtn}
-                    aria-label={`Group by: ${GROUP_BY_LABELS[groupBy ?? 'none']}`}
+                    aria-label={`Group by: ${customTriggerLabel}`}
+                    onClick={() => setIsCustomPickerOpen(true)}
                   >
-                    <span>{GROUP_BY_LABELS[groupBy ?? 'none']}</span>
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
+                    <span>{customTriggerLabel}</span>
                   </button>
-                }
-                items={groupByMenuItems}
-                align="end"
-                compact
-              />
+                  <DropdownMenu
+                    trigger={
+                      <button
+                        type="button"
+                        className={styles.groupTriggerChevronBtn}
+                        aria-label="More grouping options"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                    }
+                    items={groupByMenuItems}
+                    align="end"
+                    compact
+                  />
+                </div>
+              ) : (
+                <DropdownMenu
+                  trigger={
+                    <button
+                      type="button"
+                      className={styles.groupTriggerBtn}
+                      aria-label={`Group by: ${customTriggerLabel}`}
+                    >
+                      <span>{customTriggerLabel}</span>
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  }
+                  items={groupByMenuItems}
+                  align="end"
+                  compact
+                />
+              )}
             </div>
           )}
 
@@ -239,6 +307,20 @@ export function ProjectHeader({
                     <span>🗂️</span>
                     <span>Group by</span>
                   </button>
+                  {groupBy === 'custom' && (
+                    <button
+                      type="button"
+                      className={menuStyles.menuItem}
+                      onMouseEnter={() => setIsExportSubmenuOpen(false)}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setHideEmpty(viewId, !isHideEmpty);
+                      }}
+                    >
+                      <span>{isHideEmpty ? '☑' : '☐'}</span>
+                      <span>Hide empty sections</span>
+                    </button>
+                  )}
                   <div className={menuStyles.separator} />
                 </>
               )}
@@ -391,6 +473,38 @@ export function ProjectHeader({
           </div>,
           document.getElementById('radix-portal') || document.body
         )}
+
+      {/* Custom Group Modals */}
+      {isCustomPickerOpen && (
+        <CustomGroupPickerModal
+          projectId={project.id}
+          isOpen={isCustomPickerOpen}
+          onClose={() => setIsCustomPickerOpen(false)}
+          onOpenEditor={(g) => {
+            setEditingGroup(g ?? null);
+            setIsCustomEditorOpen(true);
+          }}
+        />
+      )}
+
+      {isCustomEditorOpen && (
+        <CustomGroupEditorModal
+          group={editingGroup}
+          isOpen={isCustomEditorOpen}
+          currentProjectId={project.id}
+          onClose={() => {
+            setIsCustomEditorOpen(false);
+            setEditingGroup(null);
+          }}
+          onSaved={(savedGroup) => {
+            if (!editingGroup) {
+              useViewGroupStore.getState().setActiveCustomGroup(viewId, savedGroup.id);
+              useViewGroupStore.getState().setGroupBy(viewId, 'custom');
+              useCustomGroupStore.getState().setActiveProjectAndGroup(project.id, savedGroup.id);
+            }
+          }}
+        />
+      )}
     </header>
   );
 }

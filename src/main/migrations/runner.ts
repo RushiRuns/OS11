@@ -30,6 +30,16 @@ function reconcileSchemaVersion(db: Database.Database, recordedVersion: number):
   let verifiedVersion = recordedVersion;
 
   if (
+    verifiedVersion >= 17 &&
+    (!hasTable(db, 'custom_groups') ||
+      !hasTable(db, 'custom_group_sections') ||
+      !hasTable(db, 'project_group_overrides') ||
+      !hasTable(db, 'task_custom_values'))
+  ) {
+    verifiedVersion = 16;
+  }
+
+  if (
     verifiedVersion >= 16 &&
     (!hasTable(db, 'goal_progress_logs') || !hasIndex(db, 'idx_goal_progress_logs_goal_id'))
   ) {

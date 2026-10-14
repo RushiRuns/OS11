@@ -6,6 +6,9 @@ import { useUndoRedoStore } from '../../hooks/useUndoRedo.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
 import { usePomodoroStore } from '../../stores/pomodoroStore.js';
 import { useAppStore } from '../../stores/app-store.js';
+import { useViewGroupStore } from '../../stores/viewGroupStore.js';
+import { useCustomGroupStore } from '../../stores/customGroupStore.js';
+import { useSelectionStore } from '../../stores/selectionStore.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { invoke } from '../../services/ipc.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
@@ -195,13 +198,18 @@ export function TaskContextMenu({
 }: TaskContextMenuProps): React.ReactElement | null {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMoveSubMenu, setShowMoveSubMenu] = useState(false);
+  const [showSectionSubMenu, setShowSectionSubMenu] = useState(false);
   const [menuCoords, setMenuCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [subMenuCoords, setSubMenuCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [sectionSubMenuCoords, setSectionSubMenuCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const menuRef = useRef<HTMLDivElement>(null);
   const moveToItemRef = useRef<HTMLButtonElement>(null);
+  const sectionItemRef = useRef<HTMLButtonElement>(null);
   const subMenuRef = useRef<HTMLDivElement>(null);
+  const sectionSubMenuRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sectionHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const areas = useAreaStore((state) => state.orderedAreaIds.map((id) => state.areasById[id]).filter(Boolean));
   const projects = useProjectStore((state) => Object.values(state.projectsById).filter((p) => p.status !== 'archived'));
@@ -211,9 +219,33 @@ export function TaskContextMenu({
   const setWaiting = useTaskStore((state) => state.setWaiting);
   const clearWaiting = useTaskStore((state) => state.clearWaiting);
 
+  const isTopLevel = Boolean(task && !task.parent_task_id);
+  const projectViewId = task?.project_id ? `project:${task.project_id}` : null;
+  const hookActiveCustomGroupId = useViewGroupStore((state) =>
+    projectViewId ? state.getActiveCustomGroup(projectViewId) : null
+  );
+  const activeCustomGroupId = typeof window === 'undefined'
+    ? (projectViewId ? useViewGroupStore.getState().getActiveCustomGroup(projectViewId) : null)
+    : hookActiveCustomGroupId;
+
+  const hookCustomGroups = useCustomGroupStore((state) => state.groups);
+  const customGroups = typeof window === 'undefined' ? useCustomGroupStore.getState().groups : hookCustomGroups;
+  const activeCustomGroup = isTopLevel && activeCustomGroupId ? customGroups.find((g) => g.id === activeCustomGroupId) : null;
+
+  const hookTaskCustomValues = useCustomGroupStore((state) => state.taskValues);
+  const taskCustomValues = typeof window === 'undefined' ? useCustomGroupStore.getState().taskValues : hookTaskCustomValues;
+
+  const hookCustomOverrides = useCustomGroupStore((state) => state.overrides);
+  const customOverrides = typeof window === 'undefined' ? useCustomGroupStore.getState().overrides : hookCustomOverrides;
+  const currentSectionId = task ? taskCustomValues[task.id] || null : null;
+
+  const selectedIds = useSelectionStore((state) => state.selectedIds);
+  const isMultiSelectActive = useSelectionStore((state) => state.isMultiSelectActive);
+
   useEffect(() => {
     setShowDatePicker(false);
     setShowMoveSubMenu(false);
+    setShowSectionSubMenu(false);
   }, [task, position]);
 
   // Viewport-aware positioning for main menu
@@ -261,8 +293,30 @@ export function TaskContextMenu({
     setSubMenuCoords({ x: Math.max(padding, subX), y: Math.max(padding, subY) });
   };
 
+  const calculateSectionSubMenuPosition = () => {
+    if (!sectionItemRef.current) return;
+    const itemRect = sectionItemRef.current.getBoundingClientRect();
+    const subMenuWidth = 210;
+    const subMenuHeight = 260;
+    const padding = 10;
+
+    let subX = itemRect.right + 4;
+    if (subX + subMenuWidth > window.innerWidth - padding) {
+      subX = itemRect.left - subMenuWidth - 4;
+    }
+
+    let subY = itemRect.top - 4;
+    if (subY + subMenuHeight > window.innerHeight - padding) {
+      subY = Math.max(padding, window.innerHeight - subMenuHeight - padding);
+    }
+
+    setSectionSubMenuCoords({ x: Math.max(padding, subX), y: Math.max(padding, subY) });
+  };
+
   const handleMoveToMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (sectionHoverTimeoutRef.current) clearTimeout(sectionHoverTimeoutRef.current);
+    setShowSectionSubMenu(false);
     calculateSubMenuPosition();
     setShowMoveSubMenu(true);
   };
@@ -285,6 +339,32 @@ export function TaskContextMenu({
     }, 150);
   };
 
+  const handleSectionMouseEnter = () => {
+    if (sectionHoverTimeoutRef.current) clearTimeout(sectionHoverTimeoutRef.current);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setShowMoveSubMenu(false);
+    calculateSectionSubMenuPosition();
+    setShowSectionSubMenu(true);
+  };
+
+  const handleSectionMouseLeave = () => {
+    if (sectionHoverTimeoutRef.current) clearTimeout(sectionHoverTimeoutRef.current);
+    sectionHoverTimeoutRef.current = setTimeout(() => {
+      setShowSectionSubMenu(false);
+    }, 150);
+  };
+
+  const handleSectionSubMenuMouseEnter = () => {
+    if (sectionHoverTimeoutRef.current) clearTimeout(sectionHoverTimeoutRef.current);
+  };
+
+  const handleSectionSubMenuMouseLeave = () => {
+    if (sectionHoverTimeoutRef.current) clearTimeout(sectionHoverTimeoutRef.current);
+    sectionHoverTimeoutRef.current = setTimeout(() => {
+      setShowSectionSubMenu(false);
+    }, 150);
+  };
+
   // Close on Escape or outside interactions
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -304,6 +384,7 @@ export function TaskContextMenu({
       window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', handleScroll);
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      if (sectionHoverTimeoutRef.current) clearTimeout(sectionHoverTimeoutRef.current);
     };
   }, [onClose]);
 
@@ -450,6 +531,27 @@ export function TaskContextMenu({
             <span className={styles.itemLabel}>Move to...</span>
             <ChevronRightIcon />
           </button>
+
+          {/* Move to section... */}
+          {activeCustomGroup && (
+            <button
+              ref={sectionItemRef}
+              type="button"
+              className={styles.item}
+              onMouseEnter={handleSectionMouseEnter}
+              onMouseLeave={handleSectionMouseLeave}
+              onClick={() => {
+                calculateSectionSubMenuPosition();
+                setShowSectionSubMenu((prev) => !prev);
+              }}
+            >
+              <span className={styles.itemIcon}>
+                <MoveArrowIcon />
+              </span>
+              <span className={styles.itemLabel}>Move to section...</span>
+              <ChevronRightIcon />
+            </button>
+          )}
 
           <div className={styles.divider} />
 
@@ -650,6 +752,69 @@ export function TaskContextMenu({
                 </React.Fragment>
               );
             })}
+          </div>
+        )}
+
+        {/* Sub-Floating Menu: Move to section... */}
+        {showSectionSubMenu && activeCustomGroup && (
+          <div
+            ref={sectionSubMenuRef}
+            className={styles.subMenu}
+            style={{ top: `${sectionSubMenuCoords.y}px`, left: `${sectionSubMenuCoords.x}px` }}
+            onMouseEnter={handleSectionSubMenuMouseEnter}
+            onMouseLeave={handleSectionSubMenuMouseLeave}
+            onClick={(e) => e.stopPropagation()}
+            role="menu"
+          >
+            {/* Unsorted */}
+            <button
+              type="button"
+              className={styles.item}
+              onClick={async () => {
+                const targetIds =
+                  isMultiSelectActive && selectedIds.has(task.id)
+                    ? Array.from(selectedIds)
+                    : [task.id];
+                await useCustomGroupStore.getState().moveTasks(targetIds, null);
+                onClose();
+              }}
+            >
+              <span className={styles.itemLabel}>Unsorted</span>
+              {!currentSectionId && <span className={styles.itemIcon}>✓</span>}
+            </button>
+
+            <div className={styles.divider} />
+
+            {/* Sections */}
+            {(activeCustomGroup.sections ?? [])
+              .filter((s) => {
+                const isHidden = customOverrides.some((o) => o.section_id === s.id && o.is_hidden === 1);
+                return !isHidden || s.id === currentSectionId;
+              })
+              .map((sec) => {
+                const isSelected = currentSectionId === sec.id;
+                const override = customOverrides.find((o) => o.section_id === sec.id);
+                const secName = override?.name_override ?? sec.name;
+
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    className={styles.item}
+                    onClick={async () => {
+                      const targetIds =
+                        isMultiSelectActive && selectedIds.has(task.id)
+                          ? Array.from(selectedIds)
+                          : [task.id];
+                      await useCustomGroupStore.getState().moveTasks(targetIds, sec.id);
+                      onClose();
+                    }}
+                  >
+                    <span className={styles.itemLabel}>{secName}</span>
+                    {isSelected && <span className={styles.itemIcon}>✓</span>}
+                  </button>
+                );
+              })}
           </div>
         )}
       </div>

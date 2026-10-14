@@ -124,6 +124,31 @@ export const IPC = {
     DELETE: 'sections:delete',
     REORDER: 'sections:reorder',
   },
+  CUSTOM_GROUPS: {
+    GET_ALL: 'custom-groups:get-all',
+    CREATE: 'custom-groups:create',
+    UPDATE: 'custom-groups:update',
+    DELETE: 'custom-groups:delete',
+    RESTORE: 'custom-groups:restore',
+    GET_DELETE_IMPACT: 'custom-groups:get-delete-impact',
+    MARK_USED: 'custom-groups:mark-used',
+  },
+  CUSTOM_GROUP_SECTIONS: {
+    CREATE: 'custom-group-sections:create',
+    UPDATE: 'custom-group-sections:update',
+    DELETE: 'custom-group-sections:delete',
+    RESTORE: 'custom-group-sections:restore',
+    REORDER: 'custom-group-sections:reorder',
+  },
+  PROJECT_GROUP_OVERRIDES: {
+    GET_FOR_PROJECT: 'project-group-overrides:get-for-project',
+    SET: 'project-group-overrides:set',
+    CLEAR: 'project-group-overrides:clear',
+  },
+  TASK_CUSTOM_VALUES: {
+    GET_FOR_PROJECT: 'task-custom-values:get-for-project',
+    MOVE_TASKS: 'task-custom-values:move-tasks',
+  },
   MILESTONES: {
     GET_ALL: 'milestones:get-all',
     CREATE: 'milestones:create',

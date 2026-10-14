@@ -68,6 +68,10 @@ export interface CreateTaskPayload {
   follow_up_date?: string | null;
   follow_up_notified_on?: string | null;
   reviewed_at?: string | null;
+  customValue?: {
+    groupId: string;
+    sectionId: string;
+  } | null;
 }
 
 export interface UpdateTaskPayload {

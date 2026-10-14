@@ -12,6 +12,7 @@ export interface InlineTaskCreatorProps {
   defaultBucket?: 'anytime' | 'someday' | null;
   defaultAreaId?: string | null;
   defaultProjectId?: string | null;
+  customValue?: { groupId: string; sectionId: string } | null;
   initialOpen?: boolean;
   onTaskCreated?: (task: Task) => void;
 }
@@ -22,6 +23,7 @@ export function InlineTaskCreator({
   defaultBucket,
   defaultAreaId,
   defaultProjectId,
+  customValue,
   initialOpen = false,
   onTaskCreated,
 }: InlineTaskCreatorProps): React.ReactElement {
@@ -113,7 +115,16 @@ export function InlineTaskCreator({
         list_id: targetListId ?? undefined,
         bucket: defaultBucket ?? null,
         due_date: dueDate ?? null,
+        customValue: customValue ?? undefined,
       });
+
+      if (created && customValue?.sectionId) {
+        import('../../stores/customGroupStore.js').then(({ useCustomGroupStore }) => {
+          useCustomGroupStore.setState((s) => ({
+            taskValues: { ...s.taskValues, [created.id]: customValue.sectionId },
+          }));
+        });
+      }
 
       playTaskCreateSound();
       onTaskCreated?.(created);
@@ -133,6 +144,7 @@ export function InlineTaskCreator({
     defaultAreaId,
     defaultBucket,
     dueDate,
+    customValue,
     createTask,
     onTaskCreated,
   ]);

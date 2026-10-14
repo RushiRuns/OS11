@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   useDndMonitor,
   useDroppable,
@@ -18,6 +18,7 @@ import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import { InlineTaskCreator } from '../tasks/InlineTaskCreator.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useViewGroupStore } from '../../stores/viewGroupStore.js';
+import { useCustomGroupStore } from '../../stores/customGroupStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useGroupedTasks, resolveGroupDropMutation } from '../../hooks/useGroupedTasks.js';
 import { useCompletionLinger } from '../../hooks/useCompletionLinger.js';
@@ -36,17 +37,31 @@ import styles from './ProjectListView.module.css';
 interface DroppableGroupHeaderProps {
   groupKey: string;
   title: string;
+  count: number;
   isEmpty?: boolean;
   isCollapsed?: boolean;
   onToggle?: () => void;
+  isCustomSection?: boolean;
+  canHide?: boolean;
+  hasOverride?: boolean;
+  onRename?: (newName: string) => void;
+  onHide?: () => void;
+  onResetOverride?: () => void;
 }
 
 function DroppableGroupHeader({
   groupKey,
   title,
+  count,
   isEmpty,
   isCollapsed,
   onToggle,
+  isCustomSection,
+  canHide,
+  hasOverride,
+  onRename,
+  onHide,
+  onResetOverride,
 }: DroppableGroupHeaderProps): React.ReactElement {
   const { setNodeRef, isOver } = useDroppable({
     id: `group-header:${groupKey}`,
@@ -55,6 +70,31 @@ function DroppableGroupHeader({
       groupKey,
     },
   });
+
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameText, setRenameText] = useState(title);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setRenameText(title);
+  }, [title]);
+
+  useEffect(() => {
+    if (isRenaming) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }
+  }, [isRenaming]);
+
+  const handleCommitRename = () => {
+    const trimmed = renameText.trim();
+    setIsRenaming(false);
+    if (trimmed && trimmed !== title) {
+      onRename?.(trimmed);
+    } else {
+      setRenameText(title);
+    }
+  };
 
   return (
     <div
@@ -65,10 +105,14 @@ function DroppableGroupHeader({
       role="button"
       tabIndex={0}
       aria-expanded={!isCollapsed}
-      aria-label={`${title}${isEmpty ? ' (empty)' : ''}`}
-      onClick={onToggle}
+      aria-label={`${title} (${count})${isEmpty ? ' (empty)' : ''}`}
+      onClick={() => {
+        if (!isRenaming) {
+          onToggle?.();
+        }
+      }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (!isRenaming && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onToggle?.();
         }
@@ -82,7 +126,98 @@ function DroppableGroupHeader({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </span>
-      <span className={styles.groupHeaderTitle}>{title}</span>
+      {isRenaming ? (
+        <input
+          ref={renameInputRef}
+          type="text"
+          className={styles.renameInput}
+          value={renameText}
+          maxLength={40}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setRenameText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleCommitRename();
+            } else if (e.key === 'Escape') {
+              setIsRenaming(false);
+              setRenameText(title);
+            }
+          }}
+          onBlur={handleCommitRename}
+        />
+      ) : (
+        <span
+          className={styles.groupHeaderTitle}
+          onDoubleClick={(e) => {
+            if (isCustomSection) {
+              e.stopPropagation();
+              setIsRenaming(true);
+            }
+          }}
+        >
+          {title}
+        </span>
+      )}
+      <span className={styles.groupCount}>({count})</span>
+
+      {isCustomSection && !isRenaming && (
+        <div className={styles.groupHeaderActions} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={styles.groupActionBtn}
+            title="Rename section for this project"
+            aria-label="Rename section for this project"
+            onClick={() => setIsRenaming(true)}
+          >
+            ✏️
+          </button>
+          <button
+            type="button"
+            className={styles.groupActionBtn}
+            title={
+              canHide
+                ? 'Hide section in this project'
+                : 'Cannot hide a section with active tasks. Move or complete tasks first.'
+            }
+            aria-label="Hide section in this project"
+            disabled={!canHide}
+            onClick={onHide}
+          >
+            👁️
+          </button>
+          {hasOverride && (
+            <button
+              type="button"
+              className={styles.groupActionBtn}
+              title="Reset to group default"
+              aria-label="Reset to group default"
+              onClick={onResetOverride}
+            >
+              ↺
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptySectionDropTarget({ groupKey }: { groupKey: string }): React.ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `group-header:${groupKey}`,
+    data: {
+      type: 'group-header',
+      groupKey,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${styles.emptySectionDropTarget} ${isOver ? styles.emptySectionDropTargetActive : ''}`}
+    >
+      Drop tasks here
     </div>
   );
 }
@@ -144,6 +279,26 @@ export function ProjectListView({
   const groupBy = useViewGroupStore((state) => state.getGroupBy(viewId));
   const collapsedGroupsMap = useViewGroupStore((state) => state.collapsedGroupsMap);
   const { toggleGroupCollapsed } = useViewGroupStore.getState();
+  const activeGroupId = useViewGroupStore((state) => state.getActiveCustomGroup(viewId));
+  const hideEmpty = useViewGroupStore((state) => state.isHideEmpty(viewId));
+
+  const customGroups = useCustomGroupStore((state) => state.groups);
+  const overrides = useCustomGroupStore((state) => state.overrides);
+  const taskValues = useCustomGroupStore((state) => state.taskValues);
+  const setActiveProjectAndGroup = useCustomGroupStore((state) => state.setActiveProjectAndGroup);
+  const setProjectOverride = useCustomGroupStore((state) => state.setProjectOverride);
+  const clearProjectOverride = useCustomGroupStore((state) => state.clearProjectOverride);
+  const moveTasks = useCustomGroupStore((state) => state.moveTasks);
+
+  useEffect(() => {
+    setActiveProjectAndGroup(project.id, activeGroupId);
+  }, [project.id, activeGroupId, setActiveProjectAndGroup]);
+
+  const activeGroup = useMemo(
+    () => customGroups.find((g) => g.id === activeGroupId),
+    [customGroups, activeGroupId]
+  );
+
   const tagsById = useTagStore((state) => state.tagsById);
   const taskTagsByTaskId = useTagStore((state) => state.taskTagsByTaskId);
 
@@ -259,6 +414,11 @@ export function ProjectListView({
     tagsById,
     taskTagsByTaskId,
     includeEmpty: false,
+    customSections: activeGroup?.sections,
+    customOverrides: overrides,
+    taskCustomValues: taskValues,
+    isDragging: Boolean(draggingTaskId),
+    hideEmpty,
   });
 
   const allActiveTaskIds = useMemo(() => flattenedActiveItems.map((item) => item.task.id), [flattenedActiveItems]);
@@ -392,9 +552,19 @@ export function ProjectListView({
           targetTask: null,
           taskTagsByTaskId,
           todayStr,
+          taskCustomValues: taskValues,
+          customSections: activeGroup?.sections,
         });
 
         if (mutation) {
+          if (mutation.customSectionChange) {
+            await moveTasks(
+              [activeTask.id],
+              mutation.customSectionChange.targetSectionId,
+              newSortOrder
+            );
+            return;
+          }
           if (Object.keys(mutation.updates).length > 0) {
             await updateTask({
               id: activeTask.id,
@@ -430,6 +600,8 @@ export function ProjectListView({
           targetTask,
           taskTagsByTaskId,
           todayStr,
+          taskCustomValues: taskValues,
+          customSections: activeGroup?.sections,
         });
 
         const groupItems = targetGroup.items.map((i) => i.task);
@@ -445,6 +617,14 @@ export function ProjectListView({
         }
 
         if (mutation) {
+          if (mutation.customSectionChange) {
+            await moveTasks(
+              [activeTask.id],
+              mutation.customSectionChange.targetSectionId,
+              newSortOrder
+            );
+            return;
+          }
           if (Object.keys(mutation.updates).length > 0) {
             await updateTask({
               id: activeTask.id,
@@ -582,6 +762,18 @@ export function ProjectListView({
                 if (search?.isFiltering && group.items.length === 0) return null;
                 const userCollapsed = Boolean(collapsedGroupsMap[`${viewId}:${group.key}`]);
                 const isCollapsed = !search?.groupOpen(group.key, !userCollapsed, group.items.length > 0);
+                const isCustomSection =
+                  groupBy === 'custom' &&
+                  group.key.startsWith('custom-section:') &&
+                  group.key !== 'custom-section:__unsorted__';
+                const sectionId = isCustomSection
+                  ? group.key.replace('custom-section:', '')
+                  : undefined;
+                const sectionOverride = sectionId
+                  ? overrides.find((o) => o.section_id === sectionId)
+                  : undefined;
+                const canHide = isCustomSection && group.items.length === 0;
+
                 return (
                   <section
                     key={group.key}
@@ -592,13 +784,40 @@ export function ProjectListView({
                     <DroppableGroupHeader
                       groupKey={group.key}
                       title={group.title}
+                      count={group.items.length}
                       isEmpty={group.items.length === 0}
                       isCollapsed={isCollapsed}
+                      isCustomSection={isCustomSection}
+                      canHide={canHide}
+                      hasOverride={Boolean(sectionOverride)}
                       onToggle={() => {
                         if (search?.isFiltering) {
                           search.setGroupOverride(group.key, isCollapsed);
                         } else {
                           toggleGroupCollapsed(viewId, group.key);
+                        }
+                      }}
+                      onRename={async (newName) => {
+                        if (sectionId) {
+                          await setProjectOverride({
+                            project_id: project.id,
+                            section_id: sectionId,
+                            name_override: newName,
+                          });
+                        }
+                      }}
+                      onHide={async () => {
+                        if (sectionId) {
+                          await setProjectOverride({
+                            project_id: project.id,
+                            section_id: sectionId,
+                            is_hidden: 1,
+                          });
+                        }
+                      }}
+                      onResetOverride={async () => {
+                        if (sectionId) {
+                          await clearProjectOverride(project.id, sectionId);
                         }
                       }}
                     />
@@ -607,7 +826,7 @@ export function ProjectListView({
                       data-collapsed={isCollapsed ? 'true' : 'false'}
                     >
                       <div className={styles.collapsibleInner}>
-                        {group.items.length > 0 && (
+                        {group.items.length > 0 ? (
                           <div className={styles.groupedTaskList}>
                             {group.items.map((item) => (
                               <TaskCard
@@ -638,6 +857,23 @@ export function ProjectListView({
                                 exiting={isExiting(item.task.id)}
                               />
                             ))}
+                          </div>
+                        ) : (
+                          <EmptySectionDropTarget groupKey={group.key} />
+                        )}
+
+                        {groupBy === 'custom' && activeGroupId && (
+                          <div className={styles.sectionInlineCreator}>
+                            <InlineTaskCreator
+                              defaultProjectId={project.id}
+                              customValue={{
+                                groupId: activeGroupId,
+                                sectionId:
+                                  group.key === 'custom-section:__unsorted__'
+                                    ? ''
+                                    : group.key.replace('custom-section:', ''),
+                              }}
+                            />
                           </div>
                         )}
                       </div>
@@ -716,34 +952,124 @@ export function ProjectListView({
                 <span>Completed ({completedMatches.length})</span>
               </div>
 
-              {isSectionOpen && (
-                <div className={styles.completedList} role="list" aria-label="Completed tasks">
-                  {completedMatches.map((task) => (
-                    <div key={task.id} className={styles.completedTaskItem}>
-                      <TaskCard
-                        task={task}
-                        disableDrag={true}
-                        isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
-                        allTaskIds={allCompletedTaskIds}
-                        onSelect={(t) => {
-                          setFocusedTaskId(t.id);
-                        }}
-                        onOpenDetail={(t) => onSelectTask(t)}
-                        onToggleComplete={handleToggleComplete}
-                        onToggleStar={toggleStar}
-                        onUpdateTitle={(id, title) => updateTask({ id, title })}
-                        onDelete={(id) => deleteTask(id)}
-                        onDuplicate={duplicateTask}
-                        onContextMenu={(e, t) => {
-                          e.preventDefault();
-                          setContextMenuTask(t);
-                          setContextMenuPos({ x: e.clientX, y: e.clientY });
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
+              {isSectionOpen &&
+                (groupBy === 'custom' && activeGroup ? (
+                  (() => {
+                    const sectionsMap = new Map<string, Task[]>();
+                    for (const sec of activeGroup.sections ?? []) {
+                      sectionsMap.set(sec.id, []);
+                    }
+                    const unsortedCompleted: Task[] = [];
+                    for (const task of completedMatches) {
+                      const secId = taskValues[task.id];
+                      if (secId && sectionsMap.has(secId)) {
+                        sectionsMap.get(secId)!.push(task);
+                      } else {
+                        unsortedCompleted.push(task);
+                      }
+                    }
+
+                    return (
+                      <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                        {(activeGroup.sections ?? []).map((sec) => {
+                          const secTasks = sectionsMap.get(sec.id) ?? [];
+                          if (secTasks.length === 0) return null;
+                          const override = overrides.find((o) => o.section_id === sec.id);
+                          const secName = override?.name_override ?? sec.name;
+                          return (
+                            <div key={sec.id} className={styles.completedCustomSection}>
+                              <div className={styles.completedCustomSectionTitle}>
+                                {secName} ({secTasks.length})
+                              </div>
+                              {secTasks.map((task) => (
+                                <div key={task.id} className={styles.completedTaskItem}>
+                                  <TaskCard
+                                    task={task}
+                                    disableDrag={true}
+                                    isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                                    allTaskIds={allCompletedTaskIds}
+                                    onSelect={(t) => {
+                                      setFocusedTaskId(t.id);
+                                    }}
+                                    onOpenDetail={(t) => onSelectTask(t)}
+                                    onToggleComplete={handleToggleComplete}
+                                    onToggleStar={toggleStar}
+                                    onUpdateTitle={(id, title) => updateTask({ id, title })}
+                                    onDelete={(id) => deleteTask(id)}
+                                    onDuplicate={duplicateTask}
+                                    onContextMenu={(e, t) => {
+                                      e.preventDefault();
+                                      setContextMenuTask(t);
+                                      setContextMenuPos({ x: e.clientX, y: e.clientY });
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                        {unsortedCompleted.length > 0 && (
+                          <div className={styles.completedCustomSection}>
+                            <div className={styles.completedCustomSectionTitle}>
+                              Unsorted ({unsortedCompleted.length})
+                            </div>
+                            {unsortedCompleted.map((task) => (
+                              <div key={task.id} className={styles.completedTaskItem}>
+                                <TaskCard
+                                  task={task}
+                                  disableDrag={true}
+                                  isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                                  allTaskIds={allCompletedTaskIds}
+                                  onSelect={(t) => {
+                                    setFocusedTaskId(t.id);
+                                  }}
+                                  onOpenDetail={(t) => onSelectTask(t)}
+                                  onToggleComplete={handleToggleComplete}
+                                  onToggleStar={toggleStar}
+                                  onUpdateTitle={(id, title) => updateTask({ id, title })}
+                                  onDelete={(id) => deleteTask(id)}
+                                  onDuplicate={duplicateTask}
+                                  onContextMenu={(e, t) => {
+                                    e.preventDefault();
+                                    setContextMenuTask(t);
+                                    setContextMenuPos({ x: e.clientX, y: e.clientY });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className={styles.completedList} role="list" aria-label="Completed tasks">
+                    {completedMatches.map((task) => (
+                      <div key={task.id} className={styles.completedTaskItem}>
+                        <TaskCard
+                          task={task}
+                          disableDrag={true}
+                          isSelected={selectedTaskId === task.id || focusedTaskId === task.id}
+                          allTaskIds={allCompletedTaskIds}
+                          onSelect={(t) => {
+                            setFocusedTaskId(t.id);
+                          }}
+                          onOpenDetail={(t) => onSelectTask(t)}
+                          onToggleComplete={handleToggleComplete}
+                          onToggleStar={toggleStar}
+                          onUpdateTitle={(id, title) => updateTask({ id, title })}
+                          onDelete={(id) => deleteTask(id)}
+                          onDuplicate={duplicateTask}
+                          onContextMenu={(e, t) => {
+                            e.preventDefault();
+                            setContextMenuTask(t);
+                            setContextMenuPos({ x: e.clientX, y: e.clientY });
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
             </div>
           );
         })()}

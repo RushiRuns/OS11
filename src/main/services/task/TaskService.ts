@@ -5,6 +5,7 @@ import { ReminderRepository } from '../../repositories/ReminderRepository.js';
 import { SettingsRepository } from '../../repositories/SettingsRepository.js';
 import { TagRepository } from '../../repositories/TagRepository.js';
 import { TaskHistoryRepository } from '../../repositories/TaskHistoryRepository.js';
+import { CustomGroupRepository } from '../../repositories/CustomGroupRepository.js';
 import { validateCreate, validateUpdate, ValidationError } from '../../domain/task-validation.js';
 import { validateTimeBlock, findOverlap } from '../../domain/timeBlock.js';
 import { getEffectiveToday } from '../../../shared/utils/date.js';
@@ -42,6 +43,7 @@ export class TaskService {
   private settingsRepo: SettingsRepository;
   private tagRepo: TagRepository;
   private historyRepo: TaskHistoryRepository;
+  private customGroupRepo: CustomGroupRepository;
   private attachmentService?: AttachmentService;
 
   constructor(
@@ -52,7 +54,8 @@ export class TaskService {
     tagRepo?: TagRepository,
     historyRepo?: TaskHistoryRepository,
     attachmentService?: AttachmentService,
-    projectRepo?: ProjectRepository
+    projectRepo?: ProjectRepository,
+    customGroupRepo?: CustomGroupRepository
   ) {
     this.taskRepo = taskRepo ?? new TaskRepository();
     this.projectRepo = projectRepo ?? new ProjectRepository();
@@ -62,6 +65,7 @@ export class TaskService {
     this.tagRepo = tagRepo ?? new TagRepository();
     const customDb = (this.taskRepo as unknown as { customDb?: Database.Database }).customDb;
     this.historyRepo = historyRepo ?? new TaskHistoryRepository(customDb);
+    this.customGroupRepo = customGroupRepo ?? new CustomGroupRepository(customDb);
     this.attachmentService = attachmentService;
   }
 
@@ -155,6 +159,20 @@ export class TaskService {
         }
       } catch {
         // Auto-tag rule application is non-blocking
+      }
+    }
+
+    // Set custom section value if provided (in same create transaction flow)
+    if (payload.customValue?.groupId && payload.customValue?.sectionId) {
+      try {
+        this.customGroupRepo.setValue(
+          task.id,
+          payload.customValue.groupId,
+          payload.customValue.sectionId,
+          task.created_at
+        );
+      } catch (customErr) {
+        console.warn('[TaskService] Failed to set initial custom value on task create:', customErr);
       }
     }
 
@@ -472,11 +490,34 @@ export class TaskService {
       throw new ValidationError('Cyclic subtask relationship detected.');
     }
 
+    // Rule: when a task becomes a subtask, delete its custom values
+    this.customGroupRepo.clearAllValuesForTask(id);
+
     return this.taskRepo.update(id, { parent_task_id: parentId });
   }
 
-  public promoteToTask(id: string): Task {
-    return this.taskRepo.update(id, { parent_task_id: null });
+  public promoteToTask(id: string, activeGroupId?: string): Task {
+    const current = this.taskRepo.getById(id);
+    const formerParentId = current?.parent_task_id;
+    const promoted = this.taskRepo.update(id, { parent_task_id: null });
+
+    // Rule: when a subtask is promoted to top level, give it its former parent's section
+    if (formerParentId) {
+      const now = new Date().toISOString();
+      if (activeGroupId) {
+        const parentVal = this.customGroupRepo.getValue(formerParentId, activeGroupId);
+        if (parentVal) {
+          this.customGroupRepo.setValue(id, activeGroupId, parentVal.section_id, now);
+        }
+      } else {
+        const parentVals = this.customGroupRepo.getValuesByTaskId(formerParentId);
+        for (const pv of parentVals) {
+          this.customGroupRepo.setValue(id, pv.group_id, pv.section_id, now);
+        }
+      }
+    }
+
+    return promoted;
   }
 
   public reorder(id: string, sortOrder: number): Task {
@@ -486,7 +527,7 @@ export class TaskService {
 
   public duplicate(id: string): Task {
     const existing = this.getById(id);
-    return this.create({
+    const copy = this.create({
       title: `${existing.title} (Copy)`,
       notes: existing.notes,
       area_id: existing.area_id,
@@ -502,6 +543,11 @@ export class TaskService {
       is_starred: existing.is_starred === 1,
       estimated_minutes: existing.estimated_minutes,
     });
+
+    // Copy custom values to duplicated task
+    this.customGroupRepo.copyValues(id, copy.id, copy.created_at);
+
+    return copy;
   }
 
   public incrementPomodoro(id: string): Task {

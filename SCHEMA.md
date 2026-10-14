@@ -12,7 +12,7 @@
 
 ## Schema Version
 
-Current version: `0001`
+Current version: `0017`
 Migration files: `src/main/migrations/`
 Version tracked in: `PRAGMA user_version`
 
@@ -26,7 +26,11 @@ Version tracked in: `PRAGMA user_version`
 | `lists` | User-created lists and built-in smart lists | 1 |
 | `list_groups` | Folder groupings for lists in the sidebar | 1 |
 | `projects` | Multi-section task containers | 1 |
-| `sections` | Named groups within a project | 1 |
+| `sections` | Named groups within a project (legacy) | 1 |
+| `custom_groups` | Library of reusable custom groups | 1 |
+| `custom_group_sections` | Ordered sections belonging to a custom group | 1 |
+| `project_group_overrides` | Per-project section overrides (hide, rename, sort) | 1 |
+| `task_custom_values` | Single-select task section assignment per group | 1 |
 | `task_dependencies` | Dependency links between tasks | 1 |
 | `milestones` | Key dates on project timelines | 1 |
 | `tags` | Named, colored labels (supports nesting) | 1 |
@@ -214,6 +218,94 @@ CREATE TABLE sections (
 );
 
 CREATE INDEX idx_sections_project_id ON sections(project_id);
+```
+
+---
+
+### `custom_groups`
+
+Library of reusable custom groups (for example "Coding", "Sprint", "Kanban").
+
+```sql
+CREATE TABLE custom_groups (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 40),
+  sort_order    REAL NOT NULL DEFAULT 0,
+  last_used_at  TEXT,
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL,
+  deleted_at    TEXT
+);
+
+CREATE UNIQUE INDEX uq_custom_groups_name
+  ON custom_groups(name COLLATE NOCASE) WHERE deleted_at IS NULL;
+```
+
+---
+
+### `custom_group_sections`
+
+Sections belonging to a custom group (for example "Bugs to be fixed", "Features to be implemented").
+
+```sql
+CREATE TABLE custom_group_sections (
+  id          TEXT PRIMARY KEY,
+  group_id    TEXT NOT NULL REFERENCES custom_groups(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 40),
+  sort_order  REAL NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL,
+  deleted_at  TEXT,
+  UNIQUE (id, group_id)
+);
+
+CREATE UNIQUE INDEX uq_custom_group_sections_name
+  ON custom_group_sections(group_id, name COLLATE NOCASE) WHERE deleted_at IS NULL;
+CREATE INDEX idx_custom_group_sections_group
+  ON custom_group_sections(group_id, sort_order);
+```
+
+---
+
+### `project_group_overrides`
+
+Per-project section overrides. Allows a project to hide, rename, and reorder sections for itself without altering the shared group definition. No private sections allowed.
+
+```sql
+CREATE TABLE project_group_overrides (
+  project_id     TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  section_id     TEXT NOT NULL REFERENCES custom_group_sections(id) ON DELETE CASCADE,
+  is_hidden      INTEGER NOT NULL DEFAULT 0 CHECK (is_hidden IN (0, 1)),
+  name_override  TEXT CHECK (name_override IS NULL OR length(name_override) BETWEEN 1 AND 40),
+  sort_override  REAL,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  PRIMARY KEY (project_id, section_id)
+);
+
+CREATE INDEX idx_project_group_overrides_proj ON project_group_overrides(project_id);
+```
+
+---
+
+### `task_custom_values`
+
+Single-select task section assignment per group. Exactly one row per task per group. The composite foreign key guarantees the section belongs to the group.
+
+```sql
+CREATE TABLE task_custom_values (
+  task_id     TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  group_id    TEXT NOT NULL,
+  section_id  TEXT NOT NULL,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL,
+  PRIMARY KEY (task_id, group_id),
+  FOREIGN KEY (section_id, group_id)
+    REFERENCES custom_group_sections(id, group_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_task_custom_values_section
+  ON task_custom_values(group_id, section_id);
 ```
 
 ---

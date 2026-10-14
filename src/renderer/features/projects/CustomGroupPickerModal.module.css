@@ -1,0 +1,201 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 60vh;
+}
+
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  padding-left: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-selected);
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-y: auto;
+  padding-right: var(--space-1);
+  max-height: 320px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: left;
+  transition: background-color var(--transition-fast);
+  user-select: none;
+}
+
+.item:hover,
+.item[data-focused="true"] {
+  background-color: var(--surface-hover);
+}
+
+.item[data-active="true"] {
+  background-color: var(--surface-selected);
+  border-color: var(--accent);
+}
+
+.itemContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.itemName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeCheck {
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.sectionPreview {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+}
+
+.editButton {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.editButton:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: var(--space-1) 0;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.emptyText {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2);
+}
+
+.newGroupBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--accent);
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.newGroupBtn:hover {
+  background-color: var(--surface-selected);
+  border-color: var(--accent);
+}
+
+.primaryBtn {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-on-accent);
+  background-color: var(--accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+}

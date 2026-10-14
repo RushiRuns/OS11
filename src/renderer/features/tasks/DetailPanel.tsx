@@ -11,6 +11,8 @@ import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useGoalStore } from '../../stores/goalStore.js';
+import { useViewGroupStore } from '../../stores/viewGroupStore.js';
+import { useCustomGroupStore } from '../../stores/customGroupStore.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { TagPicker } from '../tags/TagPicker.js';
 import { RecurrencePicker } from './RecurrencePicker.js';
@@ -52,6 +54,14 @@ function CloseIconSvg() {
     <svg className={styles.closeIconSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function FolderIconSvg() {
+  return (
+    <svg className={styles.labelIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
@@ -219,6 +229,42 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [history, setHistory] = useState<TaskHistoryRecord[]>([]);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isSectionPopoverOpen, setIsSectionPopoverOpen] = useState(false);
+
+  const projectViewId = currentTask?.project_id ? `project:${currentTask.project_id}` : null;
+  const hookActiveCustomGroupId = useViewGroupStore((state) =>
+    projectViewId ? state.getActiveCustomGroup(projectViewId) : null
+  );
+  const activeCustomGroupId = typeof window === 'undefined'
+    ? (projectViewId ? useViewGroupStore.getState().getActiveCustomGroup(projectViewId) : null)
+    : hookActiveCustomGroupId;
+
+  const hookCustomGroups = useCustomGroupStore((state) => state.groups);
+  const customGroups = typeof window === 'undefined' ? useCustomGroupStore.getState().groups : hookCustomGroups;
+
+  const hookTaskCustomValues = useCustomGroupStore((state) => state.taskValues);
+  const taskCustomValues = typeof window === 'undefined' ? useCustomGroupStore.getState().taskValues : hookTaskCustomValues;
+
+  const hookCustomOverrides = useCustomGroupStore((state) => state.overrides);
+  const customOverrides = typeof window === 'undefined' ? useCustomGroupStore.getState().overrides : hookCustomOverrides;
+  const activeCustomGroup = customGroups.find((g) => g.id === activeCustomGroupId);
+
+  const currentSectionId = currentTask ? taskCustomValues[currentTask.id] || null : null;
+  const currentCustomSectionName = useMemo(() => {
+    if (!currentSectionId || !activeCustomGroup) return 'Unsorted';
+    const sec = activeCustomGroup.sections?.find((s) => s.id === currentSectionId);
+    if (!sec) return 'Unsorted';
+    const override = customOverrides.find((o) => o.section_id === sec.id);
+    return override?.name_override ?? sec.name;
+  }, [currentSectionId, activeCustomGroup, customOverrides]);
+
+  const availableCustomSections = useMemo(() => {
+    if (!activeCustomGroup?.sections) return [];
+    return activeCustomGroup.sections.filter((s) => {
+      const isHidden = customOverrides.some((o) => o.section_id === s.id && o.is_hidden === 1);
+      return !isHidden || s.id === currentSectionId;
+    });
+  }, [activeCustomGroup, customOverrides, currentSectionId]);
 
   // Drag over panel detection for attachment drop overlay
   const [dragDepth, setDragDepth] = useState(0);
@@ -330,6 +376,10 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
       if (e.key === 'Escape') {
         if (e.defaultPrevented) return;
 
+        if (isSectionPopoverOpen) {
+          setIsSectionPopoverOpen(false);
+          return;
+        }
         if (isPriorityPopoverOpen) {
           setIsPriorityPopoverOpen(false);
           return;
@@ -948,6 +998,71 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
               </div>
             </div>
           </div>
+
+          {/* Custom Group Section Row (Shown on-demand when task is top-level and project has active custom group) */}
+          {!currentTask.parent_task_id && activeCustomGroup && (
+            <RadixPopover.Root open={isSectionPopoverOpen} onOpenChange={setIsSectionPopoverOpen}>
+              <RadixPopover.Trigger asChild>
+                <div
+                  className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={activeCustomGroup.name}
+                >
+                  <div className={styles.propertyLabel}>
+                    <FolderIconSvg />
+                    <span>{activeCustomGroup.name}</span>
+                  </div>
+                  <div className={styles.propertyValue}>
+                    <span>{currentCustomSectionName}</span>
+                  </div>
+                </div>
+              </RadixPopover.Trigger>
+              <RadixPopover.Portal container={portalContainer}>
+                <RadixPopover.Content
+                  className={styles.glassContent}
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                >
+                  <div
+                    className={styles.glassItem}
+                    onClick={async () => {
+                      await useCustomGroupStore.getState().moveTasks([currentTask.id], null);
+                      setIsSectionPopoverOpen(false);
+                    }}
+                    role="option"
+                    aria-selected={!currentSectionId}
+                  >
+                    <span>Unsorted</span>
+                    {!currentSectionId && <span className={styles.glassItemCheck}>✓</span>}
+                  </div>
+
+                  {availableCustomSections.map((sec) => {
+                    const isSelected = currentSectionId === sec.id;
+                    const override = customOverrides.find((o) => o.section_id === sec.id);
+                    const secName = override?.name_override ?? sec.name;
+
+                    return (
+                      <div
+                        key={sec.id}
+                        className={styles.glassItem}
+                        onClick={async () => {
+                          await useCustomGroupStore.getState().moveTasks([currentTask.id], sec.id);
+                          setIsSectionPopoverOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <span>{secName}</span>
+                        {isSelected && <span className={styles.glassItemCheck}>✓</span>}
+                      </div>
+                    );
+                  })}
+                </RadixPopover.Content>
+              </RadixPopover.Portal>
+            </RadixPopover.Root>
+          )}
 
           {/* On-Demand Rows (Fixed order: Repeat, Goal, Waiting For, Habit, Depends On) */}
 

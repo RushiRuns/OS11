@@ -3,6 +3,7 @@ import type { Task } from '@shared/types/task.js';
 import type { Project } from '@shared/types/Project.js';
 import type { Area } from '@shared/types/Area.js';
 import type { Tag } from '@shared/types/Tag.js';
+import type { CustomGroupSection, ProjectGroupOverride } from '@shared/types/CustomGroup.js';
 import { toISODateOnly, addDaysISO } from '@shared/utils/date.js';
 import type { GroupByOption } from '../stores/viewGroupStore.js';
 import type { FlattenedTaskItem } from '../features/tasks/TaskList.js';
@@ -22,6 +23,11 @@ export interface GroupTasksOptions {
   taskTagsByTaskId?: Record<string, string[]>;
   todayStr?: string;
   includeEmpty?: boolean;
+  customSections?: CustomGroupSection[];
+  customOverrides?: ProjectGroupOverride[];
+  taskCustomValues?: Record<string, string>;
+  isDragging?: boolean;
+  hideEmpty?: boolean;
 }
 
 const PRIORITY_CONFIG: { priority: number; key: string; title: string }[] = [
@@ -45,6 +51,11 @@ export function groupTasks({
   taskTagsByTaskId = {},
   todayStr,
   includeEmpty = false,
+  customSections,
+  customOverrides,
+  taskCustomValues,
+  isDragging = false,
+  hideEmpty = false,
 }: GroupTasksOptions): TaskGroup[] {
   if (groupBy === 'none') {
     return [{ key: 'all', title: 'All Tasks', items }];
@@ -370,6 +381,81 @@ export function groupTasks({
     return result;
   }
 
+  // 7. Group by Custom Group
+  if (groupBy === 'custom') {
+    const rawSections = (customSections || []).filter((s) => s.deleted_at === null);
+    const overridesMap = new Map((customOverrides || []).map((o) => [o.section_id, o]));
+
+    // Visible sections with overrides applied
+    const visibleSections = rawSections
+      .filter((s) => overridesMap.get(s.id)?.is_hidden !== 1)
+      .map((s) => {
+        const o = overridesMap.get(s.id);
+        return {
+          id: s.id,
+          name: o?.name_override ? o.name_override : s.name,
+          sort_order:
+            o?.sort_override !== null && o?.sort_override !== undefined
+              ? o.sort_override
+              : s.sort_order,
+          created_at: s.created_at,
+        };
+      })
+      .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
+
+    const visibleSectionIds = new Set(visibleSections.map((s) => s.id));
+    const buckets: Record<string, FlattenedTaskItem[]> = {};
+    for (const s of visibleSections) {
+      buckets[s.id] = [];
+    }
+    const unsortedItems: FlattenedTaskItem[] = [];
+
+    // Grouping by trees: top-level tasks assign their section to all subtasks under them
+    let currentBucket: FlattenedTaskItem[] | null = null;
+
+    for (const item of items) {
+      if (item.depth === 0) {
+        const sectionId = taskCustomValues ? taskCustomValues[item.task.id] : undefined;
+        if (sectionId && visibleSectionIds.has(sectionId)) {
+          currentBucket = buckets[sectionId];
+        } else {
+          currentBucket = unsortedItems;
+        }
+      }
+
+      if (currentBucket) {
+        currentBucket.push(item);
+      } else {
+        unsortedItems.push(item);
+      }
+    }
+
+    const result: TaskGroup[] = [];
+    const shouldHideEmpty = hideEmpty ?? false;
+
+    for (const sec of visibleSections) {
+      const secItems = buckets[sec.id] || [];
+      if (!shouldHideEmpty || secItems.length > 0) {
+        result.push({
+          key: `custom-section:${sec.id}`,
+          title: sec.name,
+          items: secItems,
+        });
+      }
+    }
+
+    // Append Unsorted last. Show only when it has tasks or drag is in progress.
+    if (unsortedItems.length > 0 || isDragging) {
+      result.push({
+        key: 'custom-section:__unsorted__',
+        title: 'Unsorted',
+        items: unsortedItems,
+      });
+    }
+
+    return result;
+  }
+
   return [{ key: 'all', title: 'All Tasks', items }];
 }
 
@@ -379,6 +465,10 @@ export interface GroupDropMutationResult {
   tagChanges?: {
     addTagId?: string;
     removeTagId?: string;
+  };
+  customSectionChange?: {
+    targetSectionId: string | null;
+    previousSectionId: string | null;
   };
   description: string;
 }
@@ -395,6 +485,8 @@ export function resolveGroupDropMutation({
   areasById = {},
   taskTagsByTaskId = {},
   todayStr,
+  customSections,
+  taskCustomValues,
 }: {
   task: Task;
   groupBy: GroupByOption;
@@ -404,6 +496,8 @@ export function resolveGroupDropMutation({
   areasById?: Record<string, Area>;
   taskTagsByTaskId?: Record<string, string[]>;
   todayStr: string;
+  customSections?: CustomGroupSection[];
+  taskCustomValues?: Record<string, string>;
 }): GroupDropMutationResult | null {
   if (groupBy === 'none') return null;
 
@@ -586,6 +680,36 @@ export function resolveGroupDropMutation({
     };
   }
 
+  // 7. Custom Group
+  if (groupBy === 'custom') {
+    let targetSectionId: string | null = null;
+    if (targetTask && taskCustomValues) {
+      targetSectionId = taskCustomValues[targetTask.id] || null;
+    } else if (targetGroupKey.startsWith('custom-section:')) {
+      const raw = targetGroupKey.replace('custom-section:', '');
+      targetSectionId = raw === '__unsorted__' ? null : raw;
+    }
+
+    const previousSectionId = taskCustomValues ? taskCustomValues[task.id] || null : null;
+    if (targetSectionId === previousSectionId) return null;
+
+    let targetSectionName = 'Unsorted';
+    if (targetSectionId && customSections) {
+      const sec = customSections.find((s) => s.id === targetSectionId);
+      if (sec) targetSectionName = sec.name;
+    }
+
+    return {
+      updates: {},
+      previousValues: {},
+      customSectionChange: {
+        targetSectionId,
+        previousSectionId,
+      },
+      description: `Moved "${task.title}" to ${targetSectionName}`,
+    };
+  }
+
   return null;
 }
 
@@ -602,6 +726,11 @@ export function useGroupedTasks(options: GroupTasksOptions): TaskGroup[] {
     taskTagsByTaskId,
     todayStr,
     includeEmpty,
+    customSections,
+    customOverrides,
+    taskCustomValues,
+    isDragging,
+    hideEmpty,
   } = options;
 
   return useMemo(
@@ -615,8 +744,27 @@ export function useGroupedTasks(options: GroupTasksOptions): TaskGroup[] {
         taskTagsByTaskId,
         todayStr,
         includeEmpty,
+        customSections,
+        customOverrides,
+        taskCustomValues,
+        isDragging,
+        hideEmpty,
       }),
-    [items, groupBy, projectsById, areasById, tagsById, taskTagsByTaskId, todayStr, includeEmpty]
+    [
+      items,
+      groupBy,
+      projectsById,
+      areasById,
+      tagsById,
+      taskTagsByTaskId,
+      todayStr,
+      includeEmpty,
+      customSections,
+      customOverrides,
+      taskCustomValues,
+      isDragging,
+      hideEmpty,
+    ]
   );
 }
 
