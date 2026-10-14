@@ -564,8 +564,7 @@
 }
 
 .rowHighlightedFromBlock {
-  box-shadow: 0 0 0 1.5px var(--accent-border) !important;
-  background-color: var(--surface-active) !important;
+  background-color: var(--surface-hover) !important;
 }
 
 /* Reciprocal Cross-View Membership Badges (Subtle text style) */
