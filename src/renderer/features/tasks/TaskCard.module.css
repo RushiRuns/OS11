@@ -31,12 +31,7 @@
 }
 
 .taskCardSelected {
-  background: var(--surface-selected);
   outline: none;
-}
-
-.taskCardSelected:hover {
-  background: var(--surface-selected);
 }
 
 .searchCursorRow {

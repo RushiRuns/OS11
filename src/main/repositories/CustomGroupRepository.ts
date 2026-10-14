@@ -323,7 +323,15 @@ export class CustomGroupRepository extends BaseRepository {
     return row ?? null;
   }
 
+  private hasTaskCustomValuesTable(): boolean {
+    const row = this.db.prepare(
+      "SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_custom_values'"
+    ).get();
+    return Boolean(row);
+  }
+
   public getValuesByTaskId(taskId: string): TaskCustomValue[] {
+    if (!this.hasTaskCustomValuesTable()) return [];
     return this.db.prepare(`
       SELECT * FROM task_custom_values
       WHERE task_id = ?
@@ -331,6 +339,7 @@ export class CustomGroupRepository extends BaseRepository {
   }
 
   public setValue(taskId: string, groupId: string, sectionId: string, timestamp: string): void {
+    if (!this.hasTaskCustomValuesTable()) return;
     this.db.prepare(`
       INSERT INTO task_custom_values (task_id, group_id, section_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
@@ -341,6 +350,7 @@ export class CustomGroupRepository extends BaseRepository {
   }
 
   public clearValue(taskId: string, groupId: string): void {
+    if (!this.hasTaskCustomValuesTable()) return;
     this.db.prepare(`
       DELETE FROM task_custom_values
       WHERE task_id = ? AND group_id = ?
@@ -348,6 +358,7 @@ export class CustomGroupRepository extends BaseRepository {
   }
 
   public clearAllValuesForTask(taskId: string): void {
+    if (!this.hasTaskCustomValuesTable()) return;
     this.db.prepare(`
       DELETE FROM task_custom_values
       WHERE task_id = ?
@@ -355,6 +366,7 @@ export class CustomGroupRepository extends BaseRepository {
   }
 
   public copyValues(sourceTaskId: string, targetTaskId: string, timestamp: string): void {
+    if (!this.hasTaskCustomValuesTable()) return;
     this.db.prepare(`
       INSERT INTO task_custom_values (task_id, group_id, section_id, created_at, updated_at)
       SELECT ?, group_id, section_id, ?, ?

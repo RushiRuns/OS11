@@ -81,6 +81,31 @@ vi.mock('../../src/renderer/stores/app-store.js', () => ({
   useAppStore: { getState: () => ({ activeListId: 'smart_my_day' }) },
 }));
 
+vi.mock('../../src/renderer/stores/viewGroupStore.js', () => ({
+  useViewGroupStore: Object.assign((selector: (state: any) => any) => {
+    const fakeState = { getActiveCustomGroup: () => null };
+    return selector ? selector(fakeState) : fakeState;
+  }, {
+    getState: () => ({ getActiveCustomGroup: () => null }),
+  }),
+}));
+
+vi.mock('../../src/renderer/stores/customGroupStore.js', () => ({
+  useCustomGroupStore: Object.assign((selector: (state: any) => any) => {
+    const fakeState = { groups: [], taskValues: {}, overrides: [] };
+    return selector ? selector(fakeState) : fakeState;
+  }, {
+    getState: () => ({ groups: [], taskValues: {}, overrides: [] }),
+  }),
+}));
+
+vi.mock('../../src/renderer/stores/selectionStore.js', () => ({
+  useSelectionStore: (selector: (state: any) => any) => {
+    const fakeState = { selectedIds: new Set(), isMultiSelectActive: false };
+    return selector ? selector(fakeState) : fakeState;
+  },
+}));
+
 vi.mock('../../src/renderer/services/ipc.js', () => ({
   invoke: vi.fn(),
 }));
