@@ -2,7 +2,7 @@ import type { Task } from '@shared/types/task.js';
 
 export const OPTIONAL_FIELDS = [
   'repeat',
-  'goal',
+  'key_result',
   'waitingFor',
   'habit',
   'dependsOn',
@@ -12,6 +12,7 @@ export const OPTIONAL_FIELDS = [
 export type OptionalField = (typeof OPTIONAL_FIELDS)[number];
 
 export interface FieldValueContext {
+  hasKeyResult?: boolean;
   hasGoal?: boolean;
   hasDependencies?: boolean;
   hasAttachments?: boolean;
@@ -27,8 +28,8 @@ export function fieldsWithValue(
   if (task.recurrence_rule) {
     set.add('repeat');
   }
-  if (context?.hasGoal) {
-    set.add('goal');
+  if (context?.hasKeyResult || context?.hasGoal || Boolean(task.key_result_id)) {
+    set.add('key_result');
   }
   if (task.waiting_on) {
     set.add('waitingFor');

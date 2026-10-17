@@ -209,7 +209,7 @@ Focus timer sessions and tracking.
 - `pomodoro:hide-mini-window` — Hide floating mini timer window.
 - `pomodoro:action` — Forward remote timer control actions (pause, resume, skip, reset) from mini window to renderer.
 
-### GOALS
+### GOALS (Legacy)
 High-level objectives linked to projects and tasks.
 - `goals:get-all` — Retrieve all active and achieved goals.
 - `goals:get-by-id` — Retrieve single goal with progress calculation.
@@ -218,6 +218,20 @@ High-level objectives linked to projects and tasks.
 - `goals:delete` — Delete a goal.
 - `goals:link-task` — Associate or dissociate a task/project from a goal.
 - `goals:get-all-links` — Retrieve all task and project links across all goals.
+
+### OKR (Objectives & Key Results)
+Objectives, key results, check-in rhythms, and habit tracking.
+- `okr:load-all` — Retrieve all objectives, key results, check-ins, and habit logs.
+- `okr:objective-create` — Create a quarterly or custom objective.
+- `okr:objective-update` — Update objective fields, cadence, or status.
+- `okr:objective-delete` — Delete an objective (returns snapshot and cleared link IDs).
+- `okr:objective-restore` — Restore an objective from an undo snapshot and re-link tasks/projects.
+- `okr:key-result-create` — Create a metric, work, or habit key result.
+- `okr:key-result-update` — Update key result targets, kind, or sort order.
+- `okr:key-result-delete` — Delete a key result and clear links on tasks/projects.
+- `okr:check-in-record` — Record check-in entries across key results in a single transaction.
+- `okr:check-in-undo` — Undo check-in entries and restore previous key result values.
+- `okr:habit-toggle` — Toggle or record a daily habit completion tick for a habit key result.
 
 ### SETTINGS
 Key-value application preferences.

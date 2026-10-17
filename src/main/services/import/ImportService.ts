@@ -67,6 +67,26 @@ export class ImportService {
     }
   }
 
+  private hasTable(name: string): boolean {
+    try {
+      const row = this.db.prepare(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?"
+      ).get(name);
+      return !!row;
+    } catch {
+      return false;
+    }
+  }
+
+  private hasColumn(table: string, column: string): boolean {
+    try {
+      const cols = this.db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+      return cols.some((c) => c.name === column);
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Full round-trip OS11 JSON importer (idempotent: skips existing IDs)
    */
@@ -84,6 +104,8 @@ export class ImportService {
 
     const totalItems =
       (data.lists?.length ?? 0) +
+      (data.objectives?.length ?? 0) +
+      (data.keyResults?.length ?? 0) +
       (data.projects?.length ?? 0) +
       (data.tags?.length ?? 0) +
       (data.tasks?.length ?? 0);
@@ -119,26 +141,133 @@ export class ImportService {
       }
     }
 
-    // 2. Projects
-    if (Array.isArray(data.projects)) {
-      const projStmt = this.db.prepare(`
-        INSERT OR IGNORE INTO projects (id, name, description, color, icon, status, due_date, default_view, sort_order, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    // 2. Objectives (if present and table exists)
+    if (Array.isArray(data.objectives) && this.hasTable('objectives')) {
+      const objStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO objectives (id, title, notes, area_id, period_kind, period_start, period_end, cadence, status, completed_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
+      for (const obj of data.objectives) {
+        objStmt.run(
+          obj.id,
+          obj.title,
+          obj.notes ?? null,
+          obj.area_id ?? null,
+          obj.period_kind ?? 'quarter',
+          obj.period_start,
+          obj.period_end,
+          obj.cadence ?? 'weekly',
+          obj.status ?? 'active',
+          obj.completed_at ?? null,
+          obj.created_at ?? new Date().toISOString(),
+          obj.updated_at ?? new Date().toISOString()
+        );
+        processed++;
+        onProgress?.({ current: processed, total: totalItems, message: `Importing goals: ${obj.title}` });
+      }
+    }
+
+    // 3. Key Results (if present and table exists)
+    if (Array.isArray(data.keyResults) && this.hasTable('key_results')) {
+      const krStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO key_results (id, objective_id, title, kind, unit, start_value, target_value, sort_order, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const kr of data.keyResults) {
+        krStmt.run(
+          kr.id,
+          kr.objective_id,
+          kr.title,
+          kr.kind,
+          kr.unit ?? null,
+          kr.start_value ?? 0,
+          kr.target_value ?? 100,
+          kr.sort_order ?? 0,
+          kr.created_at ?? new Date().toISOString(),
+          kr.updated_at ?? new Date().toISOString()
+        );
+        processed++;
+        onProgress?.({ current: processed, total: totalItems, message: `Importing key results: ${kr.title}` });
+      }
+    }
+
+    // 4. KR Check-ins (if present and table exists)
+    if (Array.isArray(data.krCheckIns) && this.hasTable('kr_check_ins')) {
+      const checkInStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO kr_check_ins (id, key_result_id, value, status, note, checked_in_on, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const ci of data.krCheckIns) {
+        checkInStmt.run(
+          ci.id,
+          ci.key_result_id,
+          ci.value,
+          ci.status,
+          ci.note ?? null,
+          ci.checked_in_on,
+          ci.created_at ?? new Date().toISOString()
+        );
+      }
+    }
+
+    // 5. KR Habit Logs (if present and table exists)
+    if (Array.isArray(data.krHabitLogs) && this.hasTable('kr_habit_logs')) {
+      const habitStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO kr_habit_logs (key_result_id, log_date, created_at)
+        VALUES (?, ?, ?)
+      `);
+      for (const hl of data.krHabitLogs) {
+        habitStmt.run(
+          hl.key_result_id,
+          hl.log_date,
+          hl.created_at ?? new Date().toISOString()
+        );
+      }
+    }
+
+    // Gather existing key_result IDs to ensure FK validity
+    const validKrIds = this.hasTable('key_results')
+      ? new Set(
+          (this.db.prepare('SELECT id FROM key_results').all() as Array<{ id: string }>).map((r) => r.id)
+        )
+      : new Set<string>();
+
+    const hasProjectKrId = this.hasColumn('projects', 'key_result_id');
+    const hasTaskKrId = this.hasColumn('tasks', 'key_result_id');
+
+    // 6. Projects
+    if (Array.isArray(data.projects)) {
+      const projStmt = hasProjectKrId
+        ? this.db.prepare(`
+            INSERT OR IGNORE INTO projects (id, name, description, color, icon, status, due_date, default_view, sort_order, key_result_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `)
+        : this.db.prepare(`
+            INSERT OR IGNORE INTO projects (id, name, description, color, icon, status, due_date, default_view, sort_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+
       for (const p of data.projects) {
-        const info = projStmt.run(
+        const krId = p.key_result_id && validKrIds.has(p.key_result_id) ? p.key_result_id : null;
+        const params = [
           p.id,
           p.name,
           p.description ?? null,
-          p.color ?? '#1B88FF',
+          p.color ?? '#8B5CF6',
           p.icon ?? '📁',
           p.status ?? 'active',
           p.due_date ?? null,
           p.default_view ?? 'list',
           p.sort_order ?? 0,
+        ];
+        if (hasProjectKrId) {
+          params.push(krId);
+        }
+        params.push(
           p.created_at ?? new Date().toISOString(),
           p.updated_at ?? new Date().toISOString()
         );
+        const info = projStmt.run(...params);
         if (info.changes > 0) importedProjects++;
         else skippedCount++;
         processed++;
@@ -146,7 +275,7 @@ export class ImportService {
       }
     }
 
-    // 3. Tags
+    // 7. Tags
     if (Array.isArray(data.tags)) {
       const tagStmt = this.db.prepare(`
         INSERT OR IGNORE INTO tags (id, name, color, created_at)
@@ -166,26 +295,45 @@ export class ImportService {
       }
     }
 
-    // 4. Tasks
+    // 8. Tasks
     if (Array.isArray(data.tasks)) {
-      const taskStmt = this.db.prepare(`
-        INSERT OR IGNORE INTO tasks (
-          id, title, notes, list_id, project_id, section_id, parent_task_id,
-          due_date, due_time, all_day, recurrence_rule, recurrence_basis,
-          priority, is_starred, is_completed, completed_at, estimated_minutes,
-          assignee_device_id, created_by_device, sort_order, my_day_date,
-          pomodoro_count, is_habit, is_trashed, trashed_at, created_at, updated_at
-        ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?
-        )
-      `);
+      const taskStmt = hasTaskKrId
+        ? this.db.prepare(`
+            INSERT OR IGNORE INTO tasks (
+              id, title, notes, list_id, project_id, section_id, parent_task_id,
+              due_date, due_time, all_day, recurrence_rule, recurrence_basis,
+              priority, is_starred, is_completed, completed_at, estimated_minutes,
+              assignee_device_id, created_by_device, sort_order, my_day_date,
+              pomodoro_count, is_habit, is_trashed, trashed_at, key_result_id, created_at, updated_at
+            ) VALUES (
+              ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?, ?
+            )
+          `)
+        : this.db.prepare(`
+            INSERT OR IGNORE INTO tasks (
+              id, title, notes, list_id, project_id, section_id, parent_task_id,
+              due_date, due_time, all_day, recurrence_rule, recurrence_basis,
+              priority, is_starred, is_completed, completed_at, estimated_minutes,
+              assignee_device_id, created_by_device, sort_order, my_day_date,
+              pomodoro_count, is_habit, is_trashed, trashed_at, created_at, updated_at
+            ) VALUES (
+              ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?
+            )
+          `);
 
       for (const t of data.tasks) {
-        const info = taskStmt.run(
+        const krId = !t.parent_task_id && t.key_result_id && validKrIds.has(t.key_result_id)
+          ? t.key_result_id
+          : null;
+        const params = [
           t.id,
           t.title,
           t.notes ?? null,
@@ -211,9 +359,15 @@ export class ImportService {
           t.is_habit ?? 0,
           t.is_trashed ?? 0,
           t.trashed_at ?? null,
+        ];
+        if (hasTaskKrId) {
+          params.push(krId);
+        }
+        params.push(
           t.created_at ?? new Date().toISOString(),
           t.updated_at ?? new Date().toISOString()
         );
+        const info = taskStmt.run(...params);
 
         if (info.changes > 0) importedTasks++;
         else skippedCount++;
@@ -222,27 +376,9 @@ export class ImportService {
       }
     }
 
-    // 5. Goals (if present)
-    if (Array.isArray(data.goals)) {
-      const goalStmt = this.db.prepare(`
-        INSERT OR IGNORE INTO goals (id, title, description, goal_type, target_date, target_value, current_value, streak_count, last_progress_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      for (const g of data.goals) {
-        goalStmt.run(
-          g.id,
-          g.title,
-          g.description ?? null,
-          g.goal_type ?? 'milestone',
-          g.target_date ?? null,
-          g.target_value ?? 100,
-          g.current_value ?? 0,
-          g.streak_count ?? 0,
-          g.last_progress_at ?? null,
-          g.created_at ?? new Date().toISOString(),
-          g.updated_at ?? new Date().toISOString()
-        );
-      }
+    // 9. Legacy Goals: skip and record
+    if (Array.isArray(data.goals) && data.goals.length > 0) {
+      skippedCount += data.goals.length;
     }
 
     // 6. Settings (if present)

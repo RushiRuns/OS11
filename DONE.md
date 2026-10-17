@@ -72,3 +72,11 @@
 - **Decision 15-16**: Standalone Agenda page removed. Goals promoted to top-level sidebar view (`view_goals`), with Habits as an internal tab.
 - **Decision 17**: Right-side slot coordinates between Detail Panel, Suggestions, and Scheduler (peer switching, transient detail restore).
 
+### OKR Model Redesign (Migration 0018)
+- **Decision 1**: Goals redesigned into full OKR tool. Model replaced with `objectives`, `key_results`, `kr_check_ins`, and `kr_habit_logs`. Legacy goal tables dropped as approved test data.
+- **Decision 2**: Key results have three kinds: `metric` (number), `work` (tasks/projects rollup), and `habit` (per-week target).
+- **Decision 3**: Linked work is tracked via `key_result_id` on `tasks` and `projects`.
+- **Decision 4**: Dates for periods, check-ins, and habit logs stored as local `YYYY-MM-DD` strings via effective today. System timestamps remain ISO 8601.
+- **Decision 5**: Deletion of objectives/key results explicitly updates task/project links in-transaction. Undo snapshots allow full restoration.
+
+

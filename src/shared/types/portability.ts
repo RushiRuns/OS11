@@ -2,8 +2,11 @@ import type { Task } from './task.js';
 import type { List } from './List.js';
 import type { Project } from './Project.js';
 import type { Tag } from './Tag.js';
-import type { Goal } from './Goal.js';
+import type { Objective } from './Objective.js';
+import type { KeyResult, KRCheckIn, KRHabitLog } from './KeyResult.js';
 import type { PomodoroSession } from './PomodoroSession.js';
+
+export const CURRENT_EXPORT_VERSION = 2;
 
 export interface OS11ExportData {
   version: number;
@@ -12,7 +15,11 @@ export interface OS11ExportData {
   lists: List[];
   projects: Project[];
   tags: Tag[];
-  goals: Goal[];
+  goals?: Array<Record<string, unknown>>;
+  objectives?: Objective[];
+  keyResults?: KeyResult[];
+  krCheckIns?: KRCheckIn[];
+  krHabitLogs?: KRHabitLog[];
   pomodoroSessions: PomodoroSession[];
   settings: Record<string, unknown>;
   taskTags?: Array<{ task_id: string; tag_id: string }>;

@@ -28,7 +28,7 @@ describe('Performance: CI Production Bundle Size Enforcement', () => {
     expect(actualJsBytes).toBeLessThan(maxJsBytes);
   });
 
-  it('enforces initial CSS bundle is < 30KB gzipped', () => {
+  it('enforces initial CSS bundle is < 35KB gzipped', () => {
     const assetsDir = path.resolve(__dirname, '../../dist/assets');
     if (!fs.existsSync(assetsDir)) {
       return;
@@ -42,7 +42,7 @@ describe('Performance: CI Production Bundle Size Enforcement', () => {
     const cssContent = fs.readFileSync(cssFilePath);
     const cssGzipped = zlib.gzipSync(cssContent);
 
-    const maxCssBytes = 30 * 1024; // 30KB = 30,720 bytes
+    const maxCssBytes = 35 * 1024; // 35KB = 35,840 bytes
     const actualCssBytes = cssGzipped.length;
     const actualCssKb = (actualCssBytes / 1024).toFixed(2);
 

@@ -7,7 +7,7 @@ import { TaskRepository } from '../../repositories/TaskRepository.js';
 import { ListRepository } from '../../repositories/ListRepository.js';
 import { ProjectRepository } from '../../repositories/ProjectRepository.js';
 import { TagRepository } from '../../repositories/TagRepository.js';
-import { GoalRepository } from '../../repositories/GoalRepository.js';
+import { ObjectiveRepository } from '../../repositories/ObjectiveRepository.js';
 import { PomodoroRepository } from '../../repositories/PomodoroRepository.js';
 import { SettingsRepository } from '../../repositories/SettingsRepository.js';
 import { createZipArchive, type ZipEntry } from '../../utils/zip-util.js';
@@ -24,7 +24,7 @@ export class ExportService {
   private listRepo: ListRepository;
   private projectRepo: ProjectRepository;
   private tagRepo: TagRepository;
-  private goalRepo: GoalRepository;
+  private objectiveRepo: ObjectiveRepository;
   private pomodoroRepo: PomodoroRepository;
   private settingsRepo: SettingsRepository;
   private attachmentsDir?: string;
@@ -36,7 +36,8 @@ export class ExportService {
     listRepo?: ListRepository;
     projectRepo?: ProjectRepository;
     tagRepo?: TagRepository;
-    goalRepo?: GoalRepository;
+    objectiveRepo?: ObjectiveRepository;
+    goalRepo?: ObjectiveRepository;
     pomodoroRepo?: PomodoroRepository;
     settingsRepo?: SettingsRepository;
     attachmentsDir?: string;
@@ -47,7 +48,7 @@ export class ExportService {
     this.listRepo = options?.listRepo ?? new ListRepository(db);
     this.projectRepo = options?.projectRepo ?? new ProjectRepository(db);
     this.tagRepo = options?.tagRepo ?? new TagRepository(db);
-    this.goalRepo = options?.goalRepo ?? new GoalRepository(db);
+    this.objectiveRepo = options?.objectiveRepo ?? options?.goalRepo ?? new ObjectiveRepository(db);
     this.pomodoroRepo = options?.pomodoroRepo ?? new PomodoroRepository(db);
     this.settingsRepo = options?.settingsRepo ?? new SettingsRepository(db);
     this.attachmentsDir = options?.attachmentsDir;
@@ -75,7 +76,7 @@ export class ExportService {
     const lists = this.listRepo.getAll();
     const projects = this.projectRepo.getAll();
     const tags = this.tagRepo.getAll();
-    const goals = this.goalRepo.getAll();
+    const okrData = this.objectiveRepo.loadAll();
     const pomodoroSessions = this.pomodoroRepo.getAll();
     const settings = this.settingsRepo.getAll();
 
@@ -92,13 +93,16 @@ export class ExportService {
     }
 
     return {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       tasks,
       lists,
       projects,
       tags,
-      goals,
+      objectives: okrData.objectives,
+      keyResults: okrData.keyResults,
+      krCheckIns: okrData.checkIns,
+      krHabitLogs: okrData.habitLogs,
       pomodoroSessions,
       settings,
       taskTags,

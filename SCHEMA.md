@@ -12,7 +12,7 @@
 
 ## Schema Version
 
-Current version: `0017`
+Current version: `0018`
 Migration files: `src/main/migrations/`
 Version tracked in: `PRAGMA user_version`
 
@@ -40,8 +40,10 @@ Version tracked in: `PRAGMA user_version`
 | `comments` | Comment threads on tasks | 1 |
 | `comment_reactions` | Emoji reactions on comments | 1 |
 | `pomodoro_sessions` | Completed and in-progress focus sessions | 1 |
-| `goals` | High-level objectives linked to tasks/projects | 1 |
-| `goal_links` | Many-to-many join: goal ↔ task or project | 1 |
+| `objectives` | Outcomes wanted in a period (OKR model) | 1 |
+| `key_results` | Measurable proof of objective completion (metric, work, habit) | 1 |
+| `kr_check_ins` | Dated updates on key results | 1 |
+| `kr_habit_logs` | Daily completion ticks for habit key results | 1 |
 | `notification_history` | In-app notification center log | 1 |
 | `settings` | Key-value store for all app preferences | 1 |
 | `modules` | Feature toggle state per module | 1 |
@@ -465,34 +467,81 @@ CREATE INDEX idx_pomodoro_started_at ON pomodoro_sessions(started_at);
 
 ---
 
-### `goals`
+### `objectives`
 
 ```sql
-CREATE TABLE goals (
-  id               TEXT PRIMARY KEY,
-  title            TEXT NOT NULL,
-  description      TEXT,
-  goal_type        TEXT NOT NULL,                -- 'habit' | 'milestone' | 'outcome'
-  target_date      TEXT,
-  target_value     REAL DEFAULT 100,
-  current_value    REAL NOT NULL DEFAULT 0,
-  streak_count     INTEGER NOT NULL DEFAULT 0,
-  last_progress_at TEXT,
-  created_at       TEXT NOT NULL,
-  updated_at       TEXT NOT NULL
+CREATE TABLE objectives (
+  id           TEXT PRIMARY KEY,
+  title        TEXT NOT NULL,
+  notes        TEXT,
+  area_id      TEXT REFERENCES areas(id) ON DELETE SET NULL,
+  period_kind  TEXT NOT NULL DEFAULT 'quarter' CHECK (period_kind IN ('quarter','custom')),
+  period_start TEXT NOT NULL,   -- YYYY-MM-DD, local date
+  period_end   TEXT NOT NULL,   -- YYYY-MM-DD, local date, inclusive
+  cadence      TEXT NOT NULL DEFAULT 'weekly' CHECK (cadence IN ('daily','weekly','biweekly','monthly')),
+  status       TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused','completed','archived')),
+  completed_at TEXT,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  CHECK (period_end >= period_start)
 );
+
+CREATE INDEX idx_objectives_status ON objectives(status);
 ```
 
 ---
 
-### `goal_links`
+### `key_results`
 
 ```sql
-CREATE TABLE goal_links (
-  goal_id       TEXT NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
-  resource_type TEXT NOT NULL,                   -- 'task' | 'project'
-  resource_id   TEXT NOT NULL,
-  PRIMARY KEY (goal_id, resource_type, resource_id)
+CREATE TABLE key_results (
+  id            TEXT PRIMARY KEY,
+  objective_id  TEXT NOT NULL REFERENCES objectives(id) ON DELETE CASCADE,
+  title         TEXT NOT NULL,
+  kind          TEXT NOT NULL CHECK (kind IN ('metric','work','habit')),
+  unit          TEXT,                      -- display only: 'L', 'ms', '%'
+  start_value   REAL NOT NULL DEFAULT 0,   -- metric only
+  target_value  REAL NOT NULL DEFAULT 0,   -- metric: the target number. habit: check-ins per week. work: unused
+  current_value REAL NOT NULL DEFAULT 0,   -- metric only: copy of the latest check-in value
+  status        TEXT CHECK (status IN ('on_track','at_risk','off_track')),  -- latest check-in status, NULL before the first
+  sort_order    REAL NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL,
+  CHECK (kind <> 'metric' OR start_value <> target_value),
+  CHECK (kind <> 'habit' OR (target_value >= 1 AND target_value <= 7))
+);
+
+CREATE INDEX idx_key_results_objective ON key_results(objective_id);
+```
+
+---
+
+### `kr_check_ins`
+
+```sql
+CREATE TABLE kr_check_ins (
+  id            TEXT PRIMARY KEY,
+  key_result_id TEXT NOT NULL REFERENCES key_results(id) ON DELETE CASCADE,
+  checked_in_on TEXT NOT NULL,   -- YYYY-MM-DD, local date
+  value         REAL,            -- metric: number entered. work/habit: snapshot (done count, period check-ins)
+  status        TEXT NOT NULL CHECK (status IN ('on_track','at_risk','off_track')),
+  note          TEXT,
+  created_at    TEXT NOT NULL
+);
+
+CREATE INDEX idx_kr_check_ins_kr_date ON kr_check_ins(key_result_id, checked_in_on);
+```
+
+---
+
+### `kr_habit_logs`
+
+```sql
+CREATE TABLE kr_habit_logs (
+  key_result_id TEXT NOT NULL REFERENCES key_results(id) ON DELETE CASCADE,
+  log_date      TEXT NOT NULL,   -- YYYY-MM-DD, local date
+  created_at    TEXT NOT NULL,
+  PRIMARY KEY (key_result_id, log_date)
 );
 ```
 
@@ -710,8 +759,11 @@ tags
   ├── parent → tag (nested tags)
   └── applied to → many tasks (via task_tags)
 
-goals
-  └── linked to → many tasks or projects (via goal_links)
+objectives
+  └── has many → key_results
+        ├── has many → kr_check_ins
+        ├── has many → kr_habit_logs
+        └── linked from → tasks & projects (via key_result_id)
 
 -- Phase 2 --
 devices ← paired via QR, token in OS keychain

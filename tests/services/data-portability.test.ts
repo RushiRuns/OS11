@@ -202,7 +202,7 @@ describe('Phase 17: Data Portability, Backup & Import', () => {
 
     it('exports full round-trip JSON', () => {
       const json = exportService.exportJson();
-      expect(json.version).toBe(1);
+      expect(json.version).toBe(2);
       expect(json.tasks.length).toBeGreaterThanOrEqual(2);
       expect(json.lists.length).toBeGreaterThan(0);
       expect(json.settings).toBeDefined();

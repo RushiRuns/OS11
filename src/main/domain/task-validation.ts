@@ -84,6 +84,15 @@ export function validateCreate(payload: CreateTaskPayload): void {
       throw new ValidationError(`Invalid follow_up_date format: "${payload.follow_up_date}". Expected YYYY-MM-DD or ISO 8601.`);
     }
   }
+
+  if (payload.key_result_id !== undefined && payload.key_result_id !== null) {
+    if (typeof payload.key_result_id !== 'string') {
+      throw new ValidationError('key_result_id must be a string.');
+    }
+    if (payload.parent_task_id) {
+      throw new ValidationError('Subtasks cannot be linked to a key result.');
+    }
+  }
 }
 
 export function validateUpdate(fields: UpdateTaskPayload): void {
@@ -153,6 +162,15 @@ export function validateUpdate(fields: UpdateTaskPayload): void {
   if (fields.follow_up_date) {
     if (!isValidIsoDateString(fields.follow_up_date)) {
       throw new ValidationError(`Invalid follow_up_date format: "${fields.follow_up_date}". Expected YYYY-MM-DD or ISO 8601.`);
+    }
+  }
+
+  if (fields.key_result_id !== undefined && fields.key_result_id !== null) {
+    if (typeof fields.key_result_id !== 'string') {
+      throw new ValidationError('key_result_id must be a string.');
+    }
+    if (fields.parent_task_id) {
+      throw new ValidationError('Subtasks cannot be linked to a key result.');
     }
   }
 }

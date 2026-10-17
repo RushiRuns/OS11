@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
-import fs from 'fs';
 import path from 'path';
 
 import { TaskRepository } from '../../src/main/repositories/TaskRepository.js';
@@ -12,24 +11,22 @@ import { TagRepository } from '../../src/main/repositories/TagRepository.js';
 import { ReminderRepository } from '../../src/main/repositories/ReminderRepository.js';
 import { AttachmentRepository } from '../../src/main/repositories/AttachmentRepository.js';
 import { PomodoroRepository } from '../../src/main/repositories/PomodoroRepository.js';
-import { GoalRepository } from '../../src/main/repositories/GoalRepository.js';
+import { ObjectiveRepository } from '../../src/main/repositories/ObjectiveRepository.js';
 import { SettingsRepository } from '../../src/main/repositories/SettingsRepository.js';
 import { ModuleRepository } from '../../src/main/repositories/ModuleRepository.js';
 import { NotificationRepository } from '../../src/main/repositories/NotificationRepository.js';
 import { IdentityRepository } from '../../src/main/repositories/IdentityRepository.js';
 import { SearchRepository } from '../../src/main/repositories/SearchRepository.js';
+import { runMigrations } from '../../src/main/migrations/runner.js';
 
 describe('Phase 2 Repositories & Database Layer', () => {
   let db: Database.Database;
+  const migrationsDir = path.resolve(__dirname, '../../src/main/migrations');
 
   beforeEach(() => {
     db = new Database(':memory:');
     db.pragma('foreign_keys = ON');
-
-    // Load and execute 0001_initial_schema.sql
-    const schemaPath = path.resolve(__dirname, '../../src/main/migrations/0001_initial_schema.sql');
-    const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-    db.exec(schemaSql);
+    runMigrations(db, migrationsDir);
   });
 
   it('verifies seeds from initial migration', () => {
@@ -39,7 +36,7 @@ describe('Phase 2 Repositories & Database Layer', () => {
 
     const moduleRepo = new ModuleRepository(db);
     const modules = moduleRepo.getAll();
-    expect(modules.length).toBe(13);
+    expect(modules.length).toBeGreaterThanOrEqual(13);
     expect(moduleRepo.isEnabled('my_day')).toBe(true);
     expect(moduleRepo.isEnabled('vim_keybindings')).toBe(false);
 
@@ -253,44 +250,20 @@ describe('Phase 2 Repositories & Database Layer', () => {
     expect(stats.totalMinutes).toBe(25);
   });
 
-  it('tests GoalRepository and GoalLink', () => {
-    const goalRepo = new GoalRepository(db);
-    const goal = goalRepo.create({
+  it('tests ObjectiveRepository', () => {
+    const objRepo = new ObjectiveRepository(db);
+    const obj = objRepo.createObjective({
       title: 'Read 12 books',
-      goal_type: 'habit',
-      target_value: 12,
+      period_start: '2026-01-01',
+      period_end: '2026-03-31',
     });
-    expect(goal.id).toBeDefined();
+    expect(obj.id).toBeDefined();
 
-    goalRepo.update(goal.id, { current_value: 3 });
-    expect(goalRepo.getAll()[0].current_value).toBe(3);
+    objRepo.updateObjective(obj.id, { title: 'Read 15 books' });
+    expect(objRepo.getAllObjectives()[0].title).toBe('Read 15 books');
 
-    goalRepo.addLink(goal.id, 'task', 'task-123');
-    const links = goalRepo.getLinks(goal.id);
-    expect(links.length).toBe(1);
-    expect(links[0].resource_id).toBe('task-123');
-
-    goalRepo.removeLink(goal.id, 'task-123');
-    expect(goalRepo.getLinks(goal.id).length).toBe(0);
-
-    goalRepo.delete(goal.id);
-    expect(goalRepo.getAll().length).toBe(0);
-
-    // Test restoring with explicit ID and historical streak / values
-    const restored = goalRepo.create({
-      id: 'custom-goal-uuid-123',
-      title: 'Restored Goal',
-      goal_type: 'outcome',
-      target_value: 50,
-      current_value: 15,
-      streak_count: 5,
-      last_progress_at: '2026-10-01T00:00:00.000Z',
-    });
-    expect(restored.id).toBe('custom-goal-uuid-123');
-    expect(restored.target_value).toBe(50);
-    expect(restored.current_value).toBe(15);
-    expect(restored.streak_count).toBe(5);
-    expect(restored.last_progress_at).toBe('2026-10-01T00:00:00.000Z');
+    objRepo.deleteObjective(obj.id);
+    expect(objRepo.getAllObjectives().length).toBe(0);
   });
 
   it('tests NotificationRepository', () => {

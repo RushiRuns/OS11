@@ -2,6 +2,7 @@ import { BaseRepository } from './base-repository.js';
 import type { Task, CreateTaskPayload, UpdateTaskPayload } from '../../shared/types/task.js';
 import type { SchedulingColumns } from '../../shared/types/Scheduling.js';
 import { GTD_SQL } from './scheduling-sql.js';
+import { validateKeyResultExists } from './key-result-validation.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class TaskRepository extends BaseRepository {
@@ -313,6 +314,19 @@ export class TaskRepository extends BaseRepository {
     return this.hasAreaIdCol;
   }
 
+  private hasKeyResultIdCol: boolean | null = null;
+  private hasKeyResultId(): boolean {
+    if (this.hasKeyResultIdCol === null) {
+      try {
+        const cols = this.db.pragma('table_info(tasks)') as Array<{ name: string }>;
+        this.hasKeyResultIdCol = cols.some((c) => c.name === 'key_result_id');
+      } catch {
+        this.hasKeyResultIdCol = false;
+      }
+    }
+    return this.hasKeyResultIdCol;
+  }
+
   private isListIdNotNullState: boolean | null = null;
   private isListIdNotNull(): boolean {
     if (this.isListIdNotNullState === null) {
@@ -424,6 +438,12 @@ export class TaskRepository extends BaseRepository {
               )
               .get(payload.project_id);
           }
+        } else if (payload.area_id) {
+          minRow = this.db
+            .prepare<[string], { min_sort: number | null }>(
+              'SELECT MIN(sort_order) AS min_sort FROM tasks WHERE area_id = ? AND project_id IS NULL AND is_trashed = 0 AND parent_task_id IS NULL'
+            )
+            .get(payload.area_id);
         } else if (listId) {
           minRow = this.db
             .prepare<[string], { min_sort: number | null }>(
@@ -442,6 +462,8 @@ export class TaskRepository extends BaseRepository {
       }
     }
 
+    validateKeyResultExists(this.db, payload.key_result_id);
+
     const record: Task = {
       id,
       title: payload.title,
@@ -451,6 +473,7 @@ export class TaskRepository extends BaseRepository {
       area_id: areaId,
       section_id: payload.section_id ?? null,
       parent_task_id: payload.parent_task_id ?? null,
+      key_result_id: payload.parent_task_id ? null : (payload.key_result_id ?? null),
       due_date: payload.due_date ?? null,
       due_time: payload.due_time ?? null,
       all_day: typeof payload.all_day === 'boolean' ? (payload.all_day ? 1 : 0) : (payload.all_day ?? 1),
@@ -499,6 +522,14 @@ export class TaskRepository extends BaseRepository {
       @my_day_date, @pomodoro_count, @is_habit, @is_trashed, @trashed_at,
       @created_at, @updated_at
     `;
+
+    if (this.hasKeyResultId()) {
+      if (record.key_result_id) {
+        validateKeyResultExists(this.db, record.key_result_id);
+      }
+      sqlCols += ', key_result_id';
+      sqlVals += ', @key_result_id';
+    }
 
     if (this.hasAreaId()) {
       sqlCols += ', area_id';
@@ -559,10 +590,27 @@ export class TaskRepository extends BaseRepository {
     const finalStartMin = isRemovingFromMyDay ? null : (current.scheduled_start_min ?? null);
     const finalDurationMin = isRemovingFromMyDay ? null : (current.scheduled_duration_min ?? null);
 
+    const effectiveParentTaskId = actualFields.parent_task_id !== undefined
+      ? actualFields.parent_task_id
+      : current.parent_task_id;
+
+    let finalKeyResultId = actualFields.key_result_id !== undefined
+      ? actualFields.key_result_id
+      : current.key_result_id;
+
+    if (effectiveParentTaskId) {
+      finalKeyResultId = null;
+    }
+
+    if (this.hasKeyResultId() && finalKeyResultId) {
+      validateKeyResultExists(this.db, finalKeyResultId);
+    }
+
     const updated: Task = {
       ...current,
       ...actualFields,
       id, // Preserve id
+      key_result_id: finalKeyResultId ?? null,
       scheduled_start_min: finalStartMin,
       scheduled_duration_min: finalDurationMin,
       area_id: actualFields.area_id !== undefined ? actualFields.area_id : current.area_id,
@@ -614,6 +662,10 @@ export class TaskRepository extends BaseRepository {
 
     if (this.hasAreaId()) {
       setClauses += ', area_id = @area_id';
+    }
+
+    if (this.hasKeyResultId()) {
+      setClauses += ', key_result_id = @key_result_id';
     }
 
     if (this.hasTimeBlock()) {

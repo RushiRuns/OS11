@@ -1,5 +1,6 @@
 import { BaseRepository } from './base-repository.js';
 import type { Project, CreateProjectPayload, UpdateProjectPayload, NotificationHistoryItem } from '../../shared/types/index.js';
+import { validateKeyResultExists } from './key-result-validation.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class ProjectRepository extends BaseRepository {
@@ -104,6 +105,19 @@ export class ProjectRepository extends BaseRepository {
     return this.hasSomedayColsState;
   }
 
+  private hasKeyResultIdColState: boolean | null = null;
+  private hasKeyResultId(): boolean {
+    if (this.hasKeyResultIdColState === null) {
+      try {
+        const cols = this.db.pragma('table_info(projects)') as Array<{ name: string }>;
+        this.hasKeyResultIdColState = cols.some((c) => c.name === 'key_result_id');
+      } catch {
+        this.hasKeyResultIdColState = false;
+      }
+    }
+    return this.hasKeyResultIdColState;
+  }
+
   public getByAreaId(areaId: string): Project[] {
     const stmt = this.db.prepare(`
       SELECT * FROM projects
@@ -146,6 +160,10 @@ export class ProjectRepository extends BaseRepository {
         ? payload.views
         : ['list', 'board', 'timeline', 'calendar', 'table'];
 
+    if (payload.key_result_id) {
+      validateKeyResultExists(this.db, payload.key_result_id);
+    }
+
     const record: Project = {
       id,
       name: payload.name,
@@ -159,6 +177,7 @@ export class ProjectRepository extends BaseRepository {
       sort_order: payload.sort_order ?? Date.now(),
       group_id: payload.group_id ?? null,
       area_id: payload.area_id ?? 'area_default',
+      key_result_id: payload.key_result_id ?? null,
       is_pinned: isPinnedVal,
       pinned_sort_order: payload.pinned_sort_order ?? 0,
       is_someday: isSomedayVal,
@@ -198,6 +217,10 @@ export class ProjectRepository extends BaseRepository {
       sql += ', is_someday, reviewed_at';
       values += ', @is_someday, @reviewed_at';
     }
+    if (this.hasKeyResultId()) {
+      sql += ', key_result_id';
+      values += ', @key_result_id';
+    }
 
     sql += ') ' + values + ')';
     const stmt = this.db.prepare(sql);
@@ -212,6 +235,10 @@ export class ProjectRepository extends BaseRepository {
     const current = this.getById(id);
     if (!current) {
       throw new Error(`Project not found: ${id}`);
+    }
+
+    if (fields.key_result_id !== undefined && fields.key_result_id !== null) {
+      validateKeyResultExists(this.db, fields.key_result_id);
     }
 
     const isPinnedVal =
@@ -239,6 +266,7 @@ export class ProjectRepository extends BaseRepository {
       id,
       group_id: fields.group_id !== undefined ? fields.group_id : current.group_id,
       area_id: fields.area_id !== undefined ? fields.area_id : current.area_id,
+      key_result_id: fields.key_result_id !== undefined ? fields.key_result_id : (current.key_result_id ?? null),
       is_pinned: isPinnedVal,
       pinned_sort_order: pinnedSortOrderVal,
       is_someday: isSomedayVal,
@@ -272,6 +300,9 @@ export class ProjectRepository extends BaseRepository {
     }
     if (this.hasSomedayCols()) {
       setClauses += ', is_someday = @is_someday, reviewed_at = @reviewed_at';
+    }
+    if (this.hasKeyResultId()) {
+      setClauses += ', key_result_id = @key_result_id';
     }
 
     const stmt = this.db.prepare(`UPDATE projects SET ${setClauses} WHERE id = @id`);

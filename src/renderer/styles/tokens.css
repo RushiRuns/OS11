@@ -290,6 +290,14 @@
   --checkbox-border-width: 1.5px;
   --checkbox-border: rgba(0, 0, 0, 0.28);
 
+  /* Goals (OKR Model) */
+  --goal-row-height: var(--task-height-cozy);
+  --goal-ring-size: var(--checkbox-size);
+  --goal-ring-stroke: 2px;
+  --goal-detail-max-width: 760px;
+  --goal-sheet-width: 480px;
+  --goal-picker-width: 360px;
+
   /* ----------------------------------------------------------
      MOTION
      All transitions in the app use one of these.

@@ -17,7 +17,7 @@ describe('detailFields reveal engine', () => {
       waiting_on: null,
     };
     const visible = fieldsWithValue(emptyTask, {
-      hasGoal: false,
+      hasKeyResult: false,
       hasDependencies: false,
       hasAttachments: false,
     });
@@ -25,7 +25,7 @@ describe('detailFields reveal engine', () => {
     expect(visible.size).toBe(0);
     expect(hiddenFields(visible)).toEqual([
       'repeat',
-      'goal',
+      'key_result',
       'waitingFor',
       'habit',
       'dependsOn',
@@ -33,28 +33,29 @@ describe('detailFields reveal engine', () => {
     ]);
   });
 
-  it('task with Repeat and Goal shows those two in fixed order', () => {
+  it('task with Repeat and Key Result shows those two in fixed order', () => {
     const task: Partial<Task> = {
       id: 'task-2',
       recurrence_rule: 'FREQ=WEEKLY',
       is_habit: 0,
       waiting_on: null,
+      key_result_id: 'kr-123',
     };
     const visible = fieldsWithValue(task, {
-      hasGoal: true,
+      hasKeyResult: true,
       hasDependencies: false,
       hasAttachments: false,
     });
 
     expect(visible.has('repeat')).toBe(true);
-    expect(visible.has('goal')).toBe(true);
+    expect(visible.has('key_result')).toBe(true);
     expect(visible.size).toBe(2);
 
     // Visible fields rendered in fixed OPTIONAL_FIELDS order
     const orderedVisible = OPTIONAL_FIELDS.filter((f) => visible.has(f));
-    expect(orderedVisible).toEqual(['repeat', 'goal']);
+    expect(orderedVisible).toEqual(['repeat', 'key_result']);
 
-    // Hidden list excludes repeat and goal
+    // Hidden list excludes repeat and key_result
     expect(hiddenFields(visible)).toEqual([
       'waitingFor',
       'habit',
@@ -75,7 +76,7 @@ describe('detailFields reveal engine', () => {
 
     expect(hiddenFields(sticky)).toEqual([
       'repeat',
-      'goal',
+      'key_result',
       'waitingFor',
       'attachments',
     ]);

@@ -9,7 +9,7 @@ import { ipc } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
 import { useTaskStore } from '../../stores/taskStore.js';
-import { useGoalStore } from '../../stores/goalStore.js';
+import { useOkrStore } from '../../stores/okrStore.js';
 import { useSchedulerUiStore } from '../../stores/schedulerUiStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
@@ -215,7 +215,12 @@ export const TaskCard = memo(function TaskCard({
   const taskTags = useTagStore(state => state.getTagsForTask(task.id));
   const loadTagsForTask = useTagStore(state => state.loadTagsForTask);
   const attachmentCount = useAttachmentStore(state => state.countsByTaskId[task.id] ?? 0);
-  const linkedGoal = useGoalStore(state => state.getGoalForTask(task.id));
+  const linkedKeyResult = useOkrStore(state =>
+    task.key_result_id ? state.keyResultsById[task.key_result_id] : undefined
+  );
+  const linkedObjective = useOkrStore(state =>
+    linkedKeyResult ? state.objectivesById[linkedKeyResult.objective_id] : undefined
+  );
 
   const dueInfo = useMemo(() => {
     if (task.is_completed === 1) {
@@ -593,7 +598,10 @@ export const TaskCard = memo(function TaskCard({
 
     // 6. Glyphs Group: Goal, Repeat, Clip
     const trailingGlyphs: React.ReactNode[] = [];
-    if (linkedGoal) {
+    if (linkedKeyResult) {
+      const tooltip = linkedObjective
+        ? `Goal: ${linkedObjective.title} › ${linkedKeyResult.title}`
+        : `Key Result: ${linkedKeyResult.title}`;
       trailingGlyphs.push(
         <span
           key="goal-glyph"
@@ -612,8 +620,8 @@ export const TaskCard = memo(function TaskCard({
               useAppStore.getState().setActiveListId('view_goals');
             }
           }}
-          title={`Goal: ${linkedGoal.title}`}
-          aria-label={`Goal: ${linkedGoal.title}`}
+          title={tooltip}
+          aria-label={tooltip}
         >
           <CardGlyph name="goal" />
         </span>
@@ -665,7 +673,8 @@ export const TaskCard = memo(function TaskCard({
     containerBadge,
     smartBadges,
     taskTags,
-    linkedGoal,
+    linkedKeyResult,
+    linkedObjective,
     attachmentCount,
   ]);
 

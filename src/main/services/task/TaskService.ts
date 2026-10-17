@@ -493,7 +493,7 @@ export class TaskService {
     // Rule: when a task becomes a subtask, delete its custom values
     this.customGroupRepo.clearAllValuesForTask(id);
 
-    return this.taskRepo.update(id, { parent_task_id: parentId });
+    return this.taskRepo.update(id, { parent_task_id: parentId, key_result_id: null });
   }
 
   public promoteToTask(id: string, activeGroupId?: string): Task {
@@ -534,6 +534,7 @@ export class TaskService {
       list_id: existing.list_id,
       project_id: existing.project_id,
       section_id: existing.section_id,
+      key_result_id: existing.parent_task_id ? null : (existing.key_result_id ?? null),
       due_date: existing.due_date,
       due_time: existing.due_time,
       all_day: existing.all_day === 1,
@@ -567,6 +568,18 @@ export class TaskService {
     const rollbackFields: Record<string, unknown> = { id: record.task_id };
     for (const [field, diff] of Object.entries(record.changed_fields)) {
       rollbackFields[field] = diff.from;
+    }
+
+    if (rollbackFields.key_result_id) {
+      try {
+        const stmt = (this.taskRepo as any).db.prepare('SELECT id FROM key_results WHERE id = ?');
+        const exists = stmt.get(rollbackFields.key_result_id);
+        if (!exists) {
+          rollbackFields.key_result_id = null;
+        }
+      } catch {
+        rollbackFields.key_result_id = null;
+      }
     }
 
     return this.update(record.task_id, rollbackFields as unknown as UpdateTaskPayload);

@@ -72,10 +72,11 @@ vi.mock('../../src/renderer/stores/attachmentStore.js', () => ({
     }),
 }));
 
-vi.mock('../../src/renderer/stores/goalStore.js', () => ({
-  useGoalStore: (selector: any) =>
+vi.mock('../../src/renderer/stores/okrStore.js', () => ({
+  useOkrStore: (selector: any) =>
     selector({
-      getGoalForTask: () => null,
+      keyResultsById: {},
+      objectivesById: {},
     }),
 }));
 

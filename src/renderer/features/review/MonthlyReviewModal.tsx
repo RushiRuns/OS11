@@ -4,8 +4,10 @@ import { invoke } from '../../services/ipc.js';
 import { IPC } from '@shared/ipc-channels.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { Button } from '../../components/Button/Button.js';
-import type { Goal } from '@shared/types/Goal.js';
 import type { Project } from '@shared/types/Project.js';
+import { useOkrStore } from '../../stores/okrStore.js';
+import { useOkrMetrics } from '../../hooks/useOkrMetrics.js';
+import { useToday } from '../../hooks/useToday.js';
 import styles from './MonthlyReviewModal.module.css';
 
 interface MonthlyReviewModalProps {
@@ -15,17 +17,17 @@ interface MonthlyReviewModalProps {
 export function MonthlyReviewModal({ onClose }: MonthlyReviewModalProps): React.ReactElement {
   const shouldReduceMotion = useReducedMotion();
   const [step, setStep] = useState<number>(1);
-  const [goals, setGoals] = useState<Goal[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const { tasksById } = useTaskStore();
 
+  const todayStr = useToday();
+  const metrics = useOkrMetrics(todayStr);
+  const objectivesById = useOkrStore((s) => s.objectivesById);
+  const keyResultsById = useOkrStore((s) => s.keyResultsById);
+  const loadAll = useOkrStore((s) => s.loadAll);
+
   useEffect(() => {
-    // Load active goals
-    invoke<Goal[]>(IPC.GOALS.GET_ALL)
-      .then((data) => {
-        if (Array.isArray(data)) setGoals(data);
-      })
-      .catch(() => {});
+    loadAll().catch(() => {});
 
     // Load projects
     invoke<Project[]>(IPC.PROJECTS.GET_ALL)
@@ -33,7 +35,7 @@ export function MonthlyReviewModal({ onClose }: MonthlyReviewModalProps): React.
         if (Array.isArray(data)) setProjects(data);
       })
       .catch(() => {});
-  }, []);
+  }, [loadAll]);
 
   // Compute completed tasks in the last 30 days
   const completedMonthCount = Object.values(tasksById).filter(
@@ -86,31 +88,32 @@ export function MonthlyReviewModal({ onClose }: MonthlyReviewModalProps): React.
                 </p>
 
                 <div className={styles.itemsList} role="list" aria-label="Goal progress list">
-                  {goals.length === 0 ? (
+                  {Object.values(objectivesById).filter((o) => o.status === 'active' || o.status === 'paused').length === 0 ? (
                     <div className={styles.emptyState}>No goals tracked yet for this period.</div>
                   ) : (
-                    goals.map((g) => {
-                      const target = g.target_value ?? 100;
-                      const current = g.current_value ?? 0;
-                      const pct = Math.min(100, Math.round((current / (target || 1)) * 100));
+                    Object.values(objectivesById)
+                      .filter((o) => o.status === 'active' || o.status === 'paused')
+                      .map((obj) => {
+                        const pct = metrics.objectiveProgressMap.get(obj.id) ?? 0;
+                        const krs = Object.values(keyResultsById).filter((k) => k.objective_id === obj.id);
 
-                      return (
-                        <div key={g.id} className={styles.cardItem} role="listitem">
-                          <div className={styles.cardRow}>
-                            <span className={styles.cardName}>{g.title}</span>
-                            <span className={styles.cardMeta}>
-                              {current} / {target} ({pct}%)
-                            </span>
+                        return (
+                          <div key={obj.id} className={styles.cardItem} role="listitem">
+                            <div className={styles.cardRow}>
+                              <span className={styles.cardName}>{obj.title}</span>
+                              <span className={styles.cardMeta}>
+                                {krs.length} {krs.length === 1 ? 'key result' : 'key results'} ({pct}%)
+                              </span>
+                            </div>
+                            <div className={styles.progressBarTrack}>
+                              <div
+                                className={styles.progressBarFill}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className={styles.progressBarTrack}>
-                            <div
-                              className={styles.progressBarFill}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })
                   )}
                 </div>
               </motion.div>

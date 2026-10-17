@@ -12,7 +12,7 @@ describe('Migration 0017: Custom Groups', () => {
     runMigrations(db, migrationsDir);
 
     const version = db.pragma('user_version', { simple: true });
-    expect(version).toBe(17);
+    expect(version).toBeGreaterThanOrEqual(17);
 
     // Foreign key integrity check
     const fkErrors = db.pragma('foreign_key_check');

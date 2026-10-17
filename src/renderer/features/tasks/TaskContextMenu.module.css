@@ -51,7 +51,8 @@
   position: relative;
 }
 
-.item:hover {
+.item:hover,
+.itemHighlighted {
   background-color: var(--surface-hover);
 }
 

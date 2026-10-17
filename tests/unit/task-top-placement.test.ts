@@ -20,6 +20,14 @@ describe('New Task Top-Placement Behavior', () => {
           !t.parent_task_id &&
           (payload.section_id ? t.section_id === payload.section_id : true)
       );
+    } else if (payload.area_id) {
+      matchingTasks = currentTasks.filter(
+        (t) =>
+          t.area_id === payload.area_id &&
+          !t.project_id &&
+          !t.parent_task_id &&
+          t.is_trashed === 0
+      );
     } else if (payload.list_id) {
       matchingTasks = currentTasks.filter(
         (t) => t.list_id === payload.list_id && t.is_trashed === 0 && !t.parent_task_id
@@ -148,5 +156,118 @@ describe('New Task Top-Placement Behavior', () => {
 
     expect(sorted[0].id).toBe('c2');
     expect(sorted[1].id).toBe('c1');
+  });
+
+  describe('Area View New Task Top-Placement', () => {
+    it('TC-AREA-TOP-01: new loose task in an area receives sort_order lower than existing tasks and is placed at the top', () => {
+      const areaId = 'area-work';
+      const existingTasks: Task[] = [
+        {
+          id: 't1',
+          title: 'Existing Task 1',
+          area_id: areaId,
+          project_id: null,
+          parent_task_id: null,
+          sort_order: 1000,
+          is_trashed: 0,
+        } as Task,
+        {
+          id: 't2',
+          title: 'Existing Task 2',
+          area_id: areaId,
+          project_id: null,
+          parent_task_id: null,
+          sort_order: 2000,
+          is_trashed: 0,
+        } as Task,
+        // Task in another area should not affect sorting
+        {
+          id: 't3',
+          title: 'Other Area Task',
+          area_id: 'area-personal',
+          project_id: null,
+          parent_task_id: null,
+          sort_order: -5000,
+          is_trashed: 0,
+        } as Task,
+      ];
+
+      const sortOrder = computeNewTaskSortOrder(
+        { title: 'New Area Task', area_id: areaId },
+        existingTasks
+      );
+      expect(sortOrder).toBe(0); // 1000 - 1000
+
+      const looseTasksInArea = [
+        ...existingTasks.filter((t) => t.area_id === areaId),
+        { id: 't-new', title: 'New Area Task', area_id: areaId, sort_order: sortOrder } as Task,
+      ].sort((a, b) => a.sort_order - b.sort_order);
+
+      expect(looseTasksInArea[0].id).toBe('t-new');
+      expect(looseTasksInArea[0].title).toBe('New Area Task');
+    });
+
+    it('TC-AREA-TOP-02: first loose task in an empty area receives baseline sort_order 1000', () => {
+      const sortOrder = computeNewTaskSortOrder({ title: 'First Task', area_id: 'area-empty' }, []);
+      expect(sortOrder).toBe(1000);
+    });
+
+    it('TC-AREA-TOP-03: multiple consecutively created tasks in an area stack newest on top', () => {
+      const areaId = 'area-ops';
+      let tasks: Task[] = [];
+
+      const addTask = (id: string, title: string) => {
+        const sort_order = computeNewTaskSortOrder({ title, area_id: areaId }, tasks);
+        const task = {
+          id,
+          title,
+          area_id: areaId,
+          project_id: null,
+          parent_task_id: null,
+          sort_order,
+          is_trashed: 0,
+        } as Task;
+        tasks = [...tasks, task].sort((a, b) => a.sort_order - b.sort_order);
+      };
+
+      addTask('t1', 'Task 1');
+      addTask('t2', 'Task 2');
+      addTask('t3', 'Task 3');
+
+      expect(tasks.map((t) => t.id)).toEqual(['t3', 't2', 't1']);
+    });
+
+    it('TC-AREA-TOP-04: tasks inside projects within the area do not interfere with loose task sort order', () => {
+      const areaId = 'area-work';
+      const existingTasks: Task[] = [
+        // Project task inside the same area with a very low sort_order
+        {
+          id: 'proj-task-1',
+          title: 'Project Task',
+          area_id: areaId,
+          project_id: 'proj-1',
+          parent_task_id: null,
+          sort_order: -9000,
+          is_trashed: 0,
+        } as Task,
+        // Loose task in the area
+        {
+          id: 'loose-1',
+          title: 'Loose Task 1',
+          area_id: areaId,
+          project_id: null,
+          parent_task_id: null,
+          sort_order: 1000,
+          is_trashed: 0,
+        } as Task,
+      ];
+
+      const sortOrder = computeNewTaskSortOrder(
+        { title: 'New Loose Task', area_id: areaId },
+        existingTasks
+      );
+      // Must be computed against loose-1 (1000 - 1000 = 0), ignoring proj-task-1 (-9000)
+      expect(sortOrder).toBe(0);
+    });
   });
 });

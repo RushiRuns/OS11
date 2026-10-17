@@ -9,6 +9,7 @@ export interface Task {
   area_id?: string | null;
   section_id?: string | null;
   parent_task_id?: string | null;
+  key_result_id?: string | null;
   due_date?: string | null;
   due_time?: string | null;
   all_day: number;
@@ -49,6 +50,7 @@ export interface CreateTaskPayload {
   area_id?: string | null;
   section_id?: string | null;
   parent_task_id?: string | null;
+  key_result_id?: string | null;
   due_date?: string | null;
   due_time?: string | null;
   all_day?: boolean | number;
@@ -83,6 +85,7 @@ export interface UpdateTaskPayload {
   area_id?: string | null;
   section_id?: string | null;
   parent_task_id?: string | null;
+  key_result_id?: string | null;
   priority?: number;
   is_starred?: number;
   is_completed?: number;

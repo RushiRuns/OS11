@@ -81,7 +81,7 @@ describe('Integration: Import/Export Round-Trip Fidelity', () => {
 
     // 2. Export full JSON snapshot from DB1
     const exportedSnapshot = exportService1.exportJson();
-    expect(exportedSnapshot.version).toBe(1);
+    expect(exportedSnapshot.version).toBe(2);
     expect(exportedSnapshot.tasks.length).toBeGreaterThanOrEqual(2);
     expect(exportedSnapshot.lists.length).toBeGreaterThan(0);
     expect(exportedSnapshot.projects.length).toBeGreaterThan(0);

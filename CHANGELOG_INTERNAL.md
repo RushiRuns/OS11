@@ -3,6 +3,36 @@
 > **Format:** `[YYYY-MM-DD] — [what was built] — [what changed architecturally]`
 > **Rule:** Updated at the end of every coding session before committing.
 
+### [2026-10-15] — Goals Redesign: OKR Model & UI Architecture
+- **What was built:**
+  - `src/main/migrations/0018_okr_model.sql`: Clean wipe of legacy test goals and creation of OKR tables: `objectives`, `key_results`, `kr_check_ins`, and `kr_habit_logs`. Replaced legacy `goal_id`/`goal_step_id` on `tasks` and `projects` with `key_result_id REFERENCES key_results(id) ON DELETE SET NULL`. Added SQLite indexes for period end, objective foreign keys, and log dates.
+  - `src/main/migrations/runner.ts`: Runner safety guard for migration 18 reconciliation. Updated `SCHEMA.md` and `DONE.md`.
+  - `src/shared/types/Objective.ts` & `src/shared/types/KeyResult.ts`: Strongly typed data contracts for objectives, 3 key result kinds (numeric target, linked work completion, habit streaks), cadences, check-ins, and snapshots.
+  - `src/shared/ipc-channels.ts` & `IPC_CHANNELS.md`: Registered `IPC.OKR.*` channels with backwards-compatible aliases for legacy channels.
+  - `src/main/repositories/key-result-validation.ts`: Key result foreign key and limit validation.
+  - `src/main/repositories/ObjectiveRepository.ts`: SQLite repository implementing transactional multi-step operations (create, update, soft/hard delete, archive, restore with link snapshots, check-in logging with undo, habit logs).
+  - `src/main/ipc/okr-handlers.ts`: Electron IPC handlers for all OKR operations.
+  - `src/main/repositories/TaskRepository.ts` & `ProjectRepository.ts`: Added `key_result_id` support with dynamic runtime column existence guards (`hasKeyResultId()`).
+  - `src/main/services/task/TaskService.ts`: Enhanced subtask conversion (clearing `key_result_id`), task duplication (preserving `key_result_id`), and version restoration (nulling dangling IDs safely).
+  - `src/shared/utils/okr.ts` & `src/main/domain/okr.ts`: Pure domain logic for quarter dates (`FY_START_MONTH = 1`), progress rollups with work deduplication, habit streaks, list state precedence, and progress clamping.
+  - `src/renderer/stores/okrStore.ts` & `src/renderer/hooks/useOkrMetrics.ts`: Reactive Zustand store with optimistic UI updates and custom metrics hook.
+  - `src/renderer/styles/tokens.css`: Added `--goal-*` design tokens (`--goal-row-height`, `--goal-ring-size`, `--goal-detail-max-width`, etc.).
+  - `src/renderer/features/goals/`: Created pure CSS/SVG components: `ProgressRing`, `GoalRow`, `KeyResultRow`, `AddEditKeyResultInline`, `CheckInSheet`, `CreateGoalModal`, `GoalDetail`, `GoalsView`, `KeyResultPickerPopover`, and `WorkPickerPopover`.
+  - `src/renderer/features/tasks/DetailPanel.tsx` & `detailFields.ts`: Replaced legacy goal picker with lazy-loaded `KeyResultPickerPopover`.
+  - `src/renderer/features/projects/CreateProjectModal.tsx`: Added key result picker for projects.
+  - `src/renderer/features/goals/HabitTracker.tsx`: Refactored to read habit key results and `kr_habit_logs` from `okrStore`.
+  - `src/renderer/features/review/MonthlyReviewModal.tsx`: Updated to consume OKRs from `okrStore`.
+  - `src/renderer/features/tasks/TaskCard.tsx`: Rendered OKR target glyph linking to `view_goals`.
+  - `src/main/services/export/ExportService.ts` & `src/main/services/import/ImportService.ts`: Export format version 2 with full OKR round-trip serialization and backward compatibility.
+  - Removed legacy files: `GoalCard.*`, `GoalAnalyticsBanner.*`, `GoalContextMenu.*`, `GoalHistoryModal.*`, `goalStore.ts`, `GoalRepository.ts`, `goal-handlers.ts`, `Goal.ts`, `GoalLink.ts`, and legacy goal tests.
+  - Added test suites: `tests/integration/okr-migrations.test.ts`, `tests/integration/okr-repository.test.ts`, `tests/integration/okr-task-project.test.ts`, `tests/domain/okr-domain.test.ts`, `tests/unit/okr-components.test.tsx`.
+- **What changed architecturally:**
+  - Modern OKR paradigm across the stack: Objectives (outcome in period) + Key Results (measurable proof: number, work, habit) + check-in cadences + linked work.
+  - Zero new dependencies added. Radix Dialog, Popover, and Dropdown primitives reused.
+  - Strict CSS token usage with zero Framer Motion added to new goals UI.
+  - 100% passing test suite: 136 of 136 test files pass (925 tests).
+  - TypeScript compiles with 0 errors (`npx tsc --noEmit`).
+
 ### [2026-10-06] — OS11 Shell Redesign: Ambient Background, Titlebar Pomodoro Pill, Profile Block & Glass Profile Menu
 - **What was built:**
   - `src/renderer/styles/tokens.css`: Added design tokens for dark-mode `--surface-main` (#141418), ambient top glow `--surface-main-glow`, edge darkening `--surface-main-vignette`, composite static `--background-main`, frosted glass popover tokens (`--surface-glass`, `--border-glass`, `--blur-glass`, `--shadow-popover-glass`), profile row & avatar tokens (`--surface-profile-hover`, `--border-avatar`, `--radius-avatar-tile`, `--radius-profile-row`, `--text-profile-name`, `--tracking-profile`, `--size-chevron`, `--radius-profile-menu-item`, `--height-profile-menu-item`, `--surface-profile-menu-hover`, `--width-profile-menu`), and Pomodoro live pill tokens (`--pomodoro-pill-border`, `--pomodoro-pill-bg`, `--pomodoro-pill-text`, `--size-pill-dot`, `--motion-pill-pulse`). Configured `@media (prefers-contrast: more)` high contrast accessibility fallback.

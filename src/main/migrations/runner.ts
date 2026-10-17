@@ -24,10 +24,29 @@ function hasRow(db: Database.Database, tableName: string, columnName: string, va
   return Boolean(row);
 }
 
-function reconcileSchemaVersion(db: Database.Database, recordedVersion: number): number {
-  if (recordedVersion <= 0) return 0;
+function hasV18Schema(db: Database.Database): boolean {
+  return (
+    hasTable(db, 'objectives') &&
+    hasTable(db, 'key_results') &&
+    hasTable(db, 'kr_check_ins') &&
+    hasTable(db, 'kr_habit_logs') &&
+    hasColumn(db, 'tasks', 'key_result_id') &&
+    hasColumn(db, 'projects', 'key_result_id')
+  );
+}
 
-  let verifiedVersion = recordedVersion;
+function reconcileSchemaVersion(db: Database.Database, recordedVersion: number): number {
+  let verifiedVersion = recordedVersion > 0 ? recordedVersion : 0;
+
+  if (verifiedVersion < 18 && hasV18Schema(db)) {
+    verifiedVersion = 18;
+  }
+
+  if (verifiedVersion <= 0) return 0;
+
+  if (verifiedVersion >= 18 && !hasV18Schema(db)) {
+    verifiedVersion = 17;
+  }
 
   if (
     verifiedVersion >= 17 &&
@@ -41,6 +60,7 @@ function reconcileSchemaVersion(db: Database.Database, recordedVersion: number):
 
   if (
     verifiedVersion >= 16 &&
+    verifiedVersion < 18 &&
     (!hasTable(db, 'goal_progress_logs') || !hasIndex(db, 'idx_goal_progress_logs_goal_id'))
   ) {
     verifiedVersion = 15;
@@ -48,6 +68,7 @@ function reconcileSchemaVersion(db: Database.Database, recordedVersion: number):
 
   if (
     verifiedVersion >= 15 &&
+    verifiedVersion < 18 &&
     (!hasColumn(db, 'goals', 'longest_streak') || !hasTable(db, 'goal_habit_logs') || !hasIndex(db, 'idx_goal_habit_logs_goal'))
   ) {
     verifiedVersion = 14;
@@ -55,6 +76,7 @@ function reconcileSchemaVersion(db: Database.Database, recordedVersion: number):
 
   if (
     verifiedVersion >= 14 &&
+    verifiedVersion < 18 &&
     (!hasColumn(db, 'goals', 'parent_goal_id') || !hasColumn(db, 'goals', 'category') || !hasIndex(db, 'idx_goals_parent_goal_id'))
   ) {
     verifiedVersion = 13;
@@ -62,6 +84,7 @@ function reconcileSchemaVersion(db: Database.Database, recordedVersion: number):
 
   if (
     verifiedVersion >= 13 &&
+    verifiedVersion < 18 &&
     (!hasColumn(db, 'goals', 'status') || !hasColumn(db, 'goals', 'completed_at') || !hasIndex(db, 'idx_goals_status'))
   ) {
     verifiedVersion = 12;

@@ -4,6 +4,8 @@ import { useProjectStore } from '../../stores/projectStore.js';
 import { useListStore } from '../../stores/listStore.js';
 import { useAreaStore } from '../../stores/areaStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
+import { useOkrStore } from '../../stores/okrStore.js';
+import { KeyResultPickerPopover } from '../goals/KeyResultPickerPopover.js';
 import type { Project, ProjectViewMode } from '@shared/types/index.js';
 import { EmojiPicker } from '../../components/EmojiPicker/EmojiPicker.js';
 import { renderViewIcon, CheckIcon } from './ProjectViewIcons.js';
@@ -59,11 +61,15 @@ export function CreateProjectModal({
   const [defaultView, setDefaultView] = useState<ProjectViewMode>('list');
   const [groupId, setGroupId] = useState<string>('');
   const [areaId, setAreaId] = useState<string>('');
+  const [keyResultId, setKeyResultId] = useState<string | null>(projectToEdit?.key_result_id ?? null);
   const [isSomeday, setIsSomeday] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+
+  const keyResultsById = useOkrStore((s) => s.keyResultsById);
+  const objectivesById = useOkrStore((s) => s.objectivesById);
 
   useEffect(() => {
     if (projectToEdit) {
@@ -83,6 +89,7 @@ export function CreateProjectModal({
       );
       setGroupId(projectToEdit.group_id ?? '');
       setAreaId(projectToEdit.area_id ?? orderedAreaIds[0] ?? 'area_default');
+      setKeyResultId(projectToEdit.key_result_id ?? null);
       setIsSomeday(projectToEdit.is_someday === 1 || projectToEdit.status === 'parked');
       setShowEmojiPicker(false);
       setIsSubmitting(false);
@@ -97,6 +104,7 @@ export function CreateProjectModal({
       setDefaultView('list');
       setGroupId(initialGroupId ?? '');
       setAreaId(initialAreaId ?? orderedAreaIds[0] ?? 'area_default');
+      setKeyResultId(null);
       setIsSomeday(false);
       setShowEmojiPicker(false);
       setIsSubmitting(false);
@@ -159,6 +167,7 @@ export function CreateProjectModal({
           views: selectedViews,
           area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
+          key_result_id: keyResultId,
           is_someday: isSomeday ? 1 : 0,
           status: isSomeday ? 'parked' : (projectToEdit.status === 'parked' ? 'active' : projectToEdit.status),
         });
@@ -174,6 +183,7 @@ export function CreateProjectModal({
           views: selectedViews,
           area_id: areaId || 'area_default',
           group_id: groupId ? groupId : null,
+          key_result_id: keyResultId,
           is_someday: isSomeday ? 1 : 0,
           status: isSomeday ? 'parked' : 'active',
         });
@@ -312,6 +322,34 @@ export function CreateProjectModal({
             </select>
           </div>
         )}
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Key Result (Goal)</label>
+          <KeyResultPickerPopover
+            value={keyResultId}
+            onChange={setKeyResultId}
+            trigger={
+              <button
+                type="button"
+                className={styles.selectInput}
+                style={{
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                }}
+              >
+                <span>
+                  {keyResultId && keyResultsById[keyResultId]
+                    ? `${objectivesById[keyResultsById[keyResultId].objective_id]?.title ? objectivesById[keyResultsById[keyResultId].objective_id].title + ' › ' : ''}${keyResultsById[keyResultId].title}`
+                    : 'None (No Key Result)'}
+                </span>
+                <span style={{ opacity: 0.5 }}>▾</span>
+              </button>
+            }
+          />
+        </div>
 
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Color</label>

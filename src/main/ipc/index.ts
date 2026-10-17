@@ -12,7 +12,7 @@ import { registerTagHandlers } from './tag-handlers.js';
 import { registerReminderHandlers } from './reminder-handlers.js';
 import { registerAttachmentHandlers } from './attachment-handlers.js';
 import { registerPomodoroHandlers } from './pomodoro-handlers.js';
-import { registerGoalHandlers } from './goal-handlers.js';
+import { registerOkrHandlers } from './okr-handlers.js';
 import { registerSettingsHandlers } from './settings-handlers.js';
 import { registerModuleHandlers } from './module-handlers.js';
 import { registerSearchHandlers } from './search-handlers.js';
@@ -45,7 +45,7 @@ export function registerIpcHandlers(): void {
   registerReminderHandlers();
   registerAttachmentHandlers();
   registerPomodoroHandlers();
-  registerGoalHandlers();
+  registerOkrHandlers();
   registerSettingsHandlers();
   registerModuleHandlers();
   registerSearchHandlers();

@@ -13,6 +13,7 @@ export interface Project {
   sort_order: number;
   group_id?: string | null;
   area_id?: string | null;
+  key_result_id?: string | null;
   is_pinned?: number;
   pinned_sort_order?: number;
   is_someday?: number;
@@ -34,6 +35,7 @@ export interface CreateProjectPayload {
   sort_order?: number;
   group_id?: string | null;
   area_id?: string | null;
+  key_result_id?: string | null;
   is_pinned?: boolean | number;
   pinned_sort_order?: number;
   is_someday?: boolean | number;
@@ -52,6 +54,7 @@ export interface UpdateProjectPayload {
   sort_order?: number;
   group_id?: string | null;
   area_id?: string | null;
+  key_result_id?: string | null;
   is_pinned?: boolean | number;
   pinned_sort_order?: number;
   is_someday?: boolean | number;

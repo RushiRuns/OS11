@@ -1,7 +1,10 @@
 import React, { useMemo } from 'react';
 import { useTaskStore } from '../../stores/taskStore.js';
-import { useGoalStore } from '../../stores/goalStore.js';
+import { useOkrStore } from '../../stores/okrStore.js';
 import { useModuleStore } from '../../stores/moduleStore.js';
+import { useOkrMetrics } from '../../hooks/useOkrMetrics.js';
+import { useToday } from '../../hooks/useToday.js';
+import { addDays } from '@shared/utils/okr.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
 import styles from './HabitTracker.module.css';
@@ -10,30 +13,32 @@ export function HabitTracker(): React.ReactElement {
   const isEnabled = useModuleStore((state) => state.isEnabled('habit_tracker'));
   const toggleModule = useModuleStore((state) => state.toggleModule);
 
+  const todayStr = useToday();
+  const metrics = useOkrMetrics(todayStr);
+
   const tasksById = useTaskStore((state) => state.tasksById);
   const toggleComplete = useTaskStore((state) => state.toggleComplete);
 
-  const goalsById = useGoalStore((state) => state.goalsById);
-  const habitLogsByGoalId = useGoalStore((state) => state.habitLogsByGoalId);
-  const checkInHabit = useGoalStore((state) => state.checkInHabit);
-  const getStreakStatus = useGoalStore((state) => state.getStreakStatus);
+  const keyResultsById = useOkrStore((s) => s.keyResultsById);
+  const objectivesById = useOkrStore((s) => s.objectivesById);
+  const habitLogsByKeyResultId = useOkrStore((s) => s.habitLogsByKeyResultId);
+  const toggleHabitLog = useOkrStore((s) => s.toggleHabitLog);
 
   // Filter tasks marked as habits
   const habitTasks = useMemo(() => {
     return Object.values(tasksById).filter((t) => t.is_habit === 1 && t.is_trashed === 0);
   }, [tasksById]);
 
-  // Filter goals marked as habits
-  const habitGoals = useMemo(() => {
-    return Object.values(goalsById).filter(
-      (g) => g.goal_type === 'habit' && g.status !== 'archived'
+  // Filter key results marked as habits
+  const habitKeyResults = useMemo(() => {
+    return Object.values(keyResultsById).filter(
+      (kr) => kr.kind === 'habit' && objectivesById[kr.objective_id]?.status !== 'archived'
     );
-  }, [goalsById]);
+  }, [keyResultsById, objectivesById]);
 
-  // Generate 52 weeks (364 days) of date strings ending today, unifying tasks & goal logs
+  // Generate 52 weeks (364 days) of date strings ending today, unifying tasks & habit logs
   const heatmapDays = useMemo(() => {
     const days: Array<{ dateStr: string; count: number }> = [];
-    const today = new Date();
 
     // Map completions by date
     const completionsByDate: Record<string, number> = {};
@@ -44,21 +49,19 @@ export function HabitTracker(): React.ReactElement {
       }
     }
 
-    // Include check-ins from goal_habit_logs
-    for (const logs of Object.values(habitLogsByGoalId)) {
+    // Include check-ins from kr_habit_logs
+    for (const logs of Object.values(habitLogsByKeyResultId)) {
       for (const log of logs) {
-        if (log.check_in_date) {
-          const date = log.check_in_date.substring(0, 10);
+        if (log.log_date) {
+          const date = log.log_date.substring(0, 10);
           completionsByDate[date] = (completionsByDate[date] ?? 0) + 1;
         }
       }
     }
 
-    // 52 weeks * 7 days = 364 days
+    // 52 weeks * 7 days = 364 days ending today
     for (let i = 363; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = addDays(todayStr, -i);
       days.push({
         dateStr,
         count: completionsByDate[dateStr] ?? 0,
@@ -66,7 +69,24 @@ export function HabitTracker(): React.ReactElement {
     }
 
     return days;
-  }, [habitTasks, habitLogsByGoalId]);
+  }, [habitTasks, habitLogsByKeyResultId, todayStr]);
+
+  // Recent 7 days helper
+  const recent7Days = useMemo(() => {
+    const days: Array<{ dateStr: string; dayLabel: string; isToday: boolean }> = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    for (let i = 6; i >= 0; i--) {
+      const dateStr = addDays(todayStr, -i);
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dayDate = new Date(y, m - 1, d);
+      days.push({
+        dateStr,
+        dayLabel: dayNames[dayDate.getDay()],
+        isToday: dateStr === todayStr,
+      });
+    }
+    return days;
+  }, [todayStr]);
 
   if (!isEnabled) {
     return (
@@ -101,13 +121,13 @@ export function HabitTracker(): React.ReactElement {
         </div>
       </div>
 
-      {/* Habit Goals & Streaks */}
+      {/* Habit Key Results & Streaks */}
       <section className={styles.chainSection}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>
-            <span>🎯 Habit Goals & Streaks</span>
+            <span>🎯 Habit Key Results & Streaks</span>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-              ({habitGoals.length})
+              ({habitKeyResults.length})
             </span>
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
@@ -115,74 +135,69 @@ export function HabitTracker(): React.ReactElement {
           </span>
         </div>
 
-        {habitGoals.length === 0 ? (
+        {habitKeyResults.length === 0 ? (
           <EmptyState
             icon="🎯"
-            title="No Habit Goals Yet"
-            description="Create a goal with type 'Habit' in the Goals view to track your long-term consistency and streaks here."
+            title="No Habit Key Results Yet"
+            description="Add a key result of kind 'Habit' to a goal in the Goals view to track your long-term consistency and streaks here."
           />
         ) : (
           <div className={styles.habitGoalsGrid}>
-            {habitGoals.map((goal) => {
-              const streakStatus = getStreakStatus(goal.id);
+            {habitKeyResults.map((kr) => {
+              const habitStat = metrics.habitStatsMap.get(kr.id);
+              const parentObj = objectivesById[kr.objective_id];
+              const logs = habitLogsByKeyResultId[kr.id] || [];
+              const checkedInToday = logs.some((l) => l.log_date === todayStr);
+              const streak = habitStat?.weekStreak ?? 0;
+
               return (
-                <div key={goal.id} className={styles.habitGoalCard}>
+                <div key={kr.id} className={styles.habitGoalCard}>
                   <div className={styles.habitGoalTop}>
                     <div className={styles.habitGoalInfo}>
-                      <h3 className={styles.habitGoalTitle}>{goal.title}</h3>
-                      {goal.category && (
-                        <span className={styles.categoryBadge}>🏷️ {goal.category}</span>
+                      <h3 className={styles.habitGoalTitle}>{kr.title}</h3>
+                      {parentObj && (
+                        <span className={styles.categoryBadge}>🎯 {parentObj.title}</span>
                       )}
                     </div>
-                    {streakStatus.health === 'completed_today' && (
+                    {checkedInToday ? (
                       <span className={styles.streakBadgeCompleted}>
-                        🔥 {streakStatus.currentStreak}d Streak
+                        🔥 {streak}w Streak
                       </span>
-                    )}
-                    {streakStatus.health === 'due_today' && (
+                    ) : (
                       <span className={styles.streakBadgeDue}>
-                        ⏳ {streakStatus.currentStreak}d Due
+                        ⏳ {streak}w Streak
                       </span>
-                    )}
-                    {streakStatus.health === 'broken' && (
-                      <span className={styles.streakBadgeBroken}>
-                        ⚠️ Broken (Best: {streakStatus.longestStreak}d)
-                      </span>
-                    )}
-                    {streakStatus.health === 'inactive' && (
-                      <span className={styles.streakBadgeInactive}>💤 Inactive</span>
                     )}
                   </div>
 
                   {/* 7-Day Mini Track */}
                   <div className={styles.recentDaysStrip}>
-                    {streakStatus.recentDays.map((d) => (
-                      <div
-                        key={d.date}
-                        className={`${styles.dayDot} ${d.checked ? styles.dayDotChecked : ''} ${d.isToday ? styles.dayDotToday : ''}`}
-                        title={`${d.date} (${d.dayLabel}): ${d.checked ? 'Checked in' : 'Missed'}${d.isToday ? ' (Today)' : ''}`}
-                      >
-                        <span className={styles.dayDotLabel}>{d.dayLabel}</span>
-                        <span className={styles.dayDotIndicator}>{d.checked ? '✓' : '·'}</span>
-                      </div>
-                    ))}
+                    {recent7Days.map((d) => {
+                      const checked = logs.some((l) => l.log_date === d.dateStr);
+                      return (
+                        <div
+                          key={d.dateStr}
+                          className={`${styles.dayDot} ${checked ? styles.dayDotChecked : ''} ${d.isToday ? styles.dayDotToday : ''}`}
+                          title={`${d.dateStr} (${d.dayLabel}): ${checked ? 'Checked in' : 'Missed'}${d.isToday ? ' (Today)' : ''}`}
+                        >
+                          <span className={styles.dayDotLabel}>{d.dayLabel}</span>
+                          <span className={styles.dayDotIndicator}>{checked ? '✓' : '·'}</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className={styles.habitGoalBottom}>
                     <span className={styles.bestStreakText}>
-                      Best Streak: <strong>{streakStatus.longestStreak}d</strong>
+                      This week: <strong>{habitStat?.weekCount ?? 0}/{kr.target_value ?? 7}d</strong>
                     </span>
                     <button
                       type="button"
-                      className={`${styles.checkInBtn} ${streakStatus.checkedInToday ? styles.checkInBtnDone : ''}`}
-                      onClick={() => checkInHabit(goal.id)}
-                      title={streakStatus.checkedInToday ? 'Checked in today! Click to undo' : 'Check in for today'}
+                      className={`${styles.checkInBtn} ${checkedInToday ? styles.checkInBtnDone : ''}`}
+                      onClick={() => toggleHabitLog(kr.id, todayStr)}
+                      title={checkedInToday ? 'Checked in today! Click to undo' : 'Check in for today'}
                     >
-                      {streakStatus.checkedInToday
-                        ? '✓ Done Today'
-                        : streakStatus.health === 'broken'
-                          ? '+ Restart Streak'
-                          : '+ Check In Today'}
+                      {checkedInToday ? '✓ Done Today' : '+ Check In Today'}
                     </button>
                   </div>
                 </div>

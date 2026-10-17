@@ -1,0 +1,42 @@
+.ringWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  user-select: none;
+}
+
+.ringSvg {
+  overflow: visible;
+  display: block;
+}
+
+.track {
+  stroke: var(--border-subtle);
+  transition: stroke var(--motion-default) var(--ease-out);
+}
+
+.progress {
+  stroke: var(--accent);
+  transition: stroke-dashoffset var(--motion-slow) var(--ease-out), stroke var(--motion-default) var(--ease-out);
+}
+
+.complete .progress {
+  stroke: var(--color-success);
+}
+
+.checkmark {
+  animation: fadeIn var(--motion-default) var(--ease-out);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -10,7 +10,7 @@ import * as RadixTooltip from '@radix-ui/react-tooltip';
 import { useTaskStore, useSubtasks } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
-import { useGoalStore } from '../../stores/goalStore.js';
+import { useOkrStore } from '../../stores/okrStore.js';
 import { useViewGroupStore } from '../../stores/viewGroupStore.js';
 import { useCustomGroupStore } from '../../stores/customGroupStore.js';
 import { useAttachmentStore } from '../../stores/attachmentStore.js';
@@ -34,6 +34,9 @@ import {
 import styles from './DetailPanel.module.css';
 
 const DatePicker = React.lazy(() => import('../../components/DatePicker/DatePicker.js'));
+const KeyResultPickerPopover = React.lazy(() =>
+  import('../goals/KeyResultPickerPopover.js').then((m) => ({ default: m.KeyResultPickerPopover }))
+);
 
 export interface DetailPanelProps {
   task: Task | null;
@@ -223,7 +226,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [datePickerPos, setDatePickerPos] = useState<{ x: number; y: number } | undefined>(undefined);
   const [isPriorityPopoverOpen, setIsPriorityPopoverOpen] = useState(false);
-  const [isGoalPopoverOpen, setIsGoalPopoverOpen] = useState(false);
+  const [isKeyResultPopoverOpen, setIsKeyResultPopoverOpen] = useState(false);
   const [isReminderPopoverOpen, setIsReminderPopoverOpen] = useState(false);
   const [isAddPropertyMenuOpen, setIsAddPropertyMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -301,16 +304,14 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
 
   const taskDependencies = currentTask ? dependenciesByTaskId[currentTask.id] ?? [] : [];
 
-  const { goalsById, linksByGoalId, linkTask, unlinkTask } = useGoalStore();
-  const linkedGoal = useMemo(() => {
-    if (!currentTask) return null;
-    for (const [goalId, links] of Object.entries(linksByGoalId)) {
-      if (links.some((l) => l.resource_id === currentTask.id)) {
-        return goalsById[goalId] ?? null;
-      }
-    }
-    return null;
-  }, [linksByGoalId, goalsById, currentTask]);
+  const keyResultsById = useOkrStore((s) => s.keyResultsById);
+  const objectivesById = useOkrStore((s) => s.objectivesById);
+  const linkedKeyResult = currentTask?.key_result_id
+    ? keyResultsById[currentTask.key_result_id] ?? null
+    : null;
+  const linkedObjective = linkedKeyResult?.objective_id
+    ? objectivesById[linkedKeyResult.objective_id] ?? null
+    : null;
 
   // Load reminders for task
   const loadReminders = useCallback(async (taskId: string) => {
@@ -384,8 +385,8 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
           setIsPriorityPopoverOpen(false);
           return;
         }
-        if (isGoalPopoverOpen) {
-          setIsGoalPopoverOpen(false);
+        if (isKeyResultPopoverOpen) {
+          setIsKeyResultPopoverOpen(false);
           return;
         }
         if (isReminderPopoverOpen) {
@@ -416,7 +417,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   }, [
     onClose,
     isPriorityPopoverOpen,
-    isGoalPopoverOpen,
+    isKeyResultPopoverOpen,
     isReminderPopoverOpen,
     isAddPropertyMenuOpen,
     isDatePickerOpen,
@@ -428,11 +429,11 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
   const currentFieldValues = useMemo(
     () =>
       fieldsWithValue(currentTask, {
-        hasGoal: Boolean(linkedGoal),
+        hasKeyResult: Boolean(linkedKeyResult),
         hasDependencies: taskDependencies.length > 0,
         hasAttachments: attachmentsCount > 0,
       }),
-    [currentTask, linkedGoal, taskDependencies.length, attachmentsCount]
+    [currentTask, linkedKeyResult, taskDependencies.length, attachmentsCount]
   );
 
   const [sticky, setSticky] = useState<Set<OptionalField>>(() => currentFieldValues);
@@ -632,8 +633,8 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
         case 'repeat':
           setIsRecurrencePickerOpen(true);
           break;
-        case 'goal':
-          setIsGoalPopoverOpen(true);
+        case 'key_result':
+          setIsKeyResultPopoverOpen(true);
           break;
         case 'waitingFor': {
           const person = prompt('Waiting on whom or what?');
@@ -1089,68 +1090,63 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
             </div>
           )}
 
-          {/* Goal Row */}
-          {visibleFields.has('goal') && (
-            <RadixPopover.Root open={isGoalPopoverOpen} onOpenChange={setIsGoalPopoverOpen}>
-              <RadixPopover.Trigger asChild>
+          {/* Key Result Row */}
+          {visibleFields.has('key_result') && !currentTask.parent_task_id && (
+            <React.Suspense
+              fallback={
                 <div
                   className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
                   role="button"
                   tabIndex={0}
-                  aria-label="Goal"
+                  aria-label="Key Result"
                 >
                   <div className={styles.propertyLabel}>
                     <TargetIconSvg />
-                    <span>Goal</span>
+                    <span>Key Result</span>
                   </div>
                   <div className={styles.propertyValue}>
-                    {linkedGoal ? (
-                      <span>{linkedGoal.title}</span>
+                    {linkedKeyResult ? (
+                      <span>
+                        {linkedObjective ? `${linkedObjective.title} › ` : ''}
+                        {linkedKeyResult.title}
+                      </span>
                     ) : (
-                      <span className={styles.valueEmpty}>None (No Goal)</span>
+                      <span className={styles.valueEmpty}>None (No Key Result)</span>
                     )}
                   </div>
                 </div>
-              </RadixPopover.Trigger>
-              <RadixPopover.Portal container={portalContainer}>
-                <RadixPopover.Content
-                  className={`${styles.glassContent} ${styles.goalDropdownContent}`}
-                  align="start"
-                  side="bottom"
-                  sideOffset={4}
-                >
+              }
+            >
+              <KeyResultPickerPopover
+                value={currentTask.key_result_id}
+                onChange={async (krId) => {
+                  await updateTask({ id: currentTask.id, key_result_id: krId });
+                }}
+                trigger={
                   <div
-                    className={styles.glassItem}
-                    onClick={() => {
-                      if (linkedGoal) unlinkTask(linkedGoal.id, currentTask.id);
-                      setIsGoalPopoverOpen(false);
-                    }}
+                    className={`${styles.propertyRow} ${styles.propertyRowTrigger}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Key Result"
                   >
-                    <span>None (No Goal)</span>
-                    {!linkedGoal && <span className={styles.glassItemCheck}>✓</span>}
-                  </div>
-                  {Object.values(goalsById)
-                    .filter((g) => g.status !== 'archived' || g.id === linkedGoal?.id)
-                    .map((g) => (
-                      <div
-                        key={g.id}
-                        className={styles.glassItem}
-                        onClick={() => {
-                          if (linkedGoal) unlinkTask(linkedGoal.id, currentTask.id);
-                          linkTask(g.id, currentTask.id);
-                          setIsGoalPopoverOpen(false);
-                        }}
-                      >
-                        <span className={styles.chipText}>
-                          {g.title}
-                          {g.category ? ` [${g.category}]` : ''}
+                    <div className={styles.propertyLabel}>
+                      <TargetIconSvg />
+                      <span>Key Result</span>
+                    </div>
+                    <div className={styles.propertyValue}>
+                      {linkedKeyResult ? (
+                        <span>
+                          {linkedObjective ? `${linkedObjective.title} › ` : ''}
+                          {linkedKeyResult.title}
                         </span>
-                        {linkedGoal?.id === g.id && <span className={styles.glassItemCheck}>✓</span>}
-                      </div>
-                    ))}
-                </RadixPopover.Content>
-              </RadixPopover.Portal>
-            </RadixPopover.Root>
+                      ) : (
+                        <span className={styles.valueEmpty}>None (No Key Result)</span>
+                      )}
+                    </div>
+                  </div>
+                }
+              />
+            </React.Suspense>
           )}
 
           {/* Waiting For Row */}
@@ -1312,7 +1308,7 @@ export function DetailPanel({ task, onClose }: DetailPanelProps): React.ReactEle
                   {hiddenOptionalFields.map((field) => {
                     const labelMap: Record<OptionalField, { name: string; icon: React.ReactNode }> = {
                       repeat: { name: 'Repeat', icon: <RepeatIconSvg /> },
-                      goal: { name: 'Goal', icon: <TargetIconSvg /> },
+                      key_result: { name: 'Key Result', icon: <TargetIconSvg /> },
                       waitingFor: { name: 'Waiting For', icon: <HourglassIconSvg /> },
                       habit: { name: 'Habit', icon: <HabitIconSvg /> },
                       dependsOn: { name: 'Depends On', icon: <LinkIconSvg /> },

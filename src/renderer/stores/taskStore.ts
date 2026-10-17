@@ -5,17 +5,23 @@ import { taskServiceAdapter } from '../services/task-service-adapter.js';
 import { playTaskCompleteSound, playTaskCreateSound } from '../utils/sound-effects.js';
 import { useAppStore } from './app-store.js';
 import { useCountsStore } from './countsStore.js';
-import { useGoalStore } from './goalStore.js';
+import { useOkrStore } from './okrStore.js';
 import { useUndoRedoStore } from '../hooks/useUndoRedo.js';
+import { localDateKey } from '@shared/utils/okr.js';
 
-function maybeCheckInLinkedGoal(taskId: string) {
+function maybeCheckInLinkedHabit(taskId: string) {
   try {
-    const goalStore = useGoalStore.getState();
-    const linkedGoal = goalStore.getGoalForTask(taskId);
-    if (linkedGoal && linkedGoal.goal_type === 'habit' && linkedGoal.status !== 'archived') {
-      const streak = goalStore.getStreakStatus(linkedGoal.id);
-      if (!streak.checkedInToday) {
-        goalStore.checkInHabit(linkedGoal.id).catch(() => {});
+    const task = useTaskStore.getState().tasksById[taskId];
+    if (task?.key_result_id) {
+      const okrStore = useOkrStore.getState();
+      const kr = okrStore.keyResultsById[task.key_result_id];
+      if (kr && kr.kind === 'habit') {
+        const todayStr = localDateKey(new Date());
+        const logs = okrStore.habitLogsByKeyResultId[kr.id] || [];
+        const alreadyLogged = logs.some((l) => l.log_date === todayStr);
+        if (!alreadyLogged) {
+          okrStore.toggleHabitLog(kr.id, todayStr).catch(() => {});
+        }
       }
     }
   } catch {
@@ -213,6 +219,14 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
           !t.parent_task_id &&
           (payload.section_id ? t.section_id === payload.section_id : true)
       );
+    } else if (payload.area_id) {
+      matchingTasks = currentTasks.filter(
+        (t) =>
+          t.area_id === payload.area_id &&
+          !t.project_id &&
+          !t.parent_task_id &&
+          t.is_trashed === 0
+      );
     } else if (payload.list_id) {
       matchingTasks = currentTasks.filter(
         (t) => t.list_id === payload.list_id && t.is_trashed === 0 && !t.parent_task_id
@@ -343,7 +357,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
         get().loadTasks().catch(() => {});
       }
       if (nextCompleted === 1) {
-        maybeCheckInLinkedGoal(id);
+        maybeCheckInLinkedHabit(id);
         const titleStr = existing.title || 'Untitled task';
         const truncatedTitle = titleStr.length > 36 ? titleStr.slice(0, 33) + '...' : titleStr;
         useUndoRedoStore.getState().pushAction({
@@ -391,7 +405,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       if (existing.recurrence_rule && !options?.skipRecurrence) {
         get().loadTasks().catch(() => {});
       }
-      maybeCheckInLinkedGoal(id);
+      maybeCheckInLinkedHabit(id);
       const titleStr = existing.title || 'Untitled task';
       const truncatedTitle = titleStr.length > 36 ? titleStr.slice(0, 33) + '...' : titleStr;
       useUndoRedoStore.getState().pushAction({
