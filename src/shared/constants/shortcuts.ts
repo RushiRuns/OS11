@@ -64,6 +64,12 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
     isGlobal: true,
   },
   {
+    id: 'new_task_in_view',
+    label: 'New Task in Current View',
+    category: 'Tasks',
+    defaultKeys: ['C'],
+  },
+  {
     id: 'complete_task',
     label: 'Mark Selected Task Complete',
     category: 'Tasks',

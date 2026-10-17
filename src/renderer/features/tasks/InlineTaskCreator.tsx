@@ -3,6 +3,8 @@ import { useTaskStore } from '../../stores/taskStore.js';
 import { playTaskCreateSound } from '../../utils/sound-effects.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
 import { formatForDisplay } from '@shared/utils/date.js';
+import { matchesShortcut } from '@shared/constants/shortcuts.js';
+import { useShortcutStore } from '../../stores/shortcutStore.js';
 import type { Task } from '@shared/types/task.js';
 import styles from './InlineTaskCreator.module.css';
 
@@ -66,19 +68,61 @@ export function InlineTaskCreator({
     }
   }, [isOpen]);
 
-  // Global Ctrl+N / Cmd+N shortcut to open task creator
+  // In-view task creation shortcut (default 'C') and Ctrl+N fallback
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n' && !e.shiftKey) {
+      // Ignore if user is currently typing in an editable field
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // If suspended (e.g. recording a shortcut in settings), do nothing
+      if (useShortcutStore.getState().isSuspended) {
+        return;
+      }
+
+      // In grouped views with section-level creators, only the main/top creator handles the view-level shortcut
+      if (customValue) {
+        return;
+      }
+
+      const shortcuts = useShortcutStore.getState().shortcuts;
+      const viewShortcut = shortcuts['new_task_in_view'] || ['C'];
+
+      const matchesViewShortcut = matchesShortcut(e, viewShortcut);
+      const matchesLegacyCtrlN = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n' && !e.shiftKey;
+
+      if (matchesViewShortcut || matchesLegacyCtrlN) {
         e.preventDefault();
         setIsOpen(true);
-        titleInputRef.current?.focus();
+        setTimeout(() => {
+          titleInputRef.current?.focus();
+        }, 30);
+      }
+    };
+
+    const handleCustomOpen = () => {
+      if (!customValue) {
+        setIsOpen(true);
+        setTimeout(() => {
+          titleInputRef.current?.focus();
+        }, 30);
       }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+    window.addEventListener('os11:open-inline-creator', handleCustomOpen);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+      window.removeEventListener('os11:open-inline-creator', handleCustomOpen);
+    };
+  }, [customValue]);
 
   // Close helper
   const handleClose = useCallback(() => {
