@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import type { Project, Section, Task } from '@shared/types/index.js';
 import { capitalizeFirstLetter } from '@shared/utils/index.js';
+import { toISODateOnly } from '@shared/utils/date.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useTagStore } from '../../stores/tagStore.js';
 import { Checkbox } from '../../components/Checkbox/Checkbox.js';
@@ -636,7 +637,7 @@ export function ProjectTableView({
           })
         }
         onToggleMyDay={(id) => {
-          const today = new Date().toISOString().split('T')[0];
+          const today = toISODateOnly(new Date());
           const target = tasks.find((t) => t.id === id);
           const next = target?.my_day_date === today ? null : today;
           updateTask({ id, my_day_date: next });

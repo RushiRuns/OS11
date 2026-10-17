@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/sortable';
 import type { Project, Section, Task } from '@shared/types/index.js';
 import { between } from '@shared/utils/fractional-index.js';
+import { toISODateOnly } from '@shared/utils/date.js';
 import { TaskCard } from '../tasks/TaskCard.js';
 import { TaskContextMenu, type TaskContextMenuPosition } from '../tasks/TaskContextMenu.js';
 import { EmptyState } from '../../components/EmptyState/EmptyState.js';
@@ -522,7 +523,7 @@ export function ProjectListView({
     const activeTask = tasks.find((t) => t.id === activeIdStr);
     if (!activeTask) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = toISODateOnly(new Date());
 
     if (groupBy !== 'none') {
       if (active.id === over.id) return;
@@ -1094,7 +1095,7 @@ export function ProjectListView({
           })
         }
         onToggleMyDay={(id) => {
-          const today = new Date().toISOString().split('T')[0];
+          const today = toISODateOnly(new Date());
           const target = tasks.find((t) => t.id === id);
           const next = target?.my_day_date === today ? null : today;
           updateTask({ id, my_day_date: next });

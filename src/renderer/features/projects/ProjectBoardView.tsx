@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/core';
 import type { Project, Section, Task } from '@shared/types/index.js';
 import { between } from '@shared/utils/fractional-index.js';
+import { toISODateOnly } from '@shared/utils/date.js';
 import { useTaskStore } from '../../stores/taskStore.js';
 import { useProjectStore } from '../../stores/projectStore.js';
 import { BoardColumn } from './BoardColumn.js';
@@ -377,7 +378,7 @@ export function ProjectBoardView({
           })
         }
         onToggleMyDay={(id) => {
-          const today = new Date().toISOString().split('T')[0];
+          const today = toISODateOnly(new Date());
           const target = tasks.find((t) => t.id === id);
           const next = target?.my_day_date === today ? null : today;
           updateTask({ id, my_day_date: next });

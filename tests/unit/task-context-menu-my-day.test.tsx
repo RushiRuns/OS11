@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import React from 'react';
 import type { Task } from '../../src/shared/types/task.js';
+import { toISODateOnly } from '../../src/shared/utils/date.js';
 
 if (typeof globalThis.window === 'undefined') {
   (globalThis as any).window = {
@@ -241,5 +242,37 @@ describe('TaskContextMenu "Add to My Day" regression tests', () => {
     expect(customToggleMyDay).toHaveBeenCalledWith('task-test-1');
     expect(mockUpdateTask).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('Case 4: late-night toggle assigns local date (matching TaskCard useToday()) across UTC boundary', async () => {
+    stateIndex = 0;
+    effects = [];
+    const onClose = vi.fn();
+
+    // Mock Date so that local date is '2026-10-18', but toISOString() yields '2026-10-17' (late night across UTC)
+    const fakeNow = new Date('2026-10-17T20:00:00.000Z'); // In UTC+5:30 this is 2026-10-18 01:30 AM
+    vi.useFakeTimers();
+    vi.setSystemTime(fakeNow);
+
+    try {
+      const localExpected = toISODateOnly(fakeNow);
+
+      const element = TaskContextMenu({
+        task: { ...baseTask, my_day_date: null },
+        position: { x: 100, y: 100 },
+        onClose,
+      });
+
+      const myDayBtn = findButtonByLabel(element!, 'Add to My Day');
+      await myDayBtn!.props.onClick();
+
+      // Must be localExpected (e.g. 2026-10-18 in local timezone), NOT raw UTC (2026-10-17)
+      expect(mockUpdateTask).toHaveBeenCalledWith({
+        id: 'task-test-1',
+        my_day_date: localExpected,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

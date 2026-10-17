@@ -12,6 +12,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { between } from '@shared/utils/fractional-index.js';
+import { toISODateOnly } from '@shared/utils/date.js';
 import {
   useTaskStore,
   useCompletedTasks,
@@ -449,7 +450,7 @@ export function TaskList({
     useCallback(
       (state) => {
         const tasks = Object.values(state.tasksById).filter((t) => t.is_trashed === 0);
-        const today = new Date().toISOString().split('T')[0];
+        const today = toISODateOnly(new Date());
         switch (activeListId) {
           case 'smart_my_day':
             return tasks
@@ -1416,7 +1417,7 @@ export function TaskList({
           })
         }
         onToggleMyDay={(id) => {
-          const today = new Date().toISOString().split('T')[0];
+          const today = toISODateOnly(new Date());
           const target = activeTasks.find((t) => t.id === id);
           const next = target?.my_day_date === today ? null : today;
           updateTask({ id, my_day_date: next });

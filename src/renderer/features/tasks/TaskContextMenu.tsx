@@ -13,6 +13,7 @@ import { IPC } from '@shared/ipc-channels.js';
 import { invoke } from '../../services/ipc.js';
 import { DatePicker } from '../../components/DatePicker/DatePicker.js';
 import type { Task } from '@shared/types/task.js';
+import { toISODateOnly } from '@shared/utils/date.js';
 import { showPrompt } from '../../components/PromptDialog/PromptDialog.js';
 import styles from './TaskContextMenu.module.css';
 
@@ -391,7 +392,7 @@ export function TaskContextMenu({
   if (!task || !position) return null;
 
   const isStarred = task.is_starred === 1;
-  const today = new Date().toISOString().split('T')[0];
+  const today = toISODateOnly(new Date());
   const isInMyDay = task.my_day_date === today;
 
   return (
